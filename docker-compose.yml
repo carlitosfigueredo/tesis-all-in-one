@@ -1,0 +1,80 @@
+services:
+  # ─────────────────────────────────────────
+  # Base de datos PostgreSQL
+  # ─────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: tesis_postgres
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tesis_network
+
+  # ─────────────────────────────────────────
+  # Backend Node.js + Express
+  # ─────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: tesis_backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      PORT: ${BACKEND_PORT}
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+    ports:
+      - "${BACKEND_PORT}:4000"
+    volumes:
+      - ./backend/src:/app/src          # Hot reload en desarrollo
+      - /app/node_modules               # Evita sobreescribir node_modules del contenedor
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - tesis_network
+
+  # ─────────────────────────────────────────
+  # Frontend React + Vite
+  # ─────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: tesis_frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: http://localhost:${BACKEND_PORT}/api
+    ports:
+      - "${FRONTEND_PORT}:5173"
+    volumes:
+      - ./frontend/src:/app/src         # Hot reload en desarrollo
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - tesis_network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  tesis_network:
+    driver: bridge
