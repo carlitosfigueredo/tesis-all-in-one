@@ -1,6 +1,7 @@
 const { Router } = require('express');
 const authRoutes = require('./auth.routes');
 const employeeRoutes = require('./employees.routes');
+const predictRoutes = require('./predict.routes');
 
 const router = Router();
 
@@ -17,5 +18,6 @@ router.get('/health', (_req, res) => {
 // Módulos de la aplicación
 router.use('/auth', authRoutes);
 router.use('/employees', employeeRoutes);
+router.use('/predict', predictRoutes);
 
 module.exports = router;
