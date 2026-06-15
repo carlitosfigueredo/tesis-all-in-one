@@ -51,6 +51,24 @@ services:
       - tesis_network
 
   # ─────────────────────────────────────────
+  # Microservicio ML (Python + FastAPI)
+  # ─────────────────────────────────────────
+  ml-service:
+    build:
+      context: ./ml-service
+      dockerfile: Dockerfile
+    container_name: tesis_ml
+    restart: unless-stopped
+    environment:
+      PYTHONUNBUFFERED: "1"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./ml-service:/app          # Hot reload en desarrollo
+    networks:
+      - tesis_network
+
+  # ─────────────────────────────────────────
   # Frontend React + Vite
   # ─────────────────────────────────────────
   frontend:
@@ -68,6 +86,7 @@ services:
       - /app/node_modules
     depends_on:
       - backend
+      - ml-service
     networks:
       - tesis_network
 
