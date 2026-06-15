@@ -1,0 +1,61 @@
+// Prisma Schema - Sistema BI de Retención de Talento
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────
+// Usuarios del sistema
+// ─────────────────────────────────────────
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(ANALYST)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+// ─────────────────────────────────────────
+// Empleados (sujetos del análisis BI)
+// ─────────────────────────────────────────
+model Employee {
+  id               String         @id @default(uuid())
+  name             String
+  department       String
+  position         String
+  salary           Float
+  yearsInCompany   Int
+  performanceScore Float          @default(0)
+  flightRisk       Float          @default(0)  // Score 0-1 del modelo ML
+  status           EmployeeStatus @default(ACTIVE)
+  hireDate         DateTime       @default(now())
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@map("employees")
+}
+
+// ─────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────
+enum Role {
+  ADMIN
+  ANALYST
+  VIEWER
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  RESIGNED
+}
