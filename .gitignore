@@ -1,4 +1,36 @@
-#Gitignore
-.vscode/
-.github/copilot-instructions.md
+# Dependencias
+node_modules/
+**/node_modules/
 
+# Variables de entorno (NUNCA commitear)
+.env
+.env.local
+.env.*.local
+
+# Builds
+dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python (legado)
+__pycache__/
+*.pyc
+api/
+
+# Docker
+postgres_data/
+
+# Prisma
+prisma/migrations/dev.db
