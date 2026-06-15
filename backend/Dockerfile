@@ -8,7 +8,7 @@ WORKDIR /app
 # Copiar manifiestos primero para aprovechar caché de Docker
 COPY package*.json ./
 
-RUN npm ci
+RUN npm install
 
 COPY . .
 
