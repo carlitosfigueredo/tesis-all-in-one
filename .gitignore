@@ -34,3 +34,10 @@ postgres_data/
 
 # Prisma
 prisma/migrations/dev.db
+
+# Datasets (no subir al repo - archivos grandes con términos de uso propios)
+ml-service/notebooks/data/*.csv
+ml-service/notebooks/data/*.zip
+
+# Modelo entrenado (se genera con el notebook)
+ml-service/model/model.pkl
