@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import predict, training
+from routers import predict, training, employees
 import os
 
 app = FastAPI(
@@ -18,6 +18,7 @@ app.add_middleware(
 
 app.include_router(predict.router, prefix="/api")
 app.include_router(training.router, prefix="/api")
+app.include_router(employees.router, prefix="/api")
 
 
 @app.get("/")
