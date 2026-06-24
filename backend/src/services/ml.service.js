@@ -45,3 +45,36 @@ const predictBatch = async (employeeList) => {
 };
 
 module.exports = { predictFlightRisk, predictBatch };
+
+// ─────────────────────────────────────────
+// Entrenamiento y estado del modelo
+// ─────────────────────────────────────────
+
+/**
+ * Devuelve el estado actual del modelo (si está entrenado, tamaño, métricas).
+ */
+const getModelStatus = async () => {
+  const response = await fetch(`${ML_SERVICE_URL}/api/model/status`);
+  if (!response.ok) {
+    throw new Error(`ML service error (${response.status})`);
+  }
+  return response.json();
+};
+
+/**
+ * Dispara el entrenamiento del modelo y devuelve las métricas.
+ * Puede tardar 30-60 segundos.
+ */
+const trainModel = async () => {
+  const response = await fetch(`${ML_SERVICE_URL}/api/train`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`ML training error (${response.status}): ${error}`);
+  }
+  return response.json();
+};
+
+module.exports = { predictFlightRisk, predictBatch, getModelStatus, trainModel };
