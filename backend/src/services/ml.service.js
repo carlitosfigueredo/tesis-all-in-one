@@ -5,76 +5,60 @@
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:8000';
 
-/**
- * Envía las features de un empleado al modelo y devuelve la predicción.
- * @param {object} features - Variables del empleado (ver schemas.py)
- * @returns {Promise<{flight_risk, risk_level, confidence, model_version, is_dummy}>}
- */
-const predictFlightRisk = async (features) => {
-  const response = await fetch(`${ML_SERVICE_URL}/api/predict`, {
-    method: 'POST',
+const _fetch = async (path, options = {}) => {
+  const response = await fetch(`${ML_SERVICE_URL}${path}`, {
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(features),
+    ...options,
   });
-
   if (!response.ok) {
     const error = await response.text();
     throw new Error(`ML service error (${response.status}): ${error}`);
   }
-
   return response.json();
+};
+
+// ── Predicción ────────────────────────────────────────────────────────────────
+
+const predictFlightRisk = (features) =>
+  _fetch('/api/predict', { method: 'POST', body: JSON.stringify(features) });
+
+const predictBatch = (employeeList) =>
+  _fetch('/api/predict/batch', { method: 'POST', body: JSON.stringify(employeeList) });
+
+// ── Entrenamiento / Estado del modelo ─────────────────────────────────────────
+
+const getModelStatus = () => _fetch('/api/model/status');
+
+const trainModel = () => _fetch('/api/train', { method: 'POST' });
+
+// ── Empleados del dataset ─────────────────────────────────────────────────────
+
+/**
+ * Lista empleados del dataset con flightRisk calculado.
+ * @param {object} params - { page, page_size, department, risk_level, search, attrition }
+ */
+const getDatasetEmployees = (params = {}) => {
+  const qs = new URLSearchParams();
+  if (params.page)        qs.set('page', params.page);
+  if (params.page_size)   qs.set('page_size', params.page_size);
+  if (params.department)  qs.set('department', params.department);
+  if (params.risk_level)  qs.set('risk_level', params.risk_level);
+  if (params.search)      qs.set('search', params.search);
+  if (params.attrition !== undefined) qs.set('attrition', params.attrition);
+  const query = qs.toString() ? `?${qs.toString()}` : '';
+  return _fetch(`/api/employees${query}`);
 };
 
 /**
- * Envía una lista de empleados y devuelve predicciones en batch.
- * @param {object[]} employeeList
+ * Detalle de un empleado por ID del dataset.
  */
-const predictBatch = async (employeeList) => {
-  const response = await fetch(`${ML_SERVICE_URL}/api/predict/batch`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(employeeList),
-  });
+const getDatasetEmployee = (id) => _fetch(`/api/employees/${id}`);
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`ML service batch error (${response.status}): ${error}`);
-  }
-
-  return response.json();
+module.exports = {
+  predictFlightRisk,
+  predictBatch,
+  getModelStatus,
+  trainModel,
+  getDatasetEmployees,
+  getDatasetEmployee,
 };
-
-module.exports = { predictFlightRisk, predictBatch };
-
-// ─────────────────────────────────────────
-// Entrenamiento y estado del modelo
-// ─────────────────────────────────────────
-
-/**
- * Devuelve el estado actual del modelo (si está entrenado, tamaño, métricas).
- */
-const getModelStatus = async () => {
-  const response = await fetch(`${ML_SERVICE_URL}/api/model/status`);
-  if (!response.ok) {
-    throw new Error(`ML service error (${response.status})`);
-  }
-  return response.json();
-};
-
-/**
- * Dispara el entrenamiento del modelo y devuelve las métricas.
- * Puede tardar 30-60 segundos.
- */
-const trainModel = async () => {
-  const response = await fetch(`${ML_SERVICE_URL}/api/train`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-  });
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`ML training error (${response.status}): ${error}`);
-  }
-  return response.json();
-};
-
-module.exports = { predictFlightRisk, predictBatch, getModelStatus, trainModel };
