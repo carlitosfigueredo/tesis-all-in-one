@@ -4,6 +4,7 @@ import PrivateRoute from './routes/PrivateRoute';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Employees from './pages/Employees';
+import ModelML from './pages/ModelML';
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/employees" element={<Employees />} />
+            <Route path="/model" element={<ModelML />} />
           </Route>
 
           {/* Fallback */}

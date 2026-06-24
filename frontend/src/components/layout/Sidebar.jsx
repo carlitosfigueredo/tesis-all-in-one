@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 const navItems = [
   { to: '/dashboard', icon: '📊', label: 'Dashboard' },
   { to: '/employees', icon: '👥', label: 'Empleados' },
+  { to: '/model',     icon: '🤖', label: 'Modelo ML' },
 ];
 
 export default function Sidebar() {
