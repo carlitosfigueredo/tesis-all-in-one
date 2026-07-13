@@ -75,7 +75,114 @@ const ConfusionMatrix = ({ cm }) => {
   );
 };
 
-// ─── Página principal ─────────────────────────────────────────────────────────
+// ─── Datos estáticos de las variables de entrenamiento ───────────────────────
+
+const TRAINING_FEATURES = [
+  {
+    feature: 'Age',
+    label: 'Edad',
+    type: 'Numérica',
+    scale: '18 — 60 años',
+    description: 'Edad actual del empleado. Empleados más jóvenes tienden a tener mayor movilidad laboral.',
+    risk: 'Edades entre 25-35 asociadas a mayor rotación.',
+  },
+  {
+    feature: 'MonthlyIncome',
+    label: 'Ingreso Mensual',
+    type: 'Numérica',
+    scale: '$1,009 — $19,999',
+    description: 'Salario mensual en dólares. Es uno de los predictores más fuertes de retención.',
+    risk: 'Ingresos bajos correlacionan fuertemente con fuga.',
+  },
+  {
+    feature: 'YearsAtCompany',
+    label: 'Años en la Empresa',
+    type: 'Numérica',
+    scale: '0 — 40 años',
+    description: 'Tiempo total trabajando en la empresa. Refleja el nivel de arraigo organizacional.',
+    risk: 'Los primeros 2 años son los de mayor riesgo.',
+  },
+  {
+    feature: 'YearsInCurrentRole',
+    label: 'Años en el Cargo Actual',
+    type: 'Numérica',
+    scale: '0 — 18 años',
+    description: 'Tiempo en el puesto actual. Mucho tiempo sin cambio puede indicar estancamiento.',
+    risk: 'Muy poco tiempo en el rol aumenta la probabilidad de salida.',
+  },
+  {
+    feature: 'YearsSinceLastPromotion',
+    label: 'Años sin Ascenso',
+    type: 'Numérica',
+    scale: '0 — 15 años',
+    description: 'Años transcurridos desde la última promoción. Indica percepción de desarrollo profesional.',
+    risk: '≥ 3 años sin ascenso es un factor de alerta.',
+  },
+  {
+    feature: 'JobSatisfaction',
+    label: 'Satisfacción Laboral',
+    type: 'Ordinal',
+    scale: '1 (Baja) — 4 (Muy alta)',
+    description: 'Nivel de satisfacción con las tareas y responsabilidades del puesto.',
+    risk: 'Valores 1-2 son predictores directos de fuga.',
+  },
+  {
+    feature: 'EnvironmentSatisfaction',
+    label: 'Satisfacción con el Ambiente',
+    type: 'Ordinal',
+    scale: '1 (Baja) — 4 (Muy alta)',
+    description: 'Nivel de satisfacción con el entorno físico y social de trabajo.',
+    risk: 'Ambiente negativo incrementa la intención de renuncia.',
+  },
+  {
+    feature: 'WorkLifeBalance',
+    label: 'Balance Vida-Trabajo',
+    type: 'Ordinal',
+    scale: '1 (Malo) — 4 (Muy bueno)',
+    description: 'Percepción del empleado sobre el equilibrio entre vida personal y laboral.',
+    risk: 'Valores 1-2 correlacionan con burnout y fuga.',
+  },
+  {
+    feature: 'NumCompaniesWorked',
+    label: 'Empresas Anteriores',
+    type: 'Numérica',
+    scale: '0 — 9 empresas',
+    description: 'Número de empresas en las que trabajó antes de la actual. Indica perfil de movilidad.',
+    risk: '≥ 4 empresas anteriores sugiere mayor propensión a cambiar.',
+  },
+  {
+    feature: 'OverTime',
+    label: 'Horas Extra',
+    type: 'Binaria',
+    scale: 'Sí / No',
+    description: 'Si el empleado trabaja habitualmente horas extra. Fuerte indicador de desgaste.',
+    risk: 'Horas extra frecuentes aumentan significativamente el riesgo.',
+  },
+  {
+    feature: 'DistanceFromHome',
+    label: 'Distancia al Trabajo',
+    type: 'Numérica',
+    scale: '1 — 29 km',
+    description: 'Distancia entre el hogar y el lugar de trabajo. Impacta calidad de vida y retención.',
+    risk: '≥ 20 km de distancia es un factor de riesgo moderado.',
+  },
+  {
+    feature: 'PerformanceRating',
+    label: 'Calificación de Desempeño',
+    type: 'Ordinal',
+    scale: '1 (Bajo) — 4 (Excelente)',
+    description: 'Evaluación formal del desempeño del empleado en el último período.',
+    risk: 'Desempeño bajo puede anticipar una salida involuntaria o voluntaria.',
+  },
+];
+
+const TYPE_COLORS = {
+  'Numérica': 'bg-blue-100 text-blue-700',
+  'Ordinal':  'bg-purple-100 text-purple-700',
+  'Binaria':  'bg-amber-100 text-amber-700',
+};
+
+
 
 export default function ModelML() {
   const [status, setStatus]   = useState(null);
@@ -297,6 +404,37 @@ export default function ModelML() {
               </p>
             </div>
           )}
+
+          {/* ── Variables de entrenamiento ── */}
+          <div className="mt-6 rounded-xl bg-white p-5 shadow-sm">
+            <h3 className="text-sm font-semibold text-gray-700">Variables Usadas para el Entrenamiento</h3>
+            <p className="mt-0.5 mb-4 text-xs text-gray-400">
+              12 variables del dataset IBM HR Analytics · Random Forest Classifier
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {TRAINING_FEATURES.map((f) => (
+                <div
+                  key={f.feature}
+                  className="rounded-lg border border-gray-100 p-3 hover:border-blue-200 hover:bg-blue-50/30 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-semibold text-gray-800 text-sm">{f.label}</p>
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${TYPE_COLORS[f.type]}`}>
+                      {f.type}
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-xs text-gray-400 font-mono">{f.feature}</p>
+                  <p className="mt-1.5 text-xs text-gray-500 leading-relaxed">{f.description}</p>
+                  <div className="mt-2 flex items-center justify-between">
+                    <span className="text-xs text-gray-400">Escala: <span className="font-medium text-gray-600">{f.scale}</span></span>
+                  </div>
+                  <div className="mt-1.5 rounded bg-red-50 px-2 py-1 text-xs text-red-600">
+                    ⚠ {f.risk}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
 
         </main>
       </div>
