@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
 import Navbar from '../components/layout/Navbar';
 import api from '../services/api';
@@ -33,17 +33,21 @@ const SatisfactionDots = ({ value, max = 4 }) => (
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function Employees() {
-  const navigate = useNavigate();
+  const navigate  = useNavigate();
+  const location  = useLocation();
   const [employees, setEmployees] = useState([]);
   const [meta, setMeta]           = useState({ total: 0, page: 1, total_pages: 1 });
   const [loading, setLoading]     = useState(true);
+
+  // Leer filtros iniciales desde la URL (ej: /employees?risk_level=ALTO)
+  const initialRiskLevel = new URLSearchParams(location.search).get('risk_level') ?? '';
 
   const [filters, setFilters] = useState({
     page:       1,
     page_size:  20,
     search:     '',
     department: '',
-    risk_level: '',
+    risk_level: initialRiskLevel,
     attrition:  '',
   });
 
