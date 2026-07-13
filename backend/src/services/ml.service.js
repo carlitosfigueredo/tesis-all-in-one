@@ -50,6 +50,12 @@ const getDatasetEmployees = (params = {}) => {
 };
 
 /**
+ * Estadísticas globales del dataset (sin paginación).
+ * Usada por el Dashboard para mostrar KPIs reales.
+ */
+const getDatasetStats = () => _fetch('/api/employees/stats');
+
+/**
  * Detalle de un empleado por ID del dataset.
  */
 const getDatasetEmployee = (id) => _fetch(`/api/employees/${id}`);
@@ -61,4 +67,5 @@ module.exports = {
   trainModel,
   getDatasetEmployees,
   getDatasetEmployee,
+  getDatasetStats,
 };

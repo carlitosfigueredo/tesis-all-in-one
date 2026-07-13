@@ -2,6 +2,7 @@ const { Router } = require('express');
 const {
   getAllEmployees,
   getEmployeeById,
+  getEmployeesStats,
   createEmployee,
   updateEmployee,
   deleteEmployee,
@@ -12,6 +13,9 @@ const router = Router();
 
 // Todas las rutas de empleados requieren autenticación
 router.use(protect);
+
+// GET    /api/employees/stats  — debe ir ANTES de /:id
+router.get('/stats', getEmployeesStats);
 
 // GET    /api/employees
 router.get('/', getAllEmployees);

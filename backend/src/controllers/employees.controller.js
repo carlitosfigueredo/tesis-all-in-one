@@ -1,4 +1,4 @@
-const { getDatasetEmployees, getDatasetEmployee } = require('../services/ml.service');
+const { getDatasetEmployees, getDatasetEmployee, getDatasetStats } = require('../services/ml.service');
 
 /**
  * GET /api/employees
@@ -47,9 +47,23 @@ const updateEmployee = (_req, res) =>
 const deleteEmployee = (_req, res) =>
   res.status(501).json({ success: false, message: 'No implementado aún' });
 
+/**
+ * GET /api/employees/stats
+ * Estadísticas globales para el Dashboard (totales reales, sin paginación).
+ */
+const getEmployeesStats = async (req, res, next) => {
+  try {
+    const stats = await getDatasetStats();
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getAllEmployees,
   getEmployeeById,
+  getEmployeesStats,
   createEmployee,
   updateEmployee,
   deleteEmployee,

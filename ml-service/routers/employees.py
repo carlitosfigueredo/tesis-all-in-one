@@ -81,18 +81,10 @@ def _get_risk_level(score: float) -> str:
 
 
 def _calc_flight_risk(row: pd.Series, model) -> tuple[float, bool]:
-    features = {
-        "job_satisfaction":           int(row["JobSatisfaction"]),
-        "environment_satisfaction":   int(row["EnvironmentSatisfaction"]),
-        "work_life_balance":          int(row["WorkLifeBalance"]),
-        "overtime":                   row["OverTime"] == "Yes",
-        "num_companies_worked":       int(row["NumCompaniesWorked"]),
-        "years_at_company":           int(row["YearsAtCompany"]),
-        "years_since_last_promotion": int(row["YearsSinceLastPromotion"]),
-        "distance_from_home":         int(row["DistanceFromHome"]),
-    }
+    """Calcula flight_risk para UNA fila (usado en /employees y /employees/{id})."""
     if model is not None:
-        feat_array = [[
+        # DataFrame con nombres de columna para evitar el UserWarning de sklearn
+        feat_df = pd.DataFrame([[
             int(row["Age"]),
             int(row["MonthlyIncome"]),
             int(row["YearsAtCompany"]),
@@ -105,12 +97,111 @@ def _calc_flight_risk(row: pd.Series, model) -> tuple[float, bool]:
             1 if row["OverTime"] == "Yes" else 0,
             int(row["DistanceFromHome"]),
             int(row["PerformanceRating"]),
-        ]]
-        prob = float(model.predict_proba(feat_array)[0][1])
+        ]], columns=FEATURES)
+        prob = float(model.predict_proba(feat_df)[0][1])
         return round(prob, 4), False
     else:
+        features = {
+            "job_satisfaction":           int(row["JobSatisfaction"]),
+            "environment_satisfaction":   int(row["EnvironmentSatisfaction"]),
+            "work_life_balance":          int(row["WorkLifeBalance"]),
+            "overtime":                   row["OverTime"] == "Yes",
+            "num_companies_worked":       int(row["NumCompaniesWorked"]),
+            "years_at_company":           int(row["YearsAtCompany"]),
+            "years_since_last_promotion": int(row["YearsSinceLastPromotion"]),
+            "distance_from_home":         int(row["DistanceFromHome"]),
+        }
         risk, _ = dummy_predict(features)
         return round(risk, 4), True
+
+
+def _calc_flight_risk_batch(df: pd.DataFrame, model) -> tuple[list[float], bool]:
+    """
+    Calcula flight_risk para todo un DataFrame de una vez (vectorizado).
+    Mucho más rápido que llamar _calc_flight_risk fila a fila.
+    """
+    if model is not None:
+        feat_df = pd.DataFrame({
+            "Age":                      df["Age"].astype(int),
+            "MonthlyIncome":            df["MonthlyIncome"].astype(int),
+            "YearsAtCompany":           df["YearsAtCompany"].astype(int),
+            "YearsInCurrentRole":       df["YearsInCurrentRole"].astype(int),
+            "YearsSinceLastPromotion":  df["YearsSinceLastPromotion"].astype(int),
+            "JobSatisfaction":          df["JobSatisfaction"].astype(int),
+            "EnvironmentSatisfaction":  df["EnvironmentSatisfaction"].astype(int),
+            "WorkLifeBalance":          df["WorkLifeBalance"].astype(int),
+            "NumCompaniesWorked":       df["NumCompaniesWorked"].astype(int),
+            "OverTime":                 (df["OverTime"] == "Yes").astype(int),
+            "DistanceFromHome":         df["DistanceFromHome"].astype(int),
+            "PerformanceRating":        df["PerformanceRating"].astype(int),
+        })
+        probs = model.predict_proba(feat_df)[:, 1]
+        return [round(float(p), 4) for p in probs], False
+    else:
+        # Dummy: calcular fila a fila (solo se usa en desarrollo sin modelo)
+        risks = []
+        for _, row in df.iterrows():
+            features = {
+                "job_satisfaction":           int(row["JobSatisfaction"]),
+                "environment_satisfaction":   int(row["EnvironmentSatisfaction"]),
+                "work_life_balance":          int(row["WorkLifeBalance"]),
+                "overtime":                   row["OverTime"] == "Yes",
+                "num_companies_worked":       int(row["NumCompaniesWorked"]),
+                "years_at_company":           int(row["YearsAtCompany"]),
+                "years_since_last_promotion": int(row["YearsSinceLastPromotion"]),
+                "distance_from_home":         int(row["DistanceFromHome"]),
+            }
+            risk, _ = dummy_predict(features)
+            risks.append(round(risk, 4))
+        return risks, True
+
+
+@router.get("/employees/stats")
+def get_employees_stats():
+    """
+    Devuelve estadísticas globales calculadas sobre TODO el dataset.
+    Usa predicción vectorizada (batch) para ser rápido.
+    """
+    if not os.path.exists(DATASET_PATH):
+        raise HTTPException(status_code=404, detail="Dataset no disponible")
+
+    df = pd.read_csv(DATASET_PATH)
+    model = _load_model()
+
+    total = len(df)
+
+    # Predicción vectorizada: una sola llamada para las 1470 filas
+    risks, is_dummy = _calc_flight_risk_batch(df, model)
+    df["_flight_risk"] = risks
+    df["_risk_level"]  = df["_flight_risk"].apply(_get_risk_level)
+
+    high_risk = int((df["_risk_level"] == "ALTO").sum())
+    med_risk  = int((df["_risk_level"] == "MEDIO").sum())
+    low_risk  = int((df["_risk_level"] == "BAJO").sum())
+
+    # PerformanceRating 1-4 → escala 0-5
+    avg_performance = round(float(df["PerformanceRating"].mean() * (5 / 4)), 2)
+
+    # Riesgo promedio por departamento
+    df["_dept"] = df["Department"].map(DEPT_MAP).fillna(df["Department"])
+    dept_avg_risk = (
+        df.groupby("_dept")["_flight_risk"]
+        .mean()
+        .round(4)
+        .reset_index()
+        .rename(columns={"_dept": "department", "_flight_risk": "avg_risk"})
+        .to_dict(orient="records")
+    )
+
+    return {
+        "total":           total,
+        "high_risk":       high_risk,
+        "med_risk":        med_risk,
+        "low_risk":        low_risk,
+        "avg_performance": avg_performance,
+        "dept_avg_risk":   dept_avg_risk,
+        "is_dummy":        is_dummy,
+    }
 
 
 @router.get("/employees", response_model=EmployeeListResponse)
