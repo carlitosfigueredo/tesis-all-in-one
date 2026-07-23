@@ -6,6 +6,7 @@ const {
   createEmployee,
   updateEmployee,
   deleteEmployee,
+  importEmployees,
 } = require('../controllers/employees.controller');
 const { protect } = require('../middlewares/auth.middleware');
 
@@ -16,6 +17,9 @@ router.use(protect);
 
 // GET    /api/employees/stats  — debe ir ANTES de /:id
 router.get('/stats', getEmployeesStats);
+
+// POST   /api/employees/import — debe ir ANTES de /:id
+router.post('/import', importEmployees);
 
 // GET    /api/employees
 router.get('/', getAllEmployees);

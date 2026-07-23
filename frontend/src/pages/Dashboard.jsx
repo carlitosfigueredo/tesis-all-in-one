@@ -10,6 +10,17 @@ import api from '../services/api';
 
 const RISK_COLORS = ['#22c55e', '#f59e0b', '#ef4444'];
 
+// Tasa de cambio referencial GS/USD — debe coincidir con Employees.jsx
+const USD_TO_GS = 7500;
+
+const formatIncome = (usdValue, inGs) => {
+  if (inGs) {
+    const gs = Math.round(usdValue * USD_TO_GS);
+    return `Gs. ${gs.toLocaleString('es-PY')}`;
+  }
+  return `$${usdValue.toLocaleString('en-US')}`;
+};
+
 const KpiCard = ({ label, value, sub, color = 'blue', onClick }) => {
   const colors = {
     blue:  'bg-blue-50 text-blue-700',
@@ -37,7 +48,8 @@ const KpiCard = ({ label, value, sub, color = 'blue', onClick }) => {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [stats, setStats] = useState(null);
+  const [stats, setStats]       = useState(null);
+  const [currency, setCurrency] = useState('USD'); // 'USD' | 'GS'
 
   useEffect(() => {
     api.get('/employees/stats').then(({ data }) => setStats(data.data));
@@ -50,6 +62,11 @@ export default function Dashboard() {
   const avgScore = stats?.avg_performance != null
     ? stats.avg_performance.toFixed(1)
     : '—';
+
+  // Ingreso promedio mensual (si el endpoint lo provee)
+  const avgIncome = stats?.avg_monthly_income != null
+    ? formatIncome(stats.avg_monthly_income, currency === 'GS')
+    : null;
 
   // Datos para gráficos
   const riskPieData = [
@@ -70,6 +87,25 @@ export default function Dashboard() {
         <Navbar title="Dashboard de Retención de Talento" />
         <main className="flex-1 p-6">
 
+          {/* Toggle de moneda */}
+          <div className="mb-5 flex items-center justify-end gap-2">
+            <span className="text-xs text-gray-400">Ingresos en:</span>
+            <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs font-medium">
+              <button
+                onClick={() => setCurrency('USD')}
+                className={`px-3 py-1.5 transition-colors ${currency === 'USD' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+              >
+                USD
+              </button>
+              <button
+                onClick={() => setCurrency('GS')}
+                className={`px-3 py-1.5 transition-colors ${currency === 'GS' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+              >
+                Guaraníes (Gs.)
+              </button>
+            </div>
+          </div>
+
           {/* KPIs */}
           <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
             <KpiCard label="Total Empleados" value={total} color="blue" />
@@ -87,7 +123,16 @@ export default function Dashboard() {
               color="amber"
               onClick={() => navigate('/employees?risk_level=MEDIO')}
             />
-            <KpiCard label="Perf. Promedio" value={avgScore} sub="Escala 0-5" color="green" />
+            {avgIncome ? (
+              <KpiCard
+                label="Ingreso Promedio Mensual"
+                value={avgIncome}
+                sub={currency === 'GS' ? 'Tipo de cambio: Gs. 7.500/USD' : 'Dólares estadounidenses'}
+                color="green"
+              />
+            ) : (
+              <KpiCard label="Perf. Promedio" value={avgScore} sub="Escala 0-5" color="green" />
+            )}
           </div>
 
           {/* Gráficos */}

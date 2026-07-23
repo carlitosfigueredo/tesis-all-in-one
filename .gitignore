@@ -41,3 +41,6 @@ ml-service/notebooks/data/*.zip
 
 # Modelo entrenado (se genera con el notebook)
 ml-service/model/model.pkl
+
+.kiro/
+.github/copilot*
