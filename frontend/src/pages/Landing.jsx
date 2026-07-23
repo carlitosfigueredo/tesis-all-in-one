@@ -4,61 +4,64 @@ import { Link } from 'react-router-dom';
 
 const PLANS = [
   {
-    id: 'starter',
-    name: 'Starter',
-    price: '$0',
-    period: '/ mes',
-    description: 'Ideal para equipos pequeños que quieren explorar la plataforma.',
+    id: 'basico',
+    name: 'Básico',
+    price: 'Gratuito',
+    period: '',
+    description: 'Acceso esencial para equipos pequeños que desean explorar el sistema.',
     features: [
       'Hasta 50 empleados',
       'Dashboard de retención',
       'Predicción de fuga básica',
       'Exportación CSV',
-      'Soporte por email',
+      'Soporte por correo electrónico',
     ],
-    cta: 'Empezar gratis',
+    cta: 'Comenzar',
     highlight: false,
   },
   {
-    id: 'pro',
-    name: 'Pro',
+    id: 'profesional',
+    name: 'Profesional',
     price: '$49',
     period: '/ mes',
-    description: 'Para empresas en crecimiento que necesitan análisis más profundos.',
+    description: 'Para empresas en crecimiento que requieren análisis más profundos.',
     features: [
       'Hasta 500 empleados',
-      'Todo lo del plan Starter',
+      'Todo lo del plan Básico',
       'Modelo ML personalizable',
       'Reportes avanzados',
       'Importación masiva CSV',
       'Soporte prioritario',
     ],
-    cta: 'Iniciar prueba gratis',
+    cta: 'Iniciar prueba gratuita',
     highlight: true,
   },
   {
-    id: 'enterprise',
-    name: 'Enterprise',
-    price: 'A medida',
+    id: 'empresarial',
+    name: 'Empresarial',
+    price: 'A consultar',
     period: '',
-    description: 'Solución completa para grandes organizaciones con necesidades específicas.',
+    description: 'Solución completa para grandes organizaciones con requerimientos específicos.',
     features: [
       'Empleados ilimitados',
-      'Todo lo del plan Pro',
-      'Integración con HRIS existente',
+      'Todo lo del plan Profesional',
+      'Integración con sistemas HRIS',
       'SSO / Active Directory',
-      'SLA garantizado 99.9%',
-      'Gerente de cuenta dedicado',
+      'SLA garantizado 99,9 %',
+      'Asesor de cuenta dedicado',
     ],
-    cta: 'Contactar ventas',
+    cta: 'Consultar',
     highlight: false,
   },
 ];
 
 // ─── Componentes ──────────────────────────────────────────────────────────────
 
-const CheckIcon = () => (
-  <svg className="h-4 w-4 flex-shrink-0 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
+const CheckIcon = ({ highlight }) => (
+  <svg
+    className={`h-4 w-4 flex-shrink-0 mt-0.5 ${highlight ? 'text-green-300' : 'text-green-500'}`}
+    fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true"
+  >
     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
   </svg>
 );
@@ -98,10 +101,7 @@ const PlanCard = ({ plan }) => (
     <ul className="mt-6 space-y-3 flex-1">
       {plan.features.map((f) => (
         <li key={f} className="flex items-start gap-2 text-sm">
-          {plan.highlight
-            ? <svg className="h-4 w-4 flex-shrink-0 text-green-300 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-            : <CheckIcon />
-          }
+          <CheckIcon highlight={plan.highlight} />
           <span className={plan.highlight ? 'text-blue-50' : 'text-gray-600'}>{f}</span>
         </li>
       ))}
@@ -120,27 +120,34 @@ const PlanCard = ({ plan }) => (
   </article>
 );
 
+// Icono de gráfico de barras simple para el logo/marca del sistema
+const SystemIcon = ({ className = 'h-5 w-5 text-white' }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+  </svg>
+);
+
 const NavBar = () => (
   <header className="sticky top-0 z-50 border-b border-gray-100 bg-white/90 backdrop-blur-sm">
     <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-      {/* Logo */}
+      {/* Identidad del sistema */}
       <Link to="/" className="flex items-center gap-2">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
-          <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
+          <SystemIcon />
         </div>
-        <span className="text-lg font-bold text-gray-900">TalentIQ</span>
+        <span className="text-base font-bold text-gray-900 leading-tight">
+          Sistema BI<span className="hidden sm:inline text-gray-400 font-normal"> · Retención de Talento</span>
+        </span>
       </Link>
 
-      {/* Nav links */}
+      {/* Navegación */}
       <nav className="hidden items-center gap-6 text-sm font-medium text-gray-600 md:flex" aria-label="Navegación principal">
         <a href="#planes" className="hover:text-blue-600 transition-colors">Planes</a>
         <Link to="/terms" className="hover:text-blue-600 transition-colors">Términos</Link>
         <Link to="/legal" className="hover:text-blue-600 transition-colors">Legal</Link>
       </nav>
 
-      {/* CTA */}
+      {/* Botón de acceso */}
       <Link
         to="/login"
         className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
@@ -156,18 +163,17 @@ const Footer = () => (
     <div className="mx-auto max-w-6xl px-6 py-12">
       <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4">
 
-        {/* Marca */}
+        {/* Descripción del sistema */}
         <div className="col-span-1 sm:col-span-2 lg:col-span-1">
           <div className="flex items-center gap-2 mb-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
-              <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
+              <SystemIcon />
             </div>
-            <span className="font-bold text-gray-900">TalentIQ</span>
+            <span className="font-bold text-gray-900 text-sm">Sistema BI</span>
           </div>
           <p className="text-sm text-gray-500 leading-relaxed">
-            Plataforma de retención de talento potenciada por machine learning.
+            Plataforma de inteligencia de negocios para la predicción de fuga de talento,
+            desarrollada como trabajo de tesis — Asunción, 2026.
           </p>
         </div>
 
@@ -175,7 +181,7 @@ const Footer = () => (
         <div>
           <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Producto</h4>
           <ul className="space-y-2 text-sm text-gray-600">
-            <li><a href="#planes" className="hover:text-blue-600 transition-colors">Planes y precios</a></li>
+            <li><a href="#planes" className="hover:text-blue-600 transition-colors">Planes y acceso</a></li>
             <li><Link to="/login" className="hover:text-blue-600 transition-colors">Iniciar sesión</Link></li>
           </ul>
         </div>
@@ -194,8 +200,8 @@ const Footer = () => (
           <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Contacto</h4>
           <ul className="space-y-2 text-sm text-gray-600">
             <li>
-              <a href="mailto:soporte@talentiq.com" className="hover:text-blue-600 transition-colors">
-                soporte@talentiq.com
+              <a href="mailto:soporte@sistemabi.edu.py" className="hover:text-blue-600 transition-colors">
+                soporte@sistemabi.edu.py
               </a>
             </li>
           </ul>
@@ -203,7 +209,7 @@ const Footer = () => (
       </div>
 
       <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-gray-100 pt-6 text-xs text-gray-400 sm:flex-row">
-        <p>© {new Date().getFullYear()} TalentIQ. Todos los derechos reservados.</p>
+        <p>© {new Date().getFullYear()} Sistema BI — Retención de Talento. Trabajo de tesis académica.</p>
         <div className="flex gap-4">
           <Link to="/terms" className="hover:text-gray-600 transition-colors">Términos</Link>
           <Link to="/legal" className="hover:text-gray-600 transition-colors">Legal</Link>
@@ -224,15 +230,16 @@ export default function Landing() {
       <section className="bg-white">
         <div className="mx-auto max-w-6xl px-6 py-24 text-center">
           <span className="mb-4 inline-block rounded-full bg-blue-50 px-4 py-1.5 text-xs font-semibold text-blue-600 uppercase tracking-wider">
-            Plataforma HR · Machine Learning
+            Inteligencia de Negocios · Machine Learning · RR. HH.
           </span>
           <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 sm:text-5xl lg:text-6xl">
-            Retén a tu mejor{' '}
+            Predicción de fuga de{' '}
             <span className="text-blue-600">talento</span>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-gray-500">
-            TalentIQ analiza los datos de tu equipo con inteligencia artificial para predecir y prevenir
-            la rotación antes de que suceda. Decisiones más inteligentes, equipos más estables.
+            Sistema de inteligencia de negocios basado en machine learning para predecir y prevenir
+            la rotación de personal en empresas de desarrollo de software.
+            Decisiones fundamentadas en datos, equipos más estables.
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Link
@@ -251,7 +258,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── Características destacadas ── */}
+      {/* ── Características ── */}
       <section className="bg-gray-50 py-16">
         <div className="mx-auto max-w-6xl px-6">
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-3">
@@ -262,8 +269,8 @@ export default function Landing() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                   </svg>
                 ),
-                title: 'IA predictiva',
-                desc: 'Modelo de machine learning entrenado con el dataset IBM HR Analytics para detectar señales de riesgo de fuga.',
+                title: 'Modelo predictivo ML',
+                desc: 'Algoritmo entrenado con el dataset IBM HR Analytics para detectar señales tempranas de riesgo de fuga de empleados.',
               },
               {
                 icon: (
@@ -271,8 +278,8 @@ export default function Landing() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
                 ),
-                title: 'Dashboard en tiempo real',
-                desc: 'Visualizá KPIs de retención, distribución de riesgo y tendencias de satisfacción en un solo lugar.',
+                title: 'Dashboard analítico',
+                desc: 'Visualización de KPIs de retención, distribución de riesgo y tendencias de satisfacción laboral en tiempo real.',
               },
               {
                 icon: (
@@ -280,8 +287,8 @@ export default function Landing() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
                 ),
-                title: 'Seguro y privado',
-                desc: 'Autenticación JWT, control de acceso por roles y datos alojados en tu propia infraestructura.',
+                title: 'Acceso seguro',
+                desc: 'Autenticación mediante JWT y control de acceso por roles para proteger la información sensible del equipo.',
               },
             ].map((item) => (
               <div key={item.title} className="rounded-2xl bg-white p-7 shadow-sm border border-gray-100">
@@ -301,10 +308,10 @@ export default function Landing() {
         <div className="mx-auto max-w-6xl px-6">
           <div className="mb-12 text-center">
             <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
-              Planes para cada equipo
+              Planes de acceso
             </h2>
             <p className="mt-3 text-gray-500">
-              Sin contratos largos. Cambiá de plan cuando quieras.
+              Escalable según el tamaño de tu organización. Sin contratos de largo plazo.
             </p>
           </div>
 
@@ -315,7 +322,7 @@ export default function Landing() {
           </div>
 
           <p className="mt-8 text-center text-xs text-gray-400">
-            Todos los precios en USD. Al contratar aceptás nuestros{' '}
+            Precios en USD. Al contratar aceptás nuestros{' '}
             <Link to="/terms" className="underline hover:text-gray-600">Términos y condiciones</Link>.
           </p>
         </div>
@@ -325,10 +332,10 @@ export default function Landing() {
       <section className="bg-blue-600 py-16">
         <div className="mx-auto max-w-3xl px-6 text-center">
           <h2 className="text-3xl font-extrabold text-white">
-            ¿Listo para reducir la rotación?
+            ¿Listo para reducir la rotación de tu equipo?
           </h2>
           <p className="mt-4 text-blue-100">
-            Entrá a tu cuenta y empezá a analizar tu equipo hoy mismo.
+            Accedé al sistema y comenzá a analizar los datos de tu organización.
           </p>
           <Link
             to="/login"

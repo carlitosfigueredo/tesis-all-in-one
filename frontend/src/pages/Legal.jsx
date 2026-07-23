@@ -1,5 +1,11 @@
 import { Link } from 'react-router-dom';
 
+const SystemIcon = () => (
+  <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+  </svg>
+);
+
 const Section = ({ title, children }) => (
   <section className="mb-10">
     <h2 className="mb-3 text-xl font-bold text-gray-900">{title}</h2>
@@ -16,11 +22,11 @@ export default function Legal() {
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
           <Link to="/" className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
-              <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
+              <SystemIcon />
             </div>
-            <span className="text-lg font-bold text-gray-900">TalentIQ</span>
+            <span className="text-base font-bold text-gray-900">
+              Sistema BI<span className="hidden sm:inline text-gray-400 font-normal"> · Retención de Talento</span>
+            </span>
           </Link>
           <Link
             to="/login"
@@ -34,116 +40,125 @@ export default function Legal() {
       {/* Contenido */}
       <main className="mx-auto max-w-3xl px-6 py-16">
 
-        {/* Encabezado */}
         <div className="mb-12">
           <h1 className="text-4xl font-extrabold text-gray-900">Aviso legal</h1>
           <p className="mt-3 text-sm text-gray-400">Última actualización: julio de 2026</p>
           <p className="mt-4 text-sm text-gray-600">
-            El presente aviso regula el acceso y uso de la plataforma <strong>TalentIQ</strong>,
-            así como la responsabilidad derivada de la información contenida en ella.
+            El presente aviso regula el acceso y uso del sistema de inteligencia de negocios para
+            la predicción de fuga de talento, así como la responsabilidad derivada de la información
+            contenida en él.
           </p>
         </div>
 
-        <Section title="1. Titular de la plataforma">
+        <Section title="1. Titularidad del sistema">
           <p>
-            La plataforma TalentIQ es desarrollada y operada en el marco de un proyecto de tesis
-            académica en la República del Paraguay. Los derechos de autor y propiedad intelectual
-            corresponden a sus autores, conforme a la legislación paraguaya aplicable.
+            Este sistema fue desarrollado en el marco de la tesis{' '}
+            <em>
+              "Diseño e implementación de un sistema de inteligencia de negocios basado en machine
+              learning para la predicción de la fuga de talento y la optimización de estrategias
+              de retención en empresas de desarrollo de software de Asunción, 2026"
+            </em>.
           </p>
           <p>
-            Para cualquier consulta legal escribí a{' '}
-            <a href="mailto:legal@talentiq.com" className="text-blue-600 underline hover:text-blue-800">
-              legal@talentiq.com
+            Los derechos de autor y propiedad intelectual corresponden a sus autores, conforme
+            a la legislación paraguaya vigente.
+          </p>
+          <p>
+            Consultas legales:{' '}
+            <a href="mailto:soporte@sistemabi.edu.py" className="text-blue-600 underline hover:text-blue-800">
+              soporte@sistemabi.edu.py
             </a>.
           </p>
         </Section>
 
         <Section title="2. Propiedad intelectual">
           <p>
-            Todos los contenidos de la plataforma —incluyendo, sin limitarse a, código fuente,
-            diseño visual, modelos de machine learning, textos, logotipos e iconografía— están
-            protegidos por las leyes de propiedad intelectual vigentes.
+            Todos los contenidos del sistema —incluyendo código fuente, diseño visual, modelos
+            de machine learning, textos e iconografía— están protegidos por las leyes de propiedad
+            intelectual vigentes en la República del Paraguay.
           </p>
           <p>
-            Queda estrictamente prohibida su reproducción total o parcial, distribución, comunicación
-            pública o transformación sin la autorización expresa y por escrito de los titulares.
+            Queda estrictamente prohibida su reproducción total o parcial, distribución,
+            comunicación pública o transformación sin autorización expresa y por escrito
+            de los titulares.
           </p>
         </Section>
 
         <Section title="3. Datos personales y privacidad">
           <p>
-            TalentIQ trata los datos personales de los usuarios y de los empleados cargados en la
-            plataforma conforme a las disposiciones de la{' '}
+            El sistema trata los datos personales de los usuarios y de los empleados cargados
+            conforme a la{' '}
             <strong>Ley N.º 6534/2020 de Protección de Datos Personales</strong> de la República
-            del Paraguay y, en lo que resulte aplicable, al Reglamento General de Protección de
-            Datos (RGPD) de la Unión Europea.
+            del Paraguay y, en lo aplicable, al Reglamento General de Protección de Datos (RGPD).
           </p>
           <p>
-            Los datos son utilizados exclusivamente para la prestación del servicio contratado.
-            No se ceden a terceros salvo obligación legal o instrucción expresa del responsable
-            del tratamiento.
+            Los datos son utilizados exclusivamente para la prestación del servicio. No se ceden
+            a terceros salvo obligación legal o instrucción expresa del responsable del tratamiento.
           </p>
           <p>
             Los titulares de los datos tienen derecho de acceso, rectificación, cancelación y
-            oposición. Para ejercerlos, escribí a{' '}
-            <a href="mailto:privacidad@talentiq.com" className="text-blue-600 underline hover:text-blue-800">
-              privacidad@talentiq.com
+            oposición. Para ejercerlos escribí a{' '}
+            <a href="mailto:soporte@sistemabi.edu.py" className="text-blue-600 underline hover:text-blue-800">
+              soporte@sistemabi.edu.py
             </a>.
           </p>
         </Section>
 
-        <Section title="4. Cookies y tecnologías de rastreo">
+        <Section title="4. Cookies y tecnologías de sesión">
           <p>
-            La plataforma puede utilizar cookies técnicas estrictamente necesarias para el
+            El sistema puede utilizar cookies técnicas estrictamente necesarias para el
             funcionamiento del servicio, como las de sesión y autenticación. No se utilizan
             cookies de publicidad ni de seguimiento de terceros.
           </p>
           <p>
-            Al acceder a la plataforma, aceptás el uso de estas cookies técnicas. Podés
-            configurar tu navegador para rechazarlas, aunque esto puede afectar el
-            funcionamiento de algunas funciones.
+            Al acceder al sistema aceptás el uso de estas cookies técnicas. Podés configurar
+            tu navegador para rechazarlas, aunque esto puede afectar algunas funcionalidades.
           </p>
         </Section>
 
         <Section title="5. Responsabilidad sobre el contenido">
           <p>
-            TalentIQ no se responsabiliza por los datos cargados por los usuarios, ni por las
-            decisiones empresariales que estos tomen basándose en las predicciones del modelo
-            de machine learning.
+            Los responsables del sistema no asumen responsabilidad por los datos cargados por los
+            usuarios, ni por las decisiones organizacionales tomadas a partir de las predicciones
+            del modelo de machine learning.
           </p>
           <p>
-            Los resultados del modelo son orientativos y no constituyen dictámenes legales,
-            laborales ni de ningún otro tipo. El usuario es el único responsable del uso que
-            haga de la información proporcionada.
+            Los resultados del modelo son de carácter orientativo y no constituyen dictámenes
+            legales, laborales ni de ningún otro tipo. El usuario es el único responsable del uso
+            que haga de la información proporcionada por el sistema.
           </p>
         </Section>
 
-        <Section title="6. Menores de edad">
+        <Section title="6. Contexto académico">
           <p>
-            La plataforma está dirigida exclusivamente a profesionales y organizaciones.
-            No está orientada a menores de 18 años. TalentIQ no recaba conscientemente
-            datos de menores de edad.
+            Este sistema fue construido en el contexto de una investigación académica. Los datos
+            de entrenamiento del modelo provienen del dataset público{' '}
+            <strong>IBM HR Analytics Employee Attrition &amp; Performance</strong>, disponible
+            bajo licencia abierta.
+          </p>
+          <p>
+            El sistema no está afiliado, patrocinado ni respaldado por IBM Corporation ni por
+            ninguna otra empresa privada.
           </p>
         </Section>
 
         <Section title="7. Jurisdicción aplicable">
           <p>
-            Este aviso legal se rige por la legislación de la República del Paraguay.
-            Cualquier controversia relacionada con el acceso o uso de la plataforma será
-            sometida a la jurisdicción de los tribunales competentes de la ciudad de Asunción.
+            Este aviso legal se rige por la legislación de la República del Paraguay. Cualquier
+            controversia relacionada con el acceso o uso del sistema será sometida a la
+            jurisdicción de los tribunales competentes de la ciudad de Asunción.
           </p>
         </Section>
 
         <Section title="8. Modificaciones del aviso">
           <p>
-            TalentIQ se reserva el derecho de modificar este aviso legal en cualquier
-            momento. Las modificaciones entrarán en vigencia desde su publicación en la
-            plataforma. El uso continuado del servicio implica la aceptación de las
-            modificaciones realizadas.
+            Este aviso puede modificarse en cualquier momento. Los cambios entrarán en vigencia
+            desde su publicación en el sistema. El uso continuado implica la aceptación de
+            las modificaciones realizadas.
           </p>
         </Section>
 
-        {/* Navegación entre documentos legales */}
+        {/* Navegación entre documentos */}
         <div className="mt-12 rounded-xl border border-gray-100 bg-white p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-gray-500">¿Buscás otro documento?</p>
           <div className="flex gap-4">
@@ -164,9 +179,11 @@ export default function Legal() {
 
       </main>
 
-      {/* Footer mínimo */}
       <footer className="border-t border-gray-100 bg-white py-6 text-center text-xs text-gray-400">
-        <p>© {new Date().getFullYear()} TalentIQ · <Link to="/terms" className="underline hover:text-gray-600">Términos y condiciones</Link></p>
+        <p>
+          © {new Date().getFullYear()} Sistema BI — Retención de Talento. Trabajo de tesis académica.{' '}
+          <Link to="/terms" className="underline hover:text-gray-600">Términos y condiciones</Link>
+        </p>
       </footer>
     </div>
   );
