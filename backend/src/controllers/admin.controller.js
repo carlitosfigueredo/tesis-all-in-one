@@ -199,16 +199,7 @@ const getAdminStats = (_req, res) => {
   });
 };
 
-// ─── Precios ─────────────────────────────
-
-/**
- * GET /api/admin/plans
- */
-const getPlans = (_req, res) => {
-  res.json({ success: true, data: PLAN_PRICES });
-};
-
-const { getAuditLogs }  = require('../services/audit.service');
+const { getAuditLogs } = require('../services/audit.service');
 
 // ─── Audit logs ──────────────────────────
 
