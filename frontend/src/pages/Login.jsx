@@ -96,12 +96,12 @@ export default function Login() {
           </div>
         </form>
 
-        {/* Credenciales de prueba */}
-        <div className="mt-6 rounded-lg bg-gray-50 p-3 text-xs text-gray-500">
-          <p className="font-semibold mb-1">Credenciales de prueba:</p>
-          <p>Admin empresa: admin@empresa.com</p>
-          <p>Analista: analista@empresa.com</p>
-          <p>Contraseña: admin123</p>
+        {/* Link a registro */}
+        <div className="mt-4 text-center text-sm text-gray-500">
+          No tenes cuenta?{' '}
+          <Link to="/register" className="text-primary-600 font-medium hover:underline">
+            Registra tu empresa
+          </Link>
         </div>
       </div>
     </div>

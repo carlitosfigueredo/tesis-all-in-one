@@ -34,3 +34,27 @@
 - `frontend/src/pages/Users.jsx` — Eliminado MOCK_USERS, ahora usa api.get/post/patch reales
 
 **Motivo:** El sistema usaba datos hardcodeados en arrays para desarrollo. Se migro toda la capa de datos a PostgreSQL con Prisma ORM para preparar el sistema para uso real.
+
+### Multi-tenant SaaS — Registro publico y control por estado de empresa
+
+**Archivos nuevos:**
+- `backend/prisma/migrations/20260727223200_add_company_status/` — Migracion: enum CompanyStatus + campo status en companies
+- `backend/src/middlewares/companyStatus.middleware.js` — Middleware que bloquea acceso si empresa esta en PENDING_PAYMENT o SUSPENDED
+- `frontend/src/pages/Register.jsx` — Wizard de 3 pasos para registrar empresa + admin
+- `frontend/src/pages/PendingActivation.jsx` — Pantalla para empresas pendientes de pago
+
+**Archivos modificados:**
+- `backend/prisma/schema.prisma` — Enum CompanyStatus (PENDING_PAYMENT, TRIAL, ACTIVE, SUSPENDED), campo status en Company
+- `backend/prisma/seed.js` — Empresa demo con status ACTIVE
+- `backend/src/controllers/auth.controller.js` — Nuevo endpoint register, login/me devuelven companyStatus
+- `backend/src/routes/auth.routes.js` — Ruta POST /api/auth/register
+- `backend/src/schemas/auth.schema.js` — Schema Zod para validacion de registro
+- `backend/src/routes/employees.routes.js` — Agregado requireActiveCompany
+- `backend/src/routes/users.routes.js` — Agregado requireActiveCompany
+- `backend/src/routes/model.routes.js` — Agregado requireActiveCompany
+- `backend/src/routes/predict.routes.js` — Agregado requireActiveCompany
+- `frontend/src/App.jsx` — Rutas /register y /users agregadas
+- `frontend/src/pages/Login.jsx` — Link a registro, eliminadas credenciales hardcodeadas
+- `frontend/src/routes/PrivateRoute.jsx` — Detecta companyStatus PENDING_PAYMENT y muestra pantalla de activacion
+
+**Motivo:** Implementar flujo SaaS real: empresas se registran desde la landing, quedan en estado pendiente de pago, y solo acceden a los datos cuando se activan. Cada empresa tiene sus propios usuarios y empleados aislados.

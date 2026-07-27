@@ -1,11 +1,12 @@
 const { Router } = require('express');
 const { protect, requireRole } = require('../middlewares/auth.middleware');
+const { requireActiveCompany } = require('../middlewares/companyStatus.middleware');
 const { getUsers, createUser, toggleUserActive, updateUser } = require('../controllers/users.controller');
 
 const router = Router();
 
-// Todas las rutas requieren autenticacion
-router.use(protect);
+// Todas las rutas requieren autenticacion + empresa activa
+router.use(protect, requireActiveCompany);
 
 // GET /api/users — listar usuarios de la empresa (o todos para SUPER_ADMIN)
 router.get('/', getUsers);

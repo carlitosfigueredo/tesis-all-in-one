@@ -9,11 +9,12 @@ const {
   importEmployees,
 } = require('../controllers/employees.controller');
 const { protect } = require('../middlewares/auth.middleware');
+const { requireActiveCompany } = require('../middlewares/companyStatus.middleware');
 
 const router = Router();
 
-// Todas las rutas de empleados requieren autenticación
-router.use(protect);
+// Todas las rutas de empleados requieren autenticacion + empresa activa
+router.use(protect, requireActiveCompany);
 
 // GET    /api/employees/stats  — debe ir ANTES de /:id
 router.get('/stats', getEmployeesStats);

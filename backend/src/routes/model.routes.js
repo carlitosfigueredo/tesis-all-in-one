@@ -1,10 +1,11 @@
 const { Router } = require('express');
 const { protect } = require('../middlewares/auth.middleware');
+const { requireActiveCompany } = require('../middlewares/companyStatus.middleware');
 const { getModelStatus, trainModel } = require('../services/ml.service');
 
 const router = Router();
 
-router.use(protect);
+router.use(protect, requireActiveCompany);
 
 /**
  * GET /api/model/status

@@ -111,6 +111,7 @@ const login = async (req, res, next) => {
     const userData = {
       ...sanitize(user),
       companyName: user.company?.name ?? null,
+      companyStatus: user.company?.status ?? null,
     };
 
     return res.json({ success: true, data: { token, user: userData } });
@@ -177,6 +178,7 @@ const me = async (req, res, next) => {
     const userData = {
       ...sanitize(user),
       companyName: user.company?.name ?? null,
+      companyStatus: user.company?.status ?? null,
     };
 
     res.json({ success: true, data: userData });
@@ -377,4 +379,81 @@ const changePassword = async (req, res, next) => {
   }
 };
 
-module.exports = { login, adminLogin, me, forgotPassword, resetPassword, changePassword };
+/**
+ * POST /api/auth/register
+ * Registro publico: crea empresa (PENDING_PAYMENT) + usuario COMPANY_ADMIN.
+ */
+const register = async (req, res, next) => {
+  const ip = getIp(req);
+  const ua = getUserAgent(req);
+  try {
+    const { companyName, plan, name, email, password } = req.body;
+
+    // Verificar que el email no exista
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      return res.status(409).json({ success: false, message: 'Ya existe una cuenta con ese correo' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    // Crear empresa + admin en una transaccion
+    const result = await prisma.$transaction(async (tx) => {
+      const company = await tx.company.create({
+        data: {
+          name: companyName,
+          plan: plan || 'BASICO',
+          status: 'PENDING_PAYMENT',
+          active: true,
+        },
+      });
+
+      const user = await tx.user.create({
+        data: {
+          name,
+          email,
+          password: hashedPassword,
+          role: 'COMPANY_ADMIN',
+          companyId: company.id,
+        },
+      });
+
+      return { company, user };
+    });
+
+    await logAction({
+      tenantId: result.company.id,
+      userId: result.user.id,
+      action: 'COMPANY_REGISTERED',
+      resource: 'companies',
+      resourceId: result.company.id,
+      ipAddress: ip,
+      userAgent: ua,
+      status: 'SUCCESS',
+      newValue: { companyName: result.company.name, plan: result.company.plan },
+    });
+
+    // Generar token para login automatico
+    const token = generateToken(result.user);
+
+    const userData = {
+      id: result.user.id,
+      name: result.user.name,
+      email: result.user.email,
+      role: result.user.role,
+      companyId: result.company.id,
+      companyName: result.company.name,
+      companyStatus: result.company.status,
+    };
+
+    return res.status(201).json({
+      success: true,
+      message: 'Empresa registrada correctamente. Activa tu plan para acceder a todas las funcionalidades',
+      data: { token, user: userData },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { login, adminLogin, me, forgotPassword, resetPassword, changePassword, register };

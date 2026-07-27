@@ -11,6 +11,7 @@ import AdminRoute   from './routes/AdminRoute';
 // Páginas públicas
 import Landing            from './pages/Landing';
 import Login              from './pages/Login';
+import Register           from './pages/Register';
 import ForgotPassword     from './pages/ForgotPassword';
 import ResetPassword      from './pages/ResetPassword';
 import TermsAndConditions from './pages/TermsAndConditions';
@@ -27,6 +28,7 @@ import AdminAuditLogs  from './pages/admin/AdminAuditLogs';
 import Dashboard     from './pages/Dashboard';
 import Employees     from './pages/Employees';
 import EmployeeDetail from './pages/EmployeeDetail';
+import Users         from './pages/Users';
 import ModelML       from './pages/ModelML';
 
 export default function App() {
@@ -40,6 +42,7 @@ export default function App() {
             {/* ── Rutas públicas ─────────────────────────────────────── */}
             <Route path="/"                 element={<Landing />} />
             <Route path="/login"            element={<Login />} />
+            <Route path="/register"         element={<Register />} />
             <Route path="/forgot-password"  element={<ForgotPassword />} />
             <Route path="/reset-password"   element={<ResetPassword />} />
             <Route path="/terms"            element={<TermsAndConditions />} />
@@ -60,6 +63,7 @@ export default function App() {
               <Route path="/dashboard"      element={<Dashboard />} />
               <Route path="/employees"      element={<Employees />} />
               <Route path="/employees/:id"  element={<EmployeeDetail />} />
+              <Route path="/users"          element={<Users />} />
               <Route path="/model"          element={<ModelML />} />
             </Route>
 

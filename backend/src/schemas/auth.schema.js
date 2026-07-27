@@ -87,4 +87,38 @@ const resetPasswordSchema = z
       })
   : null;
 
-module.exports = { loginSchema, forgotPasswordSchema, resetPasswordSchema, validate };
+const registerSchema = z
+  ? z.object({
+      companyName: z
+        .string({ required_error: 'El nombre de la empresa es obligatorio' })
+        .min(2, 'El nombre debe tener al menos 2 caracteres')
+        .max(200, 'El nombre es demasiado largo')
+        .transform((v) => v.trim()),
+      plan: z
+        .enum(['BASICO', 'PROFESIONAL', 'EMPRESARIAL'], {
+          errorMap: () => ({ message: 'Plan invalido' }),
+        })
+        .default('BASICO'),
+      name: z
+        .string({ required_error: 'Tu nombre es obligatorio' })
+        .min(2, 'El nombre debe tener al menos 2 caracteres')
+        .max(200, 'El nombre es demasiado largo')
+        .transform((v) => v.trim()),
+      email: z
+        .string({ required_error: 'El correo es obligatorio' })
+        .email('Ingresa un correo valido')
+        .max(254, 'El correo es demasiado largo')
+        .transform((v) => v.toLowerCase().trim()),
+      password: z
+        .string({ required_error: 'La contrasena es obligatoria' })
+        .min(8, 'La contrasena debe tener al menos 8 caracteres')
+        .max(128, 'La contrasena es demasiado larga'),
+      confirmPassword: z.string({ required_error: 'Confirma tu contrasena' }),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      message: 'Las contrasenas no coinciden',
+      path: ['confirmPassword'],
+    })
+  : null;
+
+module.exports = { loginSchema, forgotPasswordSchema, resetPasswordSchema, registerSchema, validate };

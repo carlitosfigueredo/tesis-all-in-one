@@ -1,13 +1,17 @@
 const { Router } = require('express');
-const { login, me, forgotPassword, resetPassword, changePassword } = require('../controllers/auth.controller');
+const { login, me, forgotPassword, resetPassword, changePassword, register } = require('../controllers/auth.controller');
 const { protect, requirePortal }                    = require('../middlewares/auth.middleware');
 const { validate, forgotPasswordSchema,
-        resetPasswordSchema, loginSchema }          = require('../schemas/auth.schema');
+        resetPasswordSchema, loginSchema,
+        registerSchema }                            = require('../schemas/auth.schema');
 
 const router = Router();
 
 // POST /api/auth/login
 router.post('/login', validate(loginSchema), login);
+
+// POST /api/auth/register — registro publico de empresa
+router.post('/register', validate(registerSchema), register);
 
 // GET  /api/auth/me
 router.get('/me', protect, requirePortal('company'), me);

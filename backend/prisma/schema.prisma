@@ -13,12 +13,13 @@ datasource db {
 // Empresas cliente (tenants)
 // ─────────────────────────────────────────
 model Company {
-  id        String   @id @default(uuid())
+  id        String        @id @default(uuid())
   name      String
-  plan      Plan     @default(BASICO)
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  plan      Plan          @default(BASICO)
+  status    CompanyStatus @default(PENDING_PAYMENT)
+  active    Boolean       @default(true)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 
   users     User[]
   employees Employee[]
@@ -185,4 +186,11 @@ enum EmployeeStatus {
   ACTIVE
   INACTIVE
   RESIGNED
+}
+
+enum CompanyStatus {
+  PENDING_PAYMENT
+  TRIAL
+  ACTIVE
+  SUSPENDED
 }

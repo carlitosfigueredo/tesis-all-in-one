@@ -1,8 +1,9 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import PendingActivation from '../pages/PendingActivation';
 
 export default function PrivateRoute() {
-  const { isAuthenticated, loading } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
 
   if (loading) {
     return (
@@ -12,5 +13,14 @@ export default function PrivateRoute() {
     );
   }
 
-  return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Si la empresa esta pendiente de pago o suspendida, mostrar pantalla especial
+  if (user?.companyStatus === 'PENDING_PAYMENT' || user?.companyStatus === 'SUSPENDED') {
+    return <PendingActivation />;
+  }
+
+  return <Outlet />;
 }

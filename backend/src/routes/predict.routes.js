@@ -1,11 +1,12 @@
 const { Router } = require('express');
 const { predictFlightRisk, predictBatch } = require('../services/ml.service');
 const { protect } = require('../middlewares/auth.middleware');
+const { requireActiveCompany } = require('../middlewares/companyStatus.middleware');
 
 const router = Router();
 
-// Todas las rutas de predicción requieren autenticación
-router.use(protect);
+// Todas las rutas de prediccion requieren autenticacion + empresa activa
+router.use(protect, requireActiveCompany);
 
 /**
  * POST /api/predict

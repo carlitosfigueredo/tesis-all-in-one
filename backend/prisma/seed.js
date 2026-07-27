@@ -99,6 +99,7 @@ async function main() {
       id: 'comp-demo-1',
       name: 'Devsoft S.A.',
       plan: 'PROFESIONAL',
+      status: 'ACTIVE',
       active: true,
     },
   });
