@@ -39,10 +39,110 @@ const MOCK_COMPANIES = [
   },
 ];
 
-const PLAN_PRICES = {
-  BASICO:       { price: 0,    currency: 'USD', period: 'mes', employeeLimit: 50  },
-  PROFESIONAL:  { price: 49,   currency: 'USD', period: 'mes', employeeLimit: 500 },
-  EMPRESARIAL:  { price: null, currency: 'USD', period: 'mes', employeeLimit: null },
+// ─────────────────────────────────────────
+// Admin Controller — Panel SUPER_ADMIN
+// ─────────────────────────────────────────
+
+// ─── Config de planes (mutable en memoria) ───────────────────────────────────
+// En produccion: persistir en tabla `plan_config` de la BD.
+
+let PLAN_CONFIG = [
+  {
+    id: 'ESTANDAR',
+    name: 'Plan Estándar',
+    priceGs: 999000,
+    highlight: false,
+    employeeLimit: 100,
+    predictionFrequency: 'Mensual',
+    dashboardType: 'Básico',
+    features: [
+      'Hasta 100 colaboradores',
+      'Predicción de fuga mensual',
+      'Dashboard básico de retención',
+      'Exportación CSV',
+      'Soporte por correo',
+    ],
+    cta: 'Contratar',
+  },
+  {
+    id: 'PROFESIONAL',
+    name: 'Plan Profesional',
+    priceGs: 1390000,
+    highlight: true,
+    employeeLimit: 500,
+    predictionFrequency: 'Semanal',
+    dashboardType: 'Avanzado',
+    features: [
+      'Hasta 500 colaboradores',
+      'Todo lo del Plan Estándar',
+      'Predicción de fuga semanal',
+      'Dashboard avanzado con filtros',
+      'Importación masiva CSV',
+      'Soporte prioritario',
+    ],
+    cta: 'Contratar',
+  },
+  {
+    id: 'CORPORATIVO',
+    name: 'Plan Corporativo',
+    priceGs: 2590000,
+    highlight: false,
+    employeeLimit: 1500,
+    predictionFrequency: 'Bajo demanda',
+    dashboardType: 'Avanzado + Personalizado',
+    features: [
+      'Hasta 1.500 colaboradores',
+      'Todo lo del Plan Profesional',
+      'Predicción bajo demanda',
+      'Dashboard personalizado',
+      'Integración con sistemas HRIS',
+      'Gerente de cuenta dedicado',
+    ],
+    cta: 'Consultar',
+  },
+];
+
+const PAY_PER_USE = {
+  priceGs: 200000,
+  collaboratorsBlock: 250,
+  description: 'Gs. 200.000 por cada 250 colaboradores adicionales',
+};
+
+// ─── GET /api/plans (público) ─────────────────────────────────────────────────
+
+const getPublicPlans = (_req, res) => {
+  res.json({ success: true, data: { plans: PLAN_CONFIG, payPerUse: PAY_PER_USE } });
+};
+
+// ─── GET /api/admin/plans ─────────────────────────────────────────────────────
+
+const getPlans = (_req, res) => {
+  res.json({ success: true, data: { plans: PLAN_CONFIG, payPerUse: PAY_PER_USE } });
+};
+
+// ─── PUT /api/admin/plans ─────────────────────────────────────────────────────
+
+const updatePlans = (req, res) => {
+  const { plans, payPerUse: newPayPerUse } = req.body;
+
+  if (!Array.isArray(plans) || plans.length === 0) {
+    return res.status(400).json({ success: false, message: 'Se requiere un array de planes' });
+  }
+
+  // Validar estructura mínima de cada plan
+  for (const p of plans) {
+    if (!p.id || !p.name || p.priceGs === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: `Plan inválido: se requiere id, name y priceGs`,
+      });
+    }
+  }
+
+  PLAN_CONFIG = plans;
+  if (newPayPerUse) Object.assign(PAY_PER_USE, newPayPerUse);
+
+  res.json({ success: true, data: { plans: PLAN_CONFIG, payPerUse: PAY_PER_USE } });
 };
 
 // ─── Empresas ────────────────────────────
@@ -148,4 +248,4 @@ const getAdminAuditLogs = (req, res) => {
   });
 };
 
-module.exports = { getCompanies, getCompany, getAdminStats, getPlans, getAdminAuditLogs };
+module.exports = { getCompanies, getCompany, getAdminStats, getPlans, updatePlans, getPublicPlans, getAdminAuditLogs };

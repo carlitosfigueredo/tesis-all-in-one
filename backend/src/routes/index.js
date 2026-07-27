@@ -1,12 +1,15 @@
 const { Router } = require('express');
-const authRoutes = require('./auth.routes');
-const employeeRoutes = require('./employees.routes');
-const predictRoutes = require('./predict.routes');
-const modelRoutes = require('./model.routes');
+const authRoutes      = require('./auth.routes');
+const adminAuthRoutes = require('./admin.auth.routes');
+const adminRoutes     = require('./admin.routes');
+const employeeRoutes  = require('./employees.routes');
+const predictRoutes   = require('./predict.routes');
+const modelRoutes     = require('./model.routes');
+const { getPublicPlans } = require('../controllers/admin.controller');
 
 const router = Router();
 
-// Health check de la API
+// ── Health check ──────────────────────────────────────────────────────────────
 router.get('/health', (_req, res) => {
   res.json({
     success: true,
@@ -16,10 +19,17 @@ router.get('/health', (_req, res) => {
   });
 });
 
-// Módulos de la aplicación
-router.use('/auth', authRoutes);
+// ── Ruta pública de planes (para la landing) ──────────────────────────────────
+router.get('/plans', getPublicPlans);
+
+// ── Portal de empresas ────────────────────────────────────────────────────────
+router.use('/auth',      authRoutes);
 router.use('/employees', employeeRoutes);
-router.use('/predict', predictRoutes);
-router.use('/model', modelRoutes);
+router.use('/predict',   predictRoutes);
+router.use('/model',     modelRoutes);
+
+// ── Portal super admin ────────────────────────────────────────────────────────
+router.use('/admin/auth', adminAuthRoutes);
+router.use('/admin',      adminRoutes);
 
 module.exports = router;

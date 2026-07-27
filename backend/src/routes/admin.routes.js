@@ -2,26 +2,21 @@ const { Router } = require('express');
 const { protect, requireRole, requirePortal } = require('../middlewares/auth.middleware');
 const {
   getCompanies, getCompany, getAdminStats,
-  getPlans, getAdminAuditLogs,
+  getPlans, updatePlans, getAdminAuditLogs,
 } = require('../controllers/admin.controller');
 
 const router = Router();
 
-// Todas las rutas requieren: JWT válido + portal admin + rol SUPER_ADMIN
 router.use(protect, requirePortal('admin'), requireRole('SUPER_ADMIN'));
 
-// GET /api/admin/stats
-router.get('/stats', getAdminStats);
-
-// GET /api/admin/companies
-// GET /api/admin/companies/:id
-router.get('/companies',     getCompanies);
+router.get('/stats',       getAdminStats);
+router.get('/companies',   getCompanies);
 router.get('/companies/:id', getCompany);
 
-// GET /api/admin/plans
-router.get('/plans', getPlans);
+// Planes — GET y PUT
+router.get('/plans',  getPlans);
+router.put('/plans',  updatePlans);
 
-// GET /api/admin/audit-logs
 router.get('/audit-logs', getAdminAuditLogs);
 
 module.exports = router;
