@@ -148,46 +148,6 @@ const Footer = () => (
   </footer>
 );
 
-// ─── Tabla comparativa ────────────────────────────────────────────────────────
-
-const ComparisonTable = ({ plans }) => {
-  const ROWS = [
-    { label: 'Precio Mensual',       key: (p) => <span className="font-bold text-blue-600">{formatGs(p.priceGs)}</span> },
-    { label: 'Colaboradores',        key: (p) => `Hasta ${p.employeeLimit?.toLocaleString('es-PY') ?? '—'}` },
-    { label: 'Frecuencia Predictiva',key: (p) => p.predictionFrequency ?? '—' },
-    { label: 'Tipos de Dashboards',  key: (p) => p.dashboardType ?? '—' },
-  ];
-
-  return (
-    <div className="overflow-x-auto rounded-xl border border-gray-100 shadow-sm">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="bg-gray-900 text-white">
-            <th className="px-5 py-4 text-left font-semibold w-48">Característica</th>
-            {plans.map((p) => (
-              <th key={p.id} className={`px-5 py-4 text-left font-semibold ${p.highlight ? 'text-blue-300' : ''}`}>
-                {p.name}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {ROWS.map((row, i) => (
-            <tr key={row.label} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-              <td className="px-5 py-3.5 font-medium text-gray-700">{row.label}</td>
-              {plans.map((p) => (
-                <td key={p.id} className="px-5 py-3.5 text-gray-600">
-                  {row.key(p)}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-};
-
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export default function Landing() {
@@ -277,16 +237,13 @@ export default function Landing() {
           ) : (
             <>
               {/* Cards */}
-              <div className="grid grid-cols-1 gap-8 md:grid-cols-3 mb-12">
+              <div className="grid grid-cols-1 gap-8 md:grid-cols-3 mb-8">
                 {plans.map((plan) => <PlanCard key={plan.id} plan={plan} />)}
               </div>
 
-              {/* Tabla comparativa estilo tesis */}
-              <ComparisonTable plans={plans} />
-
               {/* Pay per use */}
               {payPerUse && (
-                <p className="mt-6 text-center text-sm italic text-gray-500 font-medium">
+                <p className="mt-2 text-center text-sm italic text-gray-500 font-medium">
                   Modelo Pay-per-use: {payPerUse.description}
                 </p>
               )}
