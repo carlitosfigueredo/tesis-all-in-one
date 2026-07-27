@@ -69,6 +69,20 @@ services:
       - tesis_network
 
   # ─────────────────────────────────────────
+  # Mailhog — SMTP local para desarrollo
+  # UI en http://localhost:8025
+  # ─────────────────────────────────────────
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: tesis_mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
+    networks:
+      - tesis_network
+
+  # ─────────────────────────────────────────
   # Frontend React + Vite
   # ─────────────────────────────────────────
   frontend:

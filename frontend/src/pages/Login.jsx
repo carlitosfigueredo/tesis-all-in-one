@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
@@ -85,6 +85,15 @@ export default function Login() {
           >
             {loading ? 'Ingresando...' : 'Iniciar sesión'}
           </button>
+
+          <div className="text-center">
+            <Link
+              to="/forgot-password"
+              className="text-sm text-primary-600 hover:underline"
+            >
+              ¿Olvidaste tu contraseña?
+            </Link>
+          </div>
         </form>
 
         {/* Credenciales de prueba */}
