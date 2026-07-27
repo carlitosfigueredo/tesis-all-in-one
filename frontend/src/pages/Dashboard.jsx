@@ -7,6 +7,7 @@ import {
 import Sidebar from '../components/layout/Sidebar';
 import Navbar from '../components/layout/Navbar';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const RISK_COLORS = ['#22c55e', '#f59e0b', '#ef4444'];
 
@@ -48,8 +49,9 @@ const KpiCard = ({ label, value, sub, color = 'blue', onClick }) => {
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [stats, setStats]       = useState(null);
-  const [currency, setCurrency] = useState('USD'); // 'USD' | 'GS'
+  const [currency, setCurrency] = useState('USD');
 
   useEffect(() => {
     api.get('/employees/stats').then(({ data }) => setStats(data.data));
@@ -86,6 +88,16 @@ export default function Dashboard() {
       <div className="flex flex-1 flex-col overflow-auto">
         <Navbar title="Dashboard de Retención de Talento" />
         <main className="flex-1 p-6">
+
+          {/* Encabezado con nombre de empresa */}
+          {user?.companyName && (
+            <div className="mb-5 flex items-center gap-2">
+              <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                {user.companyName}
+              </span>
+              <span className="text-xs text-gray-400">— datos de tu organización</span>
+            </div>
+          )}
 
           {/* Toggle de moneda */}
           <div className="mb-5 flex items-center justify-end gap-2">

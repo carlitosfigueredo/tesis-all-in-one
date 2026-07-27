@@ -4,6 +4,16 @@ import Sidebar from '../components/layout/Sidebar';
 import Navbar from '../components/layout/Navbar';
 import api from '../services/api';
 
+// ─── Constantes ────────────────────────────────────────────────────────────────
+const USD_TO_GS = 7500;
+
+const SATISFACTION_LABELS = {
+  1: { text: 'Muy insatisfecho', color: 'text-red-700',   bg: 'bg-red-50',    bar: 'bg-red-500'    },
+  2: { text: 'Insatisfecho',     color: 'text-orange-700', bg: 'bg-orange-50', bar: 'bg-orange-400' },
+  3: { text: 'Satisfecho',       color: 'text-blue-700',   bg: 'bg-blue-50',   bar: 'bg-blue-500'   },
+  4: { text: 'Muy satisfecho',   color: 'text-green-700',  bg: 'bg-green-50',  bar: 'bg-green-500'  },
+};
+
 const RiskGauge = ({ score }) => {
   const pct = Math.round(score * 100);
   const color =
@@ -44,17 +54,27 @@ const Field = ({ label, value, highlight }) => (
   </div>
 );
 
-const SatisfactionBar = ({ label, value, max = 4 }) => {
-  const pct = (value / max) * 100;
-  const color = pct >= 75 ? 'bg-green-500' : pct >= 50 ? 'bg-amber-400' : 'bg-red-400';
+const SatisfactionBar = ({ label, value, max = 4, hint }) => {
+  const meta  = SATISFACTION_LABELS[value] ?? SATISFACTION_LABELS[1];
+  const pct   = (value / max) * 100;
   return (
     <div>
-      <div className="mb-1 flex justify-between text-xs text-gray-500">
-        <span>{label}</span>
-        <span>{value}/{max}</span>
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <span className="text-xs text-gray-600 font-medium">{label}</span>
+          {hint && <span className="ml-1 text-xs text-gray-400">({hint})</span>}
+        </div>
+        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${meta.bg} ${meta.color}`}>
+          {meta.text}
+        </span>
       </div>
       <div className="h-2 rounded-full bg-gray-100">
-        <div className={`h-2 rounded-full ${color}`} style={{ width: `${pct}%` }} />
+        <div className={`h-2 rounded-full transition-all ${meta.bar}`} style={{ width: `${pct}%` }} />
+      </div>
+      <div className="mt-0.5 flex justify-between text-xs text-gray-300">
+        <span>Muy insatisfecho</span>
+        <span>{value}/{max}</span>
+        <span>Muy satisfecho</span>
       </div>
     </div>
   );
@@ -63,9 +83,15 @@ const SatisfactionBar = ({ label, value, max = 4 }) => {
 export default function EmployeeDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [emp, setEmp] = useState(null);
+  const [emp, setEmp]         = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError]     = useState('');
+  const [currency, setCurrency] = useState('USD');
+
+  const formatIncome = (val) => {
+    if (currency === 'GS') return `Gs. ${Math.round(val * USD_TO_GS).toLocaleString('es-PY')}`;
+    return `$${val.toLocaleString('en-US')}`;
+  };
 
   useEffect(() => {
     api.get(`/employees/${id}`)
@@ -102,13 +128,32 @@ export default function EmployeeDetail() {
 
           {emp && !loading && (
             <>
-              {/* Breadcrumb */}
-              <button
-                onClick={() => navigate('/employees')}
-                className="mb-4 text-sm text-blue-600 hover:underline"
-              >
-                ← Volver a empleados
-              </button>
+              {/* Breadcrumb + toggle moneda */}
+              <div className="mb-4 flex items-center justify-between flex-wrap gap-2">
+                <button
+                  onClick={() => navigate('/employees')}
+                  className="text-sm text-blue-600 hover:underline"
+                >
+                  ← Volver a empleados
+                </button>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400">Ingreso en:</span>
+                  <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs font-medium">
+                    <button
+                      onClick={() => setCurrency('USD')}
+                      className={`px-3 py-1.5 transition-colors ${currency === 'USD' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+                    >
+                      USD
+                    </button>
+                    <button
+                      onClick={() => setCurrency('GS')}
+                      className={`px-3 py-1.5 transition-colors ${currency === 'GS' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+                    >
+                      Gs.
+                    </button>
+                  </div>
+                </div>
+              </div>
 
               <div className="grid gap-6 lg:grid-cols-3">
 
@@ -170,7 +215,7 @@ export default function EmployeeDetail() {
                     <p className="mb-3 text-sm font-semibold text-gray-700">Datos Laborales</p>
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                       <Field label="Edad" value={`${emp.age} años`} />
-                      <Field label="Ingreso Mensual" value={`$${emp.monthly_income.toLocaleString()}`} />
+                      <Field label="Ingreso Mensual" value={formatIncome(emp.monthly_income)} />
                       <Field label="Años en la empresa" value={`${emp.years_at_company} años`} />
                       <Field label="Años en el cargo" value={`${emp.years_in_current_role} años`} />
                       <Field label="Años sin ascenso" value={`${emp.years_since_last_promotion} años`} highlight={emp.years_since_last_promotion >= 3} />
@@ -181,14 +226,35 @@ export default function EmployeeDetail() {
                     </div>
                   </div>
 
-                  {/* Satisfacción */}
+                  {/* Satisfacción — escala 1-4, con descripción verbal y extremos */}
                   <div className="rounded-xl bg-white p-5 shadow-sm">
-                    <p className="mb-4 text-sm font-semibold text-gray-700">Indicadores de Satisfacción</p>
-                    <div className="space-y-3">
-                      <SatisfactionBar label="Satisfacción Laboral"          value={emp.job_satisfaction} />
-                      <SatisfactionBar label="Satisfacción con el Ambiente"  value={emp.environment_satisfaction} />
-                      <SatisfactionBar label="Balance Vida-Trabajo"          value={emp.work_life_balance} />
-                      <SatisfactionBar label="Calificación de Desempeño"     value={emp.performance_rating} />
+                    <div className="mb-4 flex items-start justify-between gap-2">
+                      <p className="text-sm font-semibold text-gray-700">Indicadores de Satisfacción</p>
+                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500 flex-shrink-0">
+                        Escala 1–4
+                      </span>
+                    </div>
+                    <div className="space-y-5">
+                      <SatisfactionBar
+                        label="Satisfacción Laboral"
+                        value={emp.job_satisfaction}
+                        hint="¿Qué tan satisfecho está con su trabajo?"
+                      />
+                      <SatisfactionBar
+                        label="Satisfacción con el Ambiente"
+                        value={emp.environment_satisfaction}
+                        hint="¿Cómo percibe el entorno físico y social?"
+                      />
+                      <SatisfactionBar
+                        label="Balance Vida-Trabajo"
+                        value={emp.work_life_balance}
+                        hint="¿Puede equilibrar vida personal y laboral?"
+                      />
+                      <SatisfactionBar
+                        label="Calificación de Desempeño"
+                        value={emp.performance_rating}
+                        hint="Evaluación de desempeño del período"
+                      />
                     </div>
                   </div>
 

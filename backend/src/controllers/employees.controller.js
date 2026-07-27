@@ -77,12 +77,15 @@ const importEmployees = (req, res, next) => {
       'overtime', 'attrition',
     ];
 
-    const VALID_DEPTS = ['Sales', 'Research & Development', 'Human Resources'];
+    const VALID_DEPTS    = ['Sales', 'Research & Development', 'Human Resources'];
+    const VALID_TRAVEL   = ['Non-Travel', 'Travel_Rarely', 'Travel_Frequently'];
+    const VALID_OVERTIME = ['yes', 'no'];
+    const VALID_ATTRITION = ['yes', 'no'];
 
     const validationErrors = [];
 
     rows.forEach((row, idx) => {
-      const line = idx + 2; // fila 1 = headers
+      const line = idx + 2;
 
       // Campos requeridos
       for (const field of REQUIRED) {
@@ -91,27 +94,80 @@ const importEmployees = (req, res, next) => {
         }
       }
 
-      // Rango de edad
+      // Edad 18-70
       const age = Number(row.age);
-      if (!isNaN(age) && (age < 18 || age > 70)) {
-        validationErrors.push(`Línea ${line}: edad fuera de rango (18-70), recibido: ${row.age}`);
+      if (row.age !== '' && (isNaN(age) || age < 18 || age > 70)) {
+        validationErrors.push(`Línea ${line}: edad fuera de rango (18-70), recibido: "${row.age}"`);
       }
 
       // Ingreso no negativo
       const income = Number(row.monthly_income);
-      if (!isNaN(income) && income < 0) {
-        validationErrors.push(`Línea ${line}: el ingreso mensual no puede ser negativo`);
+      if (row.monthly_income !== '' && (isNaN(income) || income < 0)) {
+        validationErrors.push(`Línea ${line}: el ingreso mensual debe ser un número positivo`);
       }
 
-      // Satisfacción 1-4
+      // Satisfacción laboral 1-4
       const sat = Number(row.job_satisfaction);
       if (row.job_satisfaction !== '' && (isNaN(sat) || sat < 1 || sat > 4)) {
         validationErrors.push(`Línea ${line}: job_satisfaction debe ser 1, 2, 3 o 4`);
       }
 
+      // Satisfacción ambiente 1-4
+      if (row.environment_satisfaction !== undefined && row.environment_satisfaction !== '') {
+        const envSat = Number(row.environment_satisfaction);
+        if (isNaN(envSat) || envSat < 1 || envSat > 4) {
+          validationErrors.push(`Línea ${line}: environment_satisfaction debe ser 1, 2, 3 o 4`);
+        }
+      }
+
+      // Balance vida-trabajo 1-4
+      if (row.work_life_balance !== undefined && row.work_life_balance !== '') {
+        const wlb = Number(row.work_life_balance);
+        if (isNaN(wlb) || wlb < 1 || wlb > 4) {
+          validationErrors.push(`Línea ${line}: work_life_balance debe ser 1, 2, 3 o 4`);
+        }
+      }
+
+      // Performance rating 1-4
+      if (row.performance_rating !== undefined && row.performance_rating !== '') {
+        const perf = Number(row.performance_rating);
+        if (isNaN(perf) || perf < 1 || perf > 4) {
+          validationErrors.push(`Línea ${line}: performance_rating debe ser 1, 2, 3 o 4`);
+        }
+      }
+
+      // Educación 1-5
+      if (row.education !== undefined && row.education !== '') {
+        const edu = Number(row.education);
+        if (isNaN(edu) || edu < 1 || edu > 5) {
+          validationErrors.push(`Línea ${line}: education debe ser un número entre 1 y 5`);
+        }
+      }
+
+      // Overtime: Yes / No (case-insensitive)
+      if (row.overtime !== undefined && row.overtime !== '') {
+        if (!VALID_OVERTIME.includes(row.overtime.toLowerCase())) {
+          validationErrors.push(`Línea ${line}: overtime debe ser "Yes" o "No", recibido: "${row.overtime}"`);
+        }
+      }
+
+      // Attrition: Yes / No (case-insensitive)
+      if (row.attrition !== undefined && row.attrition !== '') {
+        if (!VALID_ATTRITION.includes(row.attrition.toLowerCase())) {
+          validationErrors.push(`Línea ${line}: attrition debe ser "Yes" o "No", recibido: "${row.attrition}"`);
+        }
+      }
+
+      // Business travel
+      if (row.business_travel !== undefined && row.business_travel !== '') {
+        if (!VALID_TRAVEL.includes(row.business_travel)) {
+          validationErrors.push(`Línea ${line}: business_travel debe ser "Non-Travel", "Travel_Rarely" o "Travel_Frequently"`);
+        }
+      }
+
       // Departamento válido
       if (row.department && !VALID_DEPTS.includes(row.department)) {
-        validationErrors.push(`Línea ${line}: departamento inválido "${row.department}"`);
+        validationErrors.push(`Línea ${line}: department inválido "${row.department}" (válidos: Sales, Research & Development, Human Resources)`);
       }
     });
 

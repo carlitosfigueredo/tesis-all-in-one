@@ -7,22 +7,35 @@ const navItems = [
   { to: '/model',     icon: '🤖', label: 'Modelo ML' },
 ];
 
+const ROLE_LABELS = {
+  COMPANY_ADMIN: 'Administrador',
+  ANALYST:       'Analista',
+  VIEWER:        'Solo lectura',
+};
+
 export default function Sidebar() {
   const { user, logout } = useAuth();
 
   return (
-    <aside className="flex h-screen w-64 flex-col bg-primary-900 text-white">
-      {/* Logo */}
+    <aside className="flex h-screen w-64 flex-col bg-primary-900 text-white flex-shrink-0">
+      {/* Logo + nombre de empresa */}
       <div className="flex items-center gap-3 border-b border-primary-700 px-6 py-5">
-        <span className="text-2xl">📈</span>
-        <div>
+        <span className="text-2xl" aria-hidden="true">📈</span>
+        <div className="min-w-0">
           <p className="text-sm font-bold leading-tight">Sistema BI</p>
-          <p className="text-xs text-primary-300">Retención de Talento</p>
+          {/* Nombre de empresa del token — tenant-aware */}
+          {user?.companyName ? (
+            <p className="text-xs text-primary-300 truncate" title={user.companyName}>
+              {user.companyName}
+            </p>
+          ) : (
+            <p className="text-xs text-primary-300">Retención de Talento</p>
+          )}
         </div>
       </div>
 
       {/* Navegación */}
-      <nav className="flex-1 px-4 py-6">
+      <nav className="flex-1 px-4 py-6" aria-label="Navegación principal">
         <ul className="space-y-1">
           {navItems.map((item) => (
             <li key={item.to}>
@@ -36,7 +49,7 @@ export default function Sidebar() {
                   }`
                 }
               >
-                <span>{item.icon}</span>
+                <span aria-hidden="true">{item.icon}</span>
                 {item.label}
               </NavLink>
             </li>
@@ -44,11 +57,16 @@ export default function Sidebar() {
         </ul>
       </nav>
 
-      {/* Usuario y logout */}
+      {/* Usuario + empresa + logout */}
       <div className="border-t border-primary-700 px-4 py-4">
         <div className="mb-3 px-2">
-          <p className="text-sm font-medium">{user?.name}</p>
-          <p className="text-xs text-primary-300">{user?.role}</p>
+          <p className="text-sm font-medium truncate">{user?.name}</p>
+          <p className="text-xs text-primary-300">{ROLE_LABELS[user?.role] ?? user?.role}</p>
+          {user?.companyName && (
+            <p className="text-xs text-primary-400 truncate mt-0.5" title={user.companyName}>
+              {user.companyName}
+            </p>
+          )}
         </div>
         <button
           onClick={logout}
