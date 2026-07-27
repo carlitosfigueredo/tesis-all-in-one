@@ -83,7 +83,7 @@ const deleteEmployee = (_req, res) =>
  * Importación masiva de empleados desde CSV (ya parseado por el frontend).
  * Valida cada fila y rechaza el lote completo si hay errores críticos.
  */
-const importEmployees = (req, res, next) => {
+const importEmployees = async (req, res, next) => {
   try {
     const { rows } = req.body;
 
