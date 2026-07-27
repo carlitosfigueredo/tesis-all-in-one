@@ -88,8 +88,8 @@ export default function Legal() {
           <p>
             El sistema trata los datos personales de los usuarios y de los empleados cargados
             conforme a la{' '}
-            <strong>Ley N.º 6534/2020 de Protección de Datos Personales</strong> de la República
-            del Paraguay y, en lo aplicable, al Reglamento General de Protección de Datos (RGPD).
+            <strong>Ley N.° 7593/2025 de Proteccion de Datos Personales</strong> de la Republica
+            del Paraguay y, en lo aplicable, al Reglamento General de Proteccion de Datos (RGPD).
           </p>
           <p>
             Los datos son utilizados exclusivamente para la prestación del servicio. No se ceden

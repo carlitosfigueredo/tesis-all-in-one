@@ -155,14 +155,46 @@ export default function TermsAndConditions() {
           </p>
         </Section>
 
-        <Section title="10. Ley aplicable y jurisdicción">
+        <Section title="10. Marco normativo">
           <p>
-            Estos términos se rigen por las leyes de la República del Paraguay. Cualquier disputa
-            será sometida a la jurisdicción de los tribunales competentes de Asunción, Paraguay.
+            El presente sistema opera en estricto cumplimiento del marco juridico vigente en la
+            Republica del Paraguay. Las siguientes normativas rigen el tratamiento de datos,
+            la seguridad informatica y la propiedad intelectual del software:
+          </p>
+          <ul className="list-disc pl-6 space-y-2">
+            <li>
+              <strong>Constitucion Nacional del Paraguay (1992)</strong> — Articulos 33 y 36,
+              que garantizan el derecho a la intimidad y la inviolabilidad de los patrimonios
+              documentales almacenados en medios tecnologicos.
+            </li>
+            <li>
+              <strong>Ley N.° 7593/2025 de Proteccion de Datos Personales</strong> — Regula el
+              tratamiento automatizado de datos de personas fisicas, exigiendo licitud en el
+              procesamiento (Art. 5), medidas tecnicas de seguridad (Art. 12) y el ejercicio
+              de los derechos ARCO por parte de los titulares (Art. 15).
+            </li>
+            <li>
+              <strong>Ley N.° 4439/2011 de Delitos Informaticos</strong> — Tipifica las
+              conductas de acceso indebido a datos (Art. 174 bis), intercepcion de datos
+              (Art. 174 ter) y alteracion de datos (Art. 175), frente a las cuales el sistema
+              implementa mecanismos de autenticacion y proteccion.
+            </li>
+            <li>
+              <strong>Ley N.° 1328/1998 de Derechos de Autor y Derechos Conexos</strong> —
+              Protege el codigo fuente del sistema como obra literaria (Arts. 2 y 7) y establece
+              los derechos morales y patrimoniales del autor sobre el software (Art. 67).
+            </li>
+          </ul>
+        </Section>
+
+        <Section title="11. Ley aplicable y jurisdiccion">
+          <p>
+            Estos terminos se rigen por las leyes de la Republica del Paraguay. Cualquier disputa
+            sera sometida a la jurisdiccion de los tribunales competentes de Asuncion, Paraguay.
           </p>
         </Section>
 
-        <Section title="11. Contacto">
+        <Section title="12. Contacto">
           <p>
             Para consultas sobre estos términos escribí a{' '}
             <a href="mailto:soporte@sistemabi.edu.py" className="text-blue-600 underline hover:text-blue-800">
