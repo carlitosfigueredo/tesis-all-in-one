@@ -1,106 +1,13 @@
 // ─────────────────────────────────────────
 // Admin Controller — Panel SUPER_ADMIN
-// Datos mock para desarrollo. En producción
-// usar Prisma con los modelos Company/User.
+// Todas las queries van contra PostgreSQL via Prisma
 // ─────────────────────────────────────────
 
-const MOCK_COMPANIES = [
-  {
-    id: 'comp-1',
-    name: 'Devsoft S.A.',
-    plan: 'PROFESIONAL',
-    active: true,
-    employeeCount: 120,
-    createdAt: '2025-01-15T00:00:00.000Z',
-  },
-  {
-    id: 'comp-2',
-    name: 'TechPy Solutions',
-    plan: 'BASICO',
-    active: true,
-    employeeCount: 35,
-    createdAt: '2025-03-20T00:00:00.000Z',
-  },
-  {
-    id: 'comp-3',
-    name: 'DataCore S.R.L.',
-    plan: 'EMPRESARIAL',
-    active: true,
-    employeeCount: 480,
-    createdAt: '2024-11-01T00:00:00.000Z',
-  },
-  {
-    id: 'comp-4',
-    name: 'Nexo Digital',
-    plan: 'BASICO',
-    active: false,
-    employeeCount: 18,
-    createdAt: '2025-05-10T00:00:00.000Z',
-  },
-];
+const prisma = require('../lib/prisma');
+const { logAction } = require('../services/audit.service');
+const { getIp, getUserAgent } = require('../utils/request.utils');
 
-// ─────────────────────────────────────────
-// Admin Controller — Panel SUPER_ADMIN
-// ─────────────────────────────────────────
-
-// ─── Config de planes (mutable en memoria) ───────────────────────────────────
-// En produccion: persistir en tabla `plan_config` de la BD.
-
-let PLAN_CONFIG = [
-  {
-    id: 'ESTANDAR',
-    name: 'Plan Estándar',
-    priceGs: 999000,
-    highlight: false,
-    employeeLimit: 100,
-    predictionFrequency: 'Mensual',
-    dashboardType: 'Básico',
-    features: [
-      'Hasta 100 colaboradores',
-      'Predicción de fuga mensual',
-      'Dashboard básico de retención',
-      'Exportación CSV',
-      'Soporte por correo',
-    ],
-    cta: 'Contratar',
-  },
-  {
-    id: 'PROFESIONAL',
-    name: 'Plan Profesional',
-    priceGs: 1390000,
-    highlight: true,
-    employeeLimit: 500,
-    predictionFrequency: 'Semanal',
-    dashboardType: 'Avanzado',
-    features: [
-      'Hasta 500 colaboradores',
-      'Todo lo del Plan Estándar',
-      'Predicción de fuga semanal',
-      'Dashboard avanzado con filtros',
-      'Importación masiva CSV',
-      'Soporte prioritario',
-    ],
-    cta: 'Contratar',
-  },
-  {
-    id: 'CORPORATIVO',
-    name: 'Plan Corporativo',
-    priceGs: 2590000,
-    highlight: false,
-    employeeLimit: 1500,
-    predictionFrequency: 'Bajo demanda',
-    dashboardType: 'Avanzado + Personalizado',
-    features: [
-      'Hasta 1.500 colaboradores',
-      'Todo lo del Plan Profesional',
-      'Predicción bajo demanda',
-      'Dashboard personalizado',
-      'Integración con sistemas HRIS',
-      'Gerente de cuenta dedicado',
-    ],
-    cta: 'Consultar',
-  },
-];
+// ─── Configuracion pay-per-use (estatica por ahora) ──────────────────────────
 
 const PAY_PER_USE = {
   priceGs: 200000,
@@ -108,135 +15,266 @@ const PAY_PER_USE = {
   description: 'Gs. 200.000 por cada 250 colaboradores adicionales',
 };
 
-// ─── GET /api/plans (público) ─────────────────────────────────────────────────
+// ─── GET /api/plans (publico - landing page) ─────────────────────────────────
 
-const getPublicPlans = (_req, res) => {
-  res.json({ success: true, data: { plans: PLAN_CONFIG, payPerUse: PAY_PER_USE } });
+const getPublicPlans = async (_req, res, next) => {
+  try {
+    const plans = await prisma.planConfig.findMany({
+      where: { active: true },
+      orderBy: { priceGs: 'asc' },
+    });
+    res.json({ success: true, data: { plans, payPerUse: PAY_PER_USE } });
+  } catch (error) {
+    next(error);
+  }
 };
 
 // ─── GET /api/admin/plans ─────────────────────────────────────────────────────
 
-const getPlans = (_req, res) => {
-  res.json({ success: true, data: { plans: PLAN_CONFIG, payPerUse: PAY_PER_USE } });
+const getPlans = async (_req, res, next) => {
+  try {
+    const plans = await prisma.planConfig.findMany({
+      orderBy: { priceGs: 'asc' },
+    });
+    res.json({ success: true, data: { plans, payPerUse: PAY_PER_USE } });
+  } catch (error) {
+    next(error);
+  }
 };
 
 // ─── PUT /api/admin/plans ─────────────────────────────────────────────────────
 
-const updatePlans = (req, res) => {
-  const { plans, payPerUse: newPayPerUse } = req.body;
+const updatePlans = async (req, res, next) => {
+  try {
+    const { plans } = req.body;
 
-  if (!Array.isArray(plans) || plans.length === 0) {
-    return res.status(400).json({ success: false, message: 'Se requiere un array de planes' });
-  }
-
-  // Validar estructura mínima de cada plan
-  for (const p of plans) {
-    if (!p.id || !p.name || p.priceGs === undefined) {
-      return res.status(400).json({
-        success: false,
-        message: `Plan inválido: se requiere id, name y priceGs`,
-      });
+    if (!Array.isArray(plans) || plans.length === 0) {
+      return res.status(400).json({ success: false, message: 'Se requiere un array de planes' });
     }
+
+    for (const p of plans) {
+      if (!p.id || !p.name || p.priceGs === undefined) {
+        return res.status(400).json({
+          success: false,
+          message: 'Plan invalido: se requiere id, name y priceGs',
+        });
+      }
+    }
+
+    // Actualizar cada plan con upsert
+    const results = [];
+    for (const p of plans) {
+      const updated = await prisma.planConfig.upsert({
+        where: { id: p.id },
+        update: {
+          name: p.name,
+          priceGs: p.priceGs,
+          highlight: p.highlight ?? false,
+          employeeLimit: p.employeeLimit ?? 100,
+          predictionFrequency: p.predictionFrequency ?? 'Mensual',
+          dashboardType: p.dashboardType ?? 'Basico',
+          features: p.features ?? [],
+          cta: p.cta ?? 'Contratar',
+          active: p.active ?? true,
+        },
+        create: {
+          id: p.id,
+          name: p.name,
+          priceGs: p.priceGs,
+          highlight: p.highlight ?? false,
+          employeeLimit: p.employeeLimit ?? 100,
+          predictionFrequency: p.predictionFrequency ?? 'Mensual',
+          dashboardType: p.dashboardType ?? 'Basico',
+          features: p.features ?? [],
+          cta: p.cta ?? 'Contratar',
+        },
+      });
+      results.push(updated);
+    }
+
+    await logAction({
+      userId: req.user.id,
+      action: 'PLANS_UPDATED',
+      resource: 'plan_configs',
+      ipAddress: getIp(req),
+      userAgent: getUserAgent(req),
+      status: 'SUCCESS',
+      newValue: { plans: results.map((r) => r.id) },
+    });
+
+    res.json({ success: true, data: { plans: results, payPerUse: PAY_PER_USE } });
+  } catch (error) {
+    next(error);
   }
-
-  PLAN_CONFIG = plans;
-  if (newPayPerUse) Object.assign(PAY_PER_USE, newPayPerUse);
-
-  res.json({ success: true, data: { plans: PLAN_CONFIG, payPerUse: PAY_PER_USE } });
 };
 
-// ─── Empresas ────────────────────────────
+// ─── Empresas ─────────────────────────────────────────────────────────────────
 
 /**
  * GET /api/admin/companies
  */
-const getCompanies = (req, res) => {
-  const { plan, active } = req.query;
+const getCompanies = async (req, res, next) => {
+  try {
+    const { plan, active } = req.query;
 
-  let result = [...MOCK_COMPANIES];
+    const where = {};
+    if (plan) where.plan = plan.toUpperCase();
+    if (active !== undefined) where.active = active === 'true';
 
-  if (plan)   result = result.filter((c) => c.plan === plan.toUpperCase());
-  if (active !== undefined) {
-    result = result.filter((c) => c.active === (active === 'true'));
+    const companies = await prisma.company.findMany({
+      where,
+      include: {
+        _count: {
+          select: { users: true, employees: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Formatear para incluir conteos
+    const data = companies.map((c) => ({
+      id: c.id,
+      name: c.name,
+      plan: c.plan,
+      active: c.active,
+      employeeCount: c._count.employees,
+      userCount: c._count.users,
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt,
+    }));
+
+    res.json({ success: true, data, total: data.length });
+  } catch (error) {
+    next(error);
   }
-
-  res.json({
-    success: true,
-    data: result,
-    total: result.length,
-  });
 };
 
 /**
  * GET /api/admin/companies/:id
  */
-const getCompany = (req, res) => {
-  const company = MOCK_COMPANIES.find((c) => c.id === req.params.id);
-  if (!company) {
-    return res.status(404).json({ success: false, message: 'Empresa no encontrada' });
+const getCompany = async (req, res, next) => {
+  try {
+    const company = await prisma.company.findUnique({
+      where: { id: req.params.id },
+      include: {
+        users: {
+          select: { id: true, name: true, email: true, role: true, active: true, createdAt: true },
+          orderBy: { createdAt: 'asc' },
+        },
+        _count: { select: { employees: true } },
+      },
+    });
+
+    if (!company) {
+      return res.status(404).json({ success: false, message: 'Empresa no encontrada' });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        ...company,
+        employeeCount: company._count.employees,
+        _count: undefined,
+      },
+    });
+  } catch (error) {
+    next(error);
   }
-  res.json({ success: true, data: company });
 };
 
-// ─── Stats globales ───────────────────────
+// ─── Stats globales ───────────────────────────────────────────────────────────
 
 /**
  * GET /api/admin/stats
  */
-const getAdminStats = (_req, res) => {
-  const total      = MOCK_COMPANIES.length;
-  const active     = MOCK_COMPANIES.filter((c) => c.active).length;
-  const byPlan     = {
-    BASICO:      MOCK_COMPANIES.filter((c) => c.plan === 'BASICO').length,
-    PROFESIONAL: MOCK_COMPANIES.filter((c) => c.plan === 'PROFESIONAL').length,
-    EMPRESARIAL: MOCK_COMPANIES.filter((c) => c.plan === 'EMPRESARIAL').length,
-  };
-  const totalEmployees = MOCK_COMPANIES.reduce((acc, c) => acc + c.employeeCount, 0);
+const getAdminStats = async (_req, res, next) => {
+  try {
+    const [totalCompanies, activeCompanies, totalEmployees, totalUsers, byPlan] = await Promise.all([
+      prisma.company.count(),
+      prisma.company.count({ where: { active: true } }),
+      prisma.employee.count(),
+      prisma.user.count({ where: { role: { not: 'SUPER_ADMIN' } } }),
+      prisma.company.groupBy({
+        by: ['plan'],
+        _count: { plan: true },
+      }),
+    ]);
 
-  res.json({
-    success: true,
-    data: { totalCompanies: total, activeCompanies: active, byPlan, totalEmployees },
-  });
+    const byPlanMap = {};
+    for (const item of byPlan) {
+      byPlanMap[item.plan] = item._count.plan;
+    }
+
+    res.json({
+      success: true,
+      data: {
+        totalCompanies,
+        activeCompanies,
+        totalEmployees,
+        totalUsers,
+        byPlan: byPlanMap,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
-const { getAuditLogs } = require('../services/audit.service');
-
-// ─── Audit logs ──────────────────────────
+// ─── Audit logs ───────────────────────────────────────────────────────────────
 
 /**
  * GET /api/admin/audit-logs
  * Filtros: action, status, tenantId, userId, dateFrom, dateTo
- * Paginación: page (default 1), pageSize (default 50, max 100)
+ * Paginacion: page (default 1), pageSize (default 50, max 100)
  */
-const getAdminAuditLogs = (req, res) => {
-  const {
-    action, status, tenantId, userId,
-    dateFrom, dateTo,
-    page = '1', pageSize = '50',
-  } = req.query;
+const getAdminAuditLogs = async (req, res, next) => {
+  try {
+    const {
+      action, status, tenantId, userId,
+      dateFrom, dateTo,
+      page = '1', pageSize = '50',
+    } = req.query;
 
-  const pg   = Math.max(1, parseInt(page, 10) || 1);
-  const size = Math.min(100, Math.max(1, parseInt(pageSize, 10) || 50));
+    const pg   = Math.max(1, parseInt(page, 10) || 1);
+    const size = Math.min(100, Math.max(1, parseInt(pageSize, 10) || 50));
 
-  let logs = getAuditLogs({ tenantId, action, status, limit: 10000 });
+    const where = {};
+    if (action)   where.action   = action;
+    if (status)   where.status   = status;
+    if (tenantId) where.tenantId = tenantId;
+    if (userId)   where.userId   = userId;
+    if (dateFrom || dateTo) {
+      where.createdAt = {};
+      if (dateFrom) where.createdAt.gte = new Date(dateFrom);
+      if (dateTo)   where.createdAt.lte = new Date(dateTo);
+    }
 
-  // Filtros adicionales
-  if (userId)   logs = logs.filter((l) => l.userId   === userId);
-  if (dateFrom) logs = logs.filter((l) => new Date(l.createdAt) >= new Date(dateFrom));
-  if (dateTo)   logs = logs.filter((l) => new Date(l.createdAt) <= new Date(dateTo));
+    const [data, total] = await Promise.all([
+      prisma.auditLog.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (pg - 1) * size,
+        take: size,
+        include: {
+          user: { select: { name: true, email: true } },
+        },
+      }),
+      prisma.auditLog.count({ where }),
+    ]);
 
-  const total      = logs.length;
-  const totalPages = Math.ceil(total / size) || 1;
-  const data       = logs.slice((pg - 1) * size, pg * size);
+    const totalPages = Math.ceil(total / size) || 1;
 
-  res.json({
-    success: true,
-    data,
-    total,
-    page:        pg,
-    pageSize:    size,
-    total_pages: totalPages,
-  });
+    res.json({
+      success: true,
+      data,
+      total,
+      page: pg,
+      pageSize: size,
+      total_pages: totalPages,
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 module.exports = { getCompanies, getCompany, getAdminStats, getPlans, updatePlans, getPublicPlans, getAdminAuditLogs };

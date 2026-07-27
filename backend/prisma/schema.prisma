@@ -1,5 +1,4 @@
-// Prisma Schema - Sistema BI de Retención de Talento
-// Docs: https://pris.ly/d/prisma-schema
+// Prisma Schema - Sistema BI de Retencion de Talento
 
 generator client {
   provider = "prisma-client-js"
@@ -14,15 +13,16 @@ datasource db {
 // Empresas cliente (tenants)
 // ─────────────────────────────────────────
 model Company {
-  id        String        @id @default(uuid())
+  id        String   @id @default(uuid())
   name      String
-  plan      Plan          @default(BASICO)
-  active    Boolean       @default(true)
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  plan      Plan     @default(BASICO)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   users     User[]
   employees Employee[]
+  auditLogs AuditLog[]
 
   @@map("companies")
 }
@@ -31,59 +31,80 @@ model Company {
 // Usuarios del sistema
 // ─────────────────────────────────────────
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  password  String
-  role      Role     @default(VIEWER)
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String   @id @default(uuid())
+  name           String
+  email          String   @unique
+  password       String
+  role           Role     @default(VIEWER)
+  active         Boolean  @default(true)
+  failedAttempts Int      @default(0)
+  lockedUntil    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   // SUPER_ADMIN no pertenece a ninguna empresa (null)
   companyId String?
   company   Company? @relation(fields: [companyId], references: [id])
 
+  auditLogs   AuditLog[]
+  resetTokens PasswordResetToken[]
+
   @@map("users")
 }
 
 // ─────────────────────────────────────────
-// Empleados (sujetos del análisis BI)
+// Tokens de reset de contrasena
+// ─────────────────────────────────────────
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+}
+
+// ─────────────────────────────────────────
+// Empleados (sujetos del analisis BI)
 // ─────────────────────────────────────────
 model Employee {
-  id                      String         @id @default(uuid())
-  // Datos básicos
-  name                    String?
-  job_role                String
-  department              String
+  id                         String         @id @default(uuid())
+  // Datos basicos
+  name                       String?
+  job_role                   String
+  department                 String
   // Datos personales
-  age                     Int
-  gender                  String
-  marital_status          String?
-  education               Int?
-  education_field         String?
+  age                        Int
+  gender                     String
+  marital_status             String?
+  education                  Int?
+  education_field            String?
   // Datos laborales
-  monthly_income          Float
-  job_satisfaction        Int
-  environment_satisfaction Int?
-  work_life_balance       Int?
-  performance_rating      Int?
-  years_at_company        Int
-  years_in_current_role   Int?
+  monthly_income             Float
+  job_satisfaction           Int
+  environment_satisfaction   Int?
+  work_life_balance          Int?
+  performance_rating         Int?
+  years_at_company           Int
+  years_in_current_role      Int?
   years_since_last_promotion Int?
-  total_working_years     Int?
-  num_companies_worked    Int?
-  distance_from_home      Int?
-  overtime                Boolean        @default(false)
-  business_travel         String?
-  // Resultado de attrition histórico
-  attrition               Boolean        @default(false)
+  total_working_years        Int?
+  num_companies_worked       Int?
+  distance_from_home         Int?
+  overtime                   Boolean        @default(false)
+  business_travel            String?
+  // Resultado de attrition historico
+  attrition                  Boolean        @default(false)
   // Score ML
-  flight_risk             Float          @default(0)
-  risk_level              String         @default("BAJO")
-  status                  EmployeeStatus @default(ACTIVE)
-  createdAt               DateTime       @default(now())
-  updatedAt               DateTime       @updatedAt
+  flight_risk                Float          @default(0)
+  risk_level                 String         @default("BAJO")
+  status                     EmployeeStatus @default(ACTIVE)
+  createdAt                  DateTime       @default(now())
+  updatedAt                  DateTime       @updatedAt
 
   // Tenant
   companyId String?
@@ -93,14 +114,65 @@ model Employee {
 }
 
 // ─────────────────────────────────────────
+// Configuracion de planes
+// ─────────────────────────────────────────
+model PlanConfig {
+  id                  String   @id
+  name                String
+  priceGs             Int
+  highlight           Boolean  @default(false)
+  employeeLimit       Int
+  predictionFrequency String
+  dashboardType       String
+  features            String[] // Array de strings con las features del plan
+  cta                 String   @default("Contratar")
+  active              Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("plan_configs")
+}
+
+// ─────────────────────────────────────────
+// Logs de auditoria
+// ─────────────────────────────────────────
+model AuditLog {
+  id         String   @id @default(uuid())
+  action     String   // LOGIN_SUCCESS, EMPLOYEE_CREATED, etc.
+  resource   String?  // 'users', 'employees', etc.
+  resourceId String?
+  oldValue   Json?
+  newValue   Json?
+  ipAddress  String?
+  userAgent  String?
+  status     String   @default("SUCCESS") // SUCCESS, FAILURE, WARNING
+  errorMsg   String?
+  createdAt  DateTime @default(now())
+
+  // Relacion con tenant (empresa)
+  tenantId String?
+  company  Company? @relation(fields: [tenantId], references: [id])
+
+  // Relacion con usuario que realizo la accion
+  userId String?
+  user   User?  @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ─────────────────────────────────────────
 // Enums
 // ─────────────────────────────────────────
 
 enum Role {
-  SUPER_ADMIN     // Admin global de la plataforma (vos)
-  COMPANY_ADMIN   // Admin de una empresa cliente
-  ANALYST         // Puede analizar y ver predicciones
-  VIEWER          // Solo lectura
+  SUPER_ADMIN
+  COMPANY_ADMIN
+  ANALYST
+  VIEWER
 }
 
 enum Plan {

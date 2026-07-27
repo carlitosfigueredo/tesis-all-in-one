@@ -1,18 +1,10 @@
 const jwt = require('jsonwebtoken');
-
-// Mock users — sincronizados con auth.controller.js
-// Contraseña de todos: "admin123"
-const ALL_USERS = [
-  { id: 'sa-1', name: 'Super Admin',   email: 'superadmin@sistemabi.edu.py', role: 'SUPER_ADMIN',   companyId: null },
-  { id: 'cu-1', name: 'Ana García',    email: 'admin@empresa.com',           role: 'COMPANY_ADMIN', companyId: 'comp-1' },
-  { id: 'cu-2', name: 'Carlos López',  email: 'analista@empresa.com',        role: 'ANALYST',       companyId: 'comp-1' },
-  { id: 'cu-3', name: 'María Torres',  email: 'viewer@empresa.com',          role: 'VIEWER',        companyId: 'comp-1' },
-];
+const prisma = require('../lib/prisma');
 
 // ─────────────────────────────────────────
-// protect — valida JWT y adjunta req.user
+// protect — valida JWT y adjunta req.user desde la BD
 // ─────────────────────────────────────────
-const protect = (req, res, next) => {
+const protect = async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader?.startsWith('Bearer ')) {
@@ -23,27 +15,43 @@ const protect = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = ALL_USERS.find((u) => u.id === decoded.id);
 
-    if (!user) {
-      return res.status(401).json({ success: false, message: 'Token inválido' });
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        active: true,
+        companyId: true,
+        company: { select: { name: true } },
+      },
+    });
+
+    if (!user || !user.active) {
+      return res.status(401).json({ success: false, message: 'Token invalido o usuario desactivado' });
     }
 
-    // Adjuntar claims completos del token al request
+    // Adjuntar usuario al request
     req.user = {
-      ...user,
-      portal:    decoded.portal,
-      companyId: decoded.companyId,
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      companyId: user.companyId,
+      companyName: user.company?.name ?? null,
+      portal: decoded.portal,
     };
 
     next();
   } catch {
-    return res.status(401).json({ success: false, message: 'Token expirado o inválido' });
+    return res.status(401).json({ success: false, message: 'Token expirado o invalido' });
   }
 };
 
 // ─────────────────────────────────────────
-// requireRole — autorización por rol
+// requireRole — autorizacion por rol
 // Uso: requireRole('SUPER_ADMIN')
 //      requireRole('COMPANY_ADMIN', 'ANALYST')
 // ─────────────────────────────────────────
@@ -72,7 +80,7 @@ const requirePortal = (portal) => (req, res, next) => {
   next();
 };
 
-// Alias de compatibilidad con código anterior
+// Alias de compatibilidad
 const authorize = requireRole;
 
 module.exports = { protect, requireRole, requirePortal, authorize };
