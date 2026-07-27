@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
+  PieChart, Pie, Cell, Legend, LineChart, Line,
 } from 'recharts';
 import Sidebar from '../components/layout/Sidebar';
 import Navbar from '../components/layout/Navbar';
@@ -10,9 +10,19 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const RISK_COLORS = ['#22c55e', '#f59e0b', '#ef4444'];
-
-// Tasa de cambio referencial GS/USD — debe coincidir con Employees.jsx
 const USD_TO_GS = 7500;
+
+// Datos mock de tendencia histórica (últimos 6 meses)
+// En producción vendrían de /api/employees/trend
+const generateTrend = () => {
+  const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'];
+  return months.map((mes, i) => ({
+    mes,
+    alto:  Math.round(8 + i * 1.5 + Math.random() * 3),
+    medio: Math.round(15 + Math.sin(i) * 4 + Math.random() * 2),
+    bajo:  Math.round(40 - i * 0.8 + Math.random() * 5),
+  }));
+};
 
 const formatIncome = (usdValue, inGs) => {
   if (inGs) {
@@ -52,6 +62,7 @@ export default function Dashboard() {
   const { user } = useAuth();
   const [stats, setStats]       = useState(null);
   const [currency, setCurrency] = useState('USD');
+  const [trend]                 = useState(generateTrend);
 
   useEffect(() => {
     api.get('/employees/stats').then(({ data }) => setStats(data.data));
@@ -147,38 +158,58 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* Gráficos */}
-          <div className="grid gap-6 lg:grid-cols-2">
-            {/* Pie - distribución de riesgo */}
-            <div className="rounded-xl bg-white p-5 shadow-sm">
-              <h2 className="mb-4 text-base font-semibold text-gray-700">Distribución de Riesgo de Fuga</h2>
-              <ResponsiveContainer width="100%" height={260}>
-                <PieChart>
-                  <Pie data={riskPieData} dataKey="value" nameKey="name" outerRadius={90} label>
-                    {riskPieData.map((_, i) => (
-                      <Cell key={i} fill={RISK_COLORS[i]} />
-                    ))}
-                  </Pie>
-                  <Legend />
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
+            {/* Gráficos fila 1 */}
+            <div className="grid gap-6 lg:grid-cols-2">
+              {/* Pie - distribución de riesgo */}
+              <div className="rounded-xl bg-white p-5 shadow-sm">
+                <h2 className="mb-4 text-base font-semibold text-gray-700">Distribución de Riesgo de Fuga</h2>
+                <ResponsiveContainer width="100%" height={260}>
+                  <PieChart>
+                    <Pie data={riskPieData} dataKey="value" nameKey="name" outerRadius={90} label>
+                      {riskPieData.map((_, i) => (
+                        <Cell key={i} fill={RISK_COLORS[i]} />
+                      ))}
+                    </Pie>
+                    <Legend />
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Bar - riesgo por departamento */}
+              <div className="rounded-xl bg-white p-5 shadow-sm">
+                <h2 className="mb-4 text-base font-semibold text-gray-700">Riesgo Promedio por Departamento</h2>
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={deptData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="dept" tick={{ fontSize: 12 }} />
+                    <YAxis domain={[0, 1]} tick={{ fontSize: 12 }} />
+                    <Tooltip formatter={(v) => `${(v * 100).toFixed(0)}%`} />
+                    <Bar dataKey="avg" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
 
-            {/* Bar - riesgo por departamento */}
+            {/* Gráfico de tendencia histórica */}
             <div className="rounded-xl bg-white p-5 shadow-sm">
-              <h2 className="mb-4 text-base font-semibold text-gray-700">Riesgo Promedio por Departamento</h2>
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={deptData}>
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-base font-semibold text-gray-700">Tendencia Histórica de Riesgo</h2>
+                <span className="text-xs text-gray-400">Últimos 6 meses · datos estimados</span>
+              </div>
+              <ResponsiveContainer width="100%" height={240}>
+                <LineChart data={trend} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="dept" tick={{ fontSize: 12 }} />
-                  <YAxis domain={[0, 1]} tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(v) => `${(v * 100).toFixed(0)}%`} />
-                  <Bar dataKey="avg" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                </BarChart>
+                  <XAxis dataKey="mes" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="alto"  name="Riesgo Alto"  stroke="#ef4444" strokeWidth={2} dot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="medio" name="Riesgo Medio" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="bajo"  name="Riesgo Bajo"  stroke="#22c55e" strokeWidth={2} dot={{ r: 3 }} />
+                </LineChart>
               </ResponsiveContainer>
             </div>
-          </div>
         </main>
       </div>
     </div>

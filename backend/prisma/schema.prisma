@@ -11,6 +11,23 @@ datasource db {
 }
 
 // ─────────────────────────────────────────
+// Empresas cliente (tenants)
+// ─────────────────────────────────────────
+model Company {
+  id        String        @id @default(uuid())
+  name      String
+  plan      Plan          @default(BASICO)
+  active    Boolean       @default(true)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  users     User[]
+  employees Employee[]
+
+  @@map("companies")
+}
+
+// ─────────────────────────────────────────
 // Usuarios del sistema
 // ─────────────────────────────────────────
 model User {
@@ -18,9 +35,14 @@ model User {
   name      String
   email     String   @unique
   password  String
-  role      Role     @default(ANALYST)
+  role      Role     @default(VIEWER)
+  active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // SUPER_ADMIN no pertenece a ninguna empresa (null)
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
 
   @@map("users")
 }
@@ -29,18 +51,43 @@ model User {
 // Empleados (sujetos del análisis BI)
 // ─────────────────────────────────────────
 model Employee {
-  id               String         @id @default(uuid())
-  name             String
-  department       String
-  position         String
-  salary           Float
-  yearsInCompany   Int
-  performanceScore Float          @default(0)
-  flightRisk       Float          @default(0)  // Score 0-1 del modelo ML
-  status           EmployeeStatus @default(ACTIVE)
-  hireDate         DateTime       @default(now())
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  id                      String         @id @default(uuid())
+  // Datos básicos
+  name                    String?
+  job_role                String
+  department              String
+  // Datos personales
+  age                     Int
+  gender                  String
+  marital_status          String?
+  education               Int?
+  education_field         String?
+  // Datos laborales
+  monthly_income          Float
+  job_satisfaction        Int
+  environment_satisfaction Int?
+  work_life_balance       Int?
+  performance_rating      Int?
+  years_at_company        Int
+  years_in_current_role   Int?
+  years_since_last_promotion Int?
+  total_working_years     Int?
+  num_companies_worked    Int?
+  distance_from_home      Int?
+  overtime                Boolean        @default(false)
+  business_travel         String?
+  // Resultado de attrition histórico
+  attrition               Boolean        @default(false)
+  // Score ML
+  flight_risk             Float          @default(0)
+  risk_level              String         @default("BAJO")
+  status                  EmployeeStatus @default(ACTIVE)
+  createdAt               DateTime       @default(now())
+  updatedAt               DateTime       @updatedAt
+
+  // Tenant
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
 
   @@map("employees")
 }
@@ -48,10 +95,18 @@ model Employee {
 // ─────────────────────────────────────────
 // Enums
 // ─────────────────────────────────────────
+
 enum Role {
-  ADMIN
-  ANALYST
-  VIEWER
+  SUPER_ADMIN     // Admin global de la plataforma (vos)
+  COMPANY_ADMIN   // Admin de una empresa cliente
+  ANALYST         // Puede analizar y ver predicciones
+  VIEWER          // Solo lectura
+}
+
+enum Plan {
+  BASICO
+  PROFESIONAL
+  EMPRESARIAL
 }
 
 enum EmployeeStatus {

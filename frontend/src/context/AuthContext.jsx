@@ -4,10 +4,10 @@ import api from '../services/api';
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+  const [user, setUser]     = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Al montar, verificar si hay token guardado
+  // Al montar, restaurar sesión de empresa si hay token guardado
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -15,7 +15,10 @@ export function AuthProvider({ children }) {
       api
         .get('/auth/me')
         .then(({ data }) => setUser(data.data))
-        .catch(() => localStorage.removeItem('token'))
+        .catch(() => {
+          localStorage.removeItem('token');
+          delete api.defaults.headers.common['Authorization'];
+        })
         .finally(() => setLoading(false));
     } else {
       setLoading(false);
@@ -38,7 +41,21 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, isAuthenticated: !!user }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        login,
+        logout,
+        loading,
+        isAuthenticated: !!user,
+        // Helpers de rol para usar en componentes
+        isSuperAdmin:    user?.role === 'SUPER_ADMIN',
+        isCompanyAdmin:  user?.role === 'COMPANY_ADMIN',
+        isAnalyst:       user?.role === 'ANALYST',
+        isViewer:        user?.role === 'VIEWER',
+        canEdit:         ['COMPANY_ADMIN', 'ANALYST'].includes(user?.role),
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
