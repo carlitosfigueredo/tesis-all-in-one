@@ -1,6 +1,6 @@
 {
   "name": "tesis-bi-backend",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "API REST para el sistema BI de retención de talento - Sector Retail",
   "main": "src/index.js",
   "scripts": {

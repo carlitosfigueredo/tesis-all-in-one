@@ -1,29 +1,33 @@
 // src/services/email.service.js
 // Servicio de correo con Nodemailer.
-// En desarrollo usa Mailhog (puerto 1025). En produccion usa SMTP real.
+// Guard: si nodemailer no esta instalado, todas las funciones
+// fallan silenciosamente sin romper el arranque del servidor.
 
-const nodemailer = require('nodemailer');
-const fs         = require('fs');
-const path       = require('path');
+const fs   = require('fs');
+const path = require('path');
 
-// ─── Transporter ─────────────────────────────────────────────────────────────
+// ─── Transporter (lazy, con guard) ───────────────────────────────────────────
 
-const transporter = nodemailer.createTransport({
-  host:   process.env.SMTP_HOST   || 'mailhog',
-  port:   Number(process.env.SMTP_PORT || 1025),
-  secure: process.env.SMTP_SECURE === 'true',
-  auth: (process.env.SMTP_USER && process.env.SMTP_PASS)
-    ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
-    : undefined,
-});
+let transporter = null;
 
-// Verificar conexion SMTP al arrancar (solo en desarrollo)
-if (process.env.NODE_ENV !== 'production') {
-  transporter.verify().then(() => {
-    console.log('[Email] Conexion SMTP lista');
-  }).catch((err) => {
-    console.warn('[Email] SMTP no disponible (correos en modo silencioso):', err.message);
+try {
+  const nodemailer = require('nodemailer'); // eslint-disable-line
+  transporter = nodemailer.createTransport({
+    host:   process.env.SMTP_HOST   || 'mailhog',
+    port:   Number(process.env.SMTP_PORT || 1025),
+    secure: process.env.SMTP_SECURE === 'true',
+    auth:   (process.env.SMTP_USER && process.env.SMTP_PASS)
+      ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+      : undefined,
   });
+
+  if (process.env.NODE_ENV !== 'production') {
+    transporter.verify()
+      .then(() => console.log('[Email] Conexion SMTP lista'))
+      .catch((err) => console.warn('[Email] SMTP no disponible:', err.message));
+  }
+} catch {
+  console.warn('[Email] nodemailer no instalado — correos desactivados hasta el proximo build');
 }
 
 // ─── Helper: cargar template HTML ────────────────────────────────────────────
@@ -33,17 +37,17 @@ const loadTemplate = (name) => {
   try {
     return fs.readFileSync(filePath, 'utf-8');
   } catch {
-    console.warn(`[Email] Template "${name}" no encontrado, usando fallback de texto`);
     return null;
   }
 };
 
 // ─── Funcion base de envio ────────────────────────────────────────────────────
 
-/**
- * Envia un correo. Nunca lanza excepciones — falla silenciosamente.
- */
 const sendEmail = async ({ to, subject, html, text }) => {
+  if (!transporter) {
+    console.warn(`[Email] Sin transporter — correo a ${to} no enviado (subject: ${subject})`);
+    return { success: false, error: 'nodemailer no disponible' };
+  }
   try {
     const info = await transporter.sendMail({
       from:    process.env.SMTP_FROM || '"Sistema BI" <noreply@sistemabi.edu.py>',
@@ -62,48 +66,27 @@ const sendEmail = async ({ to, subject, html, text }) => {
 
 // ─── Emails especificos ───────────────────────────────────────────────────────
 
-/**
- * Correo de reset de contrasena.
- * @param {{ to, name, resetUrl }} params
- */
 const sendPasswordResetEmail = async ({ to, name, resetUrl }) => {
   let html = loadTemplate('reset-password');
-
   if (html) {
     html = html
       .replace(/{{name}}/g,     name)
       .replace(/{{resetUrl}}/g, resetUrl)
       .replace(/{{year}}/g,     new Date().getFullYear());
   } else {
-    html = `
-      <p>Hola, ${name}.</p>
-      <p>Recibimos una solicitud para cambiar la contrasena de tu cuenta.</p>
-      <p>El enlace de abajo vence en <strong>5 minutos</strong>.</p>
-      <p><a href="${resetUrl}" style="background:#2563eb;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;display:inline-block">
-        Cambiar contrasena
-      </a></p>
-      <p>Si no pediste esto, ignora este correo. Tu contrasena no cambio.</p>
-      <hr/><small>Este es un correo automatico. Por favor no respondas a este mensaje.</small>
-    `;
+    html = `<p>Hola, ${name}.</p><p>Cambia tu contrasena: <a href="${resetUrl}">${resetUrl}</a></p><p>Vence en 5 minutos.</p>`;
   }
-
   return sendEmail({
     to,
     subject: 'Cambia tu contrasena — el enlace vale 5 minutos',
     html,
-    text: `Hola, ${name}.\n\nCopia este enlace en tu navegador para cambiar tu contrasena:\n${resetUrl}\n\nVence en 5 minutos. Si no pediste esto, ignora este correo.\n\nEste es un correo automatico.`,
+    text:    `Hola, ${name}.\n\nCambia tu contrasena: ${resetUrl}\n\nVence en 5 minutos.`,
   });
 };
 
-/**
- * Correo de confirmacion de cambio de contrasena.
- * @param {{ to, name, ip, timestamp }} params
- */
 const sendPasswordChangedEmail = async ({ to, name, ip, timestamp }) => {
   const fecha = new Date(timestamp).toLocaleString('es-PY', { timeZone: 'America/Asuncion' });
-
   let html = loadTemplate('password-changed');
-
   if (html) {
     html = html
       .replace(/{{name}}/g,      name)
@@ -111,50 +94,32 @@ const sendPasswordChangedEmail = async ({ to, name, ip, timestamp }) => {
       .replace(/{{timestamp}}/g, fecha)
       .replace(/{{year}}/g,      new Date().getFullYear());
   } else {
-    html = `
-      <p>Hola, ${name}.</p>
-      <p>Tu contrasena fue cambiada el <strong>${fecha}</strong> desde la IP <strong>${ip || 'desconocida'}</strong>.</p>
-      <p>Si no fuiste vos, cambia tu contrasena de inmediato.</p>
-      <hr/><small>Este es un correo automatico. Por favor no respondas a este mensaje.</small>
-    `;
+    html = `<p>Hola, ${name}.</p><p>Tu contrasena fue cambiada el ${fecha} desde ${ip || 'IP desconocida'}.</p>`;
   }
-
   return sendEmail({
     to,
     subject: 'Tu contrasena fue cambiada',
     html,
-    text: `Hola, ${name}.\n\nTu contrasena fue cambiada el ${fecha} desde la IP ${ip || 'desconocida'}.\n\nSi no fuiste vos, cambia tu contrasena de inmediato.\n\nEste es un correo automatico.`,
+    text:    `Hola, ${name}.\n\nTu contrasena fue cambiada el ${fecha} desde ${ip}.`,
   });
 };
 
-/**
- * Correo de cuenta bloqueada por intentos fallidos.
- * @param {{ to, name, lockedUntil }} params
- */
 const sendAccountLockedEmail = async ({ to, name, lockedUntil }) => {
   const hora = new Date(lockedUntil).toLocaleTimeString('es-PY', { timeZone: 'America/Asuncion' });
-
   let html = loadTemplate('account-locked');
-
   if (html) {
     html = html
       .replace(/{{name}}/g,        name)
       .replace(/{{lockedUntil}}/g, hora)
       .replace(/{{year}}/g,        new Date().getFullYear());
   } else {
-    html = `
-      <p>Hola, ${name}.</p>
-      <p>Tu cuenta fue bloqueada por 30 minutos debido a varios intentos de acceso fallidos.</p>
-      <p>Podes intentar de nuevo a partir de las <strong>${hora}</strong>.</p>
-      <hr/><small>Este es un correo automatico. Por favor no respondas a este mensaje.</small>
-    `;
+    html = `<p>Hola, ${name}.</p><p>Tu cuenta fue bloqueada. Podes intentar de nuevo a las ${hora}.</p>`;
   }
-
   return sendEmail({
     to,
     subject: 'Tu cuenta fue bloqueada temporalmente',
     html,
-    text: `Hola, ${name}.\n\nTu cuenta fue bloqueada por 30 minutos. Podes intentar de nuevo a partir de las ${hora}.\n\nEste es un correo automatico.`,
+    text:    `Hola, ${name}.\n\nTu cuenta fue bloqueada. Podes intentar de nuevo a las ${hora}.`,
   });
 };
 
