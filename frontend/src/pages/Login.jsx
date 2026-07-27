@@ -35,7 +35,7 @@ export default function Login() {
             📊
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Sistema BI</h1>
-          <p className="mt-1 text-sm text-gray-500">Retención de Talento — Sector Retail</p>
+          <p className="mt-1 text-sm text-gray-500">Retención de Talento — Acceso empresas</p>
         </div>
 
         {/* Formulario */}
@@ -89,9 +89,10 @@ export default function Login() {
 
         {/* Credenciales de prueba */}
         <div className="mt-6 rounded-lg bg-gray-50 p-3 text-xs text-gray-500">
-          <p className="font-semibold">Credenciales de prueba:</p>
-          <p>📧 admin@tesis.com</p>
-          <p>🔑 password</p>
+          <p className="font-semibold mb-1">Credenciales de prueba:</p>
+          <p>Admin empresa: admin@empresa.com</p>
+          <p>Analista: analista@empresa.com</p>
+          <p>Contraseña: admin123</p>
         </div>
       </div>
     </div>
