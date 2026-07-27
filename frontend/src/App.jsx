@@ -17,10 +17,11 @@ import TermsAndConditions from './pages/TermsAndConditions';
 import Legal              from './pages/Legal';
 
 // Portal admin (SUPER_ADMIN)
-import AdminLogin     from './pages/AdminLogin';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import AdminCompanies from './pages/admin/AdminCompanies';
-import AdminPlans     from './pages/admin/AdminPlans';
+import AdminLogin      from './pages/AdminLogin';
+import AdminDashboard  from './pages/admin/AdminDashboard';
+import AdminCompanies  from './pages/admin/AdminCompanies';
+import AdminPlans      from './pages/admin/AdminPlans';
+import AdminAuditLogs  from './pages/admin/AdminAuditLogs';
 
 // Portal empresa (COMPANY_ADMIN / ANALYST / VIEWER)
 import Dashboard     from './pages/Dashboard';
@@ -51,6 +52,7 @@ export default function App() {
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/companies" element={<AdminCompanies />} />
               <Route path="/admin/plans"     element={<AdminPlans />} />
+              <Route path="/admin/audit"     element={<AdminAuditLogs />} />
             </Route>
 
             {/* ── Portal Empresa ─────────────────────────────────────── */}

@@ -1,21 +1,29 @@
 const { getDatasetEmployees, getDatasetEmployee, getDatasetStats } = require('../services/ml.service');
+const { logAction }  = require('../services/audit.service');
+const { getIp, getUserAgent } = require('../utils/request.utils');
 
 /**
  * GET /api/employees
- * Lista empleados del dataset IBM HR con flightRisk calculado.
- * Soporta: page, page_size, department, risk_level, search, attrition
  */
 const getAllEmployees = async (req, res, next) => {
   try {
     const { page, page_size, department, risk_level, search, attrition } = req.query;
-    const result = await getDatasetEmployees({
-      page,
-      page_size,
-      department,
-      risk_level,
-      search,
-      attrition,
-    });
+    const result = await getDatasetEmployees({ page, page_size, department, risk_level, search, attrition });
+
+    // Auditar solo si hay filtros activos (no loguear cada listado simple)
+    if (department || risk_level || search) {
+      await logAction({
+        tenantId:  req.user?.companyId ?? null,
+        userId:    req.user?.id        ?? null,
+        action:    'EMPLOYEE_LIST_FILTERED',
+        resource:  'employees',
+        ipAddress: getIp(req),
+        userAgent: getUserAgent(req),
+        status:    'SUCCESS',
+        newValue:  { filters: { department, risk_level, search, attrition } },
+      });
+    }
+
     res.json({ success: true, ...result });
   } catch (error) {
     next(error);
@@ -28,9 +36,32 @@ const getAllEmployees = async (req, res, next) => {
 const getEmployeeById = async (req, res, next) => {
   try {
     const employee = await getDatasetEmployee(req.params.id);
+
+    await logAction({
+      tenantId:   req.user?.companyId ?? null,
+      userId:     req.user?.id        ?? null,
+      action:     'EMPLOYEE_VIEWED',
+      resource:   'employees',
+      resourceId: req.params.id,
+      ipAddress:  getIp(req),
+      userAgent:  getUserAgent(req),
+      status:     'SUCCESS',
+    });
+
     res.json({ success: true, data: employee });
   } catch (error) {
     if (error.message.includes('404')) {
+      await logAction({
+        tenantId:   req.user?.companyId ?? null,
+        userId:     req.user?.id        ?? null,
+        action:     'EMPLOYEE_VIEWED',
+        resource:   'employees',
+        resourceId: req.params.id,
+        ipAddress:  getIp(req),
+        userAgent:  getUserAgent(req),
+        status:     'FAILURE',
+        errorMsg:   'Empleado no encontrado',
+      });
       return res.status(404).json({ success: false, message: 'Empleado no encontrado' });
     }
     next(error);
@@ -179,12 +210,22 @@ const importEmployees = (req, res, next) => {
       });
     }
 
-    // TODO: cuando esté la BD real, usar Prisma para insertar en bulk
-    // Por ahora retorna éxito simulado con el conteo recibido
+    // Registrar importación exitosa en auditoría
+    await logAction({
+      tenantId:  req.user?.companyId ?? null,
+      userId:    req.user?.id        ?? null,
+      action:    'EMPLOYEE_IMPORT',
+      resource:  'employees',
+      ipAddress: getIp(req),
+      userAgent: getUserAgent(req),
+      status:    'SUCCESS',
+      newValue:  { imported: rows.length },
+    });
+
     return res.json({
-      success: true,
+      success:  true,
       imported: rows.length,
-      message: `${rows.length} empleados importados correctamente`,
+      message:  `${rows.length} empleados importados correctamente`,
     });
 
   } catch (error) {
