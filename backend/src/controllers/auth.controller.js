@@ -267,4 +267,54 @@ const resetPassword = async (req, res, next) => {
   }
 };
 
-module.exports = { login, adminLogin, me, forgotPassword, resetPassword };
+/**
+ * POST /api/auth/change-password
+ * Cambio de contraseña desde el perfil del usuario autenticado.
+ */
+const changePassword = async (req, res, next) => {
+  const ip = getIp(req);
+  const ua = getUserAgent(req);
+  try {
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({ success: false, message: 'Todos los campos son obligatorios' });
+    }
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ success: false, message: 'Las contraseñas nuevas no coinciden' });
+    }
+
+    const user = ALL_USERS.find((u) => u.id === req.user?.id);
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Usuario no encontrado' });
+    }
+
+    // Verificar contraseña actual
+    const isMatch = await checkPassword(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'La contraseña actual no es correcta' });
+    }
+
+    // Validar política
+    const policyResult = validatePasswordPolicy(newPassword, user);
+    if (!policyResult.valid) {
+      return res.status(400).json({
+        success: false,
+        message: 'La contraseña no cumple los requisitos de seguridad',
+        errors: policyResult.errors.map((e) => ({ message: e })),
+      });
+    }
+
+    // En prod: bcrypt.hash + prisma.user.update
+    await sendPasswordChangedEmail({ to: user.email, name: user.name, ip, timestamp: new Date().toISOString() });
+    await logAction({ userId: user.id, tenantId: user.companyId ?? null,
+      action: 'PASSWORD_CHANGED', resource: 'users', resourceId: user.id,
+      ipAddress: ip, userAgent: ua, status: 'SUCCESS' });
+
+    return res.json({ success: true, message: 'Contraseña cambiada correctamente' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { login, adminLogin, me, forgotPassword, resetPassword, changePassword };
