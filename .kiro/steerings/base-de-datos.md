@@ -6,272 +6,221 @@ inclusion: always
 
 ## Reglas generales
 
-- Todo cambio de esquema se hace **exclusivamente** via `prisma migrate dev` (desarrollo) o `prisma migrate deploy` (producción).
+- Todo cambio de esquema se hace **exclusivamente** via `prisma migrate dev` (desarrollo) o `prisma migrate deploy` (produccion/Docker).
 - No modificar la BD directamente con SQL salvo para el script inicial `db/init.sql`.
-- Cada tabla que represente datos de negocio tiene `tenantId` como campo obligatorio.
-- Usar UUIDs (`@default(uuid())`) como claves primarias en todas las tablas. No usar auto-increment.
-- Campos de auditoría mínimos en toda tabla: `createdAt`, `updatedAt`. Las tablas críticas agregan `createdBy`.
+- Usar UUIDs (`@default(uuid())`) como claves primarias en todas las tablas.
+- Campos de auditoria minimos en toda tabla: `createdAt`, `updatedAt`.
+- Cada tabla de negocio tiene `companyId` como campo de aislamiento de tenant.
 
 ---
 
-## Esquema completo del sistema
+## Schema real implementado (backend/prisma/schema.prisma)
 
-A continuación se documenta el modelo de datos objetivo. Este es el contrato que guía la implementación.
-
-### Tenants (empresas)
+### Company (tenant)
 
 ```prisma
-model Tenant {
-  id          String   @id @default(uuid())
-  name        String                          // Nombre de la empresa
-  slug        String   @unique                // Identificador URL-friendly: "empresa-acme"
-  plan        Plan     @default(FREE)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+model Company {
+  id        String        @id @default(uuid())
+  name      String
+  plan      Plan          @default(BASICO)
+  status    CompanyStatus @default(PENDING_PAYMENT)
+  active    Boolean       @default(true)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 
-  users       User[]
-  employees   Employee[]
-  auditLogs   AuditLog[]
+  users     User[]
+  employees Employee[]
+  auditLogs AuditLog[]
+  @@map("companies")
+}
 
-  @@map("tenants")
+enum CompanyStatus {
+  PENDING_PAYMENT  // Recien registrada, no pago aun
+  TRIAL            // Periodo de prueba
+  ACTIVE           // Pago confirmado, acceso total
+  SUSPENDED        // Suspendida por falta de pago
 }
 
 enum Plan {
-  FREE
-  PRO
-  ENTERPRISE
+  BASICO
+  PROFESIONAL
+  EMPRESARIAL
 }
 ```
 
-### Usuarios
+### User
 
 ```prisma
 model User {
-  id               String    @id @default(uuid())
-  tenantId         String
-  name             String
-  email            String
-  password         String                        // bcrypt hash
-  role             Role      @default(ANALYST)
-  isActive         Boolean   @default(true)
-  emailVerified    Boolean   @default(false)
-  emailVerifiedAt  DateTime?
-  lockedUntil      DateTime?                     // Bloqueo temporal por intentos fallidos
-  failedLoginCount Int       @default(0)
-  lastLoginAt      DateTime?
-  lastLoginIp      String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  createdBy        String?                       // userId que lo creó
-
-  tenant           Tenant    @relation(fields: [tenantId], references: [id])
-  passwordHistory  PasswordHistory[]
-  passwordResets   PasswordReset[]
-  refreshTokens    RefreshToken[]
-  auditLogs        AuditLog[]
-
-  @@unique([tenantId, email])                   // Email unico por tenant
+  id             String   @id @default(uuid())
+  name           String
+  email          String   @unique
+  password       String              // bcrypt hash (salt 12)
+  role           Role     @default(VIEWER)
+  active         Boolean  @default(true)
+  failedAttempts Int      @default(0)
+  lockedUntil    DateTime?           // Bloqueo temporal (5 intentos = 15 min)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  companyId      String?             // null para SUPER_ADMIN
+  company        Company? @relation(...)
+  auditLogs      AuditLog[]
+  resetTokens    PasswordResetToken[]
   @@map("users")
 }
 
 enum Role {
-  SUPER_ADMIN    // Administrador global del SaaS (no pertenece a un tenant)
-  ADMIN          // Administrador de la empresa
-  ANALYST        // Analista HR con acceso completo de lectura/escritura
-  VIEWER         // Solo lectura
+  SUPER_ADMIN     // Admin global de la plataforma
+  COMPANY_ADMIN   // Admin de una empresa cliente
+  ANALYST         // Puede analizar y ver predicciones
+  VIEWER          // Solo lectura
 }
 ```
 
-### Historial de contraseñas
-
-```prisma
-model PasswordHistory {
-  id           String   @id @default(uuid())
-  userId       String
-  passwordHash String                          // bcrypt hash de contraseña anterior
-  createdAt    DateTime @default(now())
-
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("password_history")
-}
-```
-
-### Reset de contraseña
-
-```prisma
-model PasswordReset {
-  id         String    @id @default(uuid())
-  userId     String
-  tokenHash  String    @unique               // SHA-256 del token enviado al usuario
-  expiresAt  DateTime                        // now + 5 minutos
-  usedAt     DateTime?                       // null = no usado, not null = ya consumido
-  ipAddress  String?
-  createdAt  DateTime  @default(now())
-
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("password_resets")
-}
-```
-
-### Refresh tokens
-
-```prisma
-model RefreshToken {
-  id          String    @id @default(uuid())
-  userId      String
-  tokenHash   String    @unique
-  expiresAt   DateTime
-  revokedAt   DateTime?
-  ipAddress   String?
-  userAgent   String?
-  createdAt   DateTime  @default(now())
-
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("refresh_tokens")
-}
-```
-
-### Empleados
+### Employee
 
 ```prisma
 model Employee {
-  id               String         @id @default(uuid())
-  tenantId         String
-  name             String
-  email            String?
-  department       String
-  position         String
-  salary           Float
-  yearsInCompany   Int
-  performanceScore Float          @default(0)
-  flightRisk       Float          @default(0)   // Score 0-1 del modelo ML
-  status           EmployeeStatus @default(ACTIVE)
-  hireDate         DateTime       @default(now())
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  createdBy        String?
-
-  tenant           Tenant         @relation(fields: [tenantId], references: [id])
-  predictions      MlPrediction[]
-
+  id                         String         @id @default(uuid())
+  name                       String?
+  job_role                   String
+  department                 String
+  age                        Int
+  gender                     String
+  marital_status             String?
+  education                  Int?
+  education_field            String?
+  monthly_income             Float
+  job_satisfaction           Int
+  environment_satisfaction   Int?
+  work_life_balance          Int?
+  performance_rating         Int?
+  years_at_company           Int
+  years_in_current_role      Int?
+  years_since_last_promotion Int?
+  total_working_years        Int?
+  num_companies_worked       Int?
+  distance_from_home         Int?
+  overtime                   Boolean        @default(false)
+  business_travel            String?
+  attrition                  Boolean        @default(false)
+  flight_risk                Float          @default(0)
+  risk_level                 String         @default("BAJO")
+  status                     EmployeeStatus @default(ACTIVE)
+  createdAt                  DateTime       @default(now())
+  updatedAt                  DateTime       @updatedAt
+  companyId                  String?
+  company                    Company? @relation(...)
   @@map("employees")
 }
-
-enum EmployeeStatus {
-  ACTIVE
-  INACTIVE
-  RESIGNED
-}
 ```
 
-### Predicciones ML
+### PlanConfig
 
 ```prisma
-model MlPrediction {
-  id           String   @id @default(uuid())
-  employeeId   String
-  modelVersion String
-  flightRisk   Float
-  features     Json                           // Snapshot de features usadas
-  requestedBy  String                         // userId
-  createdAt    DateTime @default(now())
-
-  employee     Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-
-  @@map("ml_predictions")
+model PlanConfig {
+  id                  String   @id          // ESTANDAR, PROFESIONAL, CORPORATIVO
+  name                String
+  priceGs             Int
+  highlight           Boolean  @default(false)
+  employeeLimit       Int
+  predictionFrequency String
+  dashboardType       String
+  features            String[]
+  cta                 String   @default("Contratar")
+  active              Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  @@map("plan_configs")
 }
 ```
 
-### Logs de auditoría
+### AuditLog
 
 ```prisma
 model AuditLog {
   id         String   @id @default(uuid())
-  tenantId   String?                         // null para acciones globales
-  userId     String?                         // null si la accion fue anonima
-  action     String                          // LOGIN, LOGOUT, CREATE_EMPLOYEE, etc.
-  resource   String?                         // Nombre de la entidad afectada
-  resourceId String?                         // ID del recurso afectado
-  oldValue   Json?                           // Estado anterior (para updates)
-  newValue   Json?                           // Estado nuevo (para updates/creates)
+  action     String
+  resource   String?
+  resourceId String?
+  oldValue   Json?
+  newValue   Json?
   ipAddress  String?
   userAgent  String?
-  status     AuditStatus @default(SUCCESS)
+  status     String   @default("SUCCESS")
   errorMsg   String?
   createdAt  DateTime @default(now())
-
-  tenant     Tenant?  @relation(fields: [tenantId], references: [id])
-  user       User?    @relation(fields: [userId], references: [id])
-
-  @@index([tenantId, createdAt])
-  @@index([userId, createdAt])
-  @@index([action, createdAt])
+  tenantId   String?
+  company    Company? @relation(...)
+  userId     String?
+  user       User?    @relation(...)
+  @@index([tenantId])
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
   @@map("audit_logs")
 }
+```
 
-enum AuditStatus {
-  SUCCESS
-  FAILURE
-  WARNING
+### PasswordResetToken
+
+```prisma
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  userId    String
+  user      User      @relation(...)
+  @@map("password_reset_tokens")
 }
 ```
 
 ---
 
-## Índices recomendados
+## Aislamiento por tenant
 
-Además de los definidos en el schema, ejecutar en `db/init.sql`:
-
-```sql
--- Para búsquedas frecuentes de empleados por tenant
-CREATE INDEX IF NOT EXISTS idx_employees_tenant_status ON employees(tenant_id, status);
-
--- Para expiración de tokens de reset
-CREATE INDEX IF NOT EXISTS idx_password_resets_expires ON password_resets(expires_at) WHERE used_at IS NULL;
-
--- Para limpiar refresh tokens vencidos
-CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires ON refresh_tokens(expires_at) WHERE revoked_at IS NULL;
-```
+- `employees.controller.js` y `users.controller.js` usan `getCompanyFilter(req.user)` que retorna `{ companyId: user.companyId }` para roles de empresa y `{}` para SUPER_ADMIN.
+- Nunca exponer datos de una empresa a otra.
+- Al crear recursos, siempre asignar el `companyId` del usuario autenticado (excepto SUPER_ADMIN que puede especificarlo).
 
 ---
 
-## Migraciones
+## Migraciones existentes
 
-Al modificar el schema:
+1. `20260727221553_init` — Tablas base: companies, users, employees, plan_configs, audit_logs, password_reset_tokens
+2. `20260727223200_add_company_status` — Enum CompanyStatus + campo status en companies
+
+---
+
+## Comandos (desde el host, fuera de Docker)
 
 ```bash
-# Dentro del contenedor backend o con la venv activa
-npx prisma migrate dev --name descripcion_del_cambio
+cd backend
 
-# Verificar el estado
-npx prisma migrate status
+# Crear nueva migracion
+DATABASE_URL="postgresql://tesis_user:tesis_pass@localhost:5432/tesis_bi_db" npx prisma migrate dev --name nombre
 
-# Generar el cliente actualizado
-npx prisma generate
+# Regenerar cliente
+DATABASE_URL="postgresql://tesis_user:tesis_pass@localhost:5432/tesis_bi_db" npx prisma generate
+
+# Reset completo (borra todo y re-seedea)
+DATABASE_URL="postgresql://tesis_user:tesis_pass@localhost:5432/tesis_bi_db" npx prisma migrate reset
+
+# Ver datos en browser
+DATABASE_URL="postgresql://tesis_user:tesis_pass@localhost:5432/tesis_bi_db" npx prisma studio
 ```
 
-Nombrar las migraciones en formato `snake_case` descriptivo:
-- `add_tenant_model`
-- `add_password_reset_table`
-- `add_audit_logs_indexes`
+Dentro de Docker el CMD del backend ejecuta automaticamente `prisma generate` + `prisma migrate deploy` al arrancar.
 
 ---
 
-## Limpieza periódica (tareas programadas)
+## Seed (backend/prisma/seed.js)
 
-Implementar un cron job (o endpoint admin protegido) para:
-
-```sql
--- Eliminar tokens de reset vencidos o ya usados (mayores a 24h)
-DELETE FROM password_resets WHERE expires_at < NOW() - INTERVAL '24 hours';
-
--- Revocar refresh tokens vencidos
-UPDATE refresh_tokens SET revoked_at = NOW() WHERE expires_at < NOW() AND revoked_at IS NULL;
-
--- Opcional: purgar audit_logs con más de 90 días (según política de retención)
--- DELETE FROM audit_logs WHERE created_at < NOW() - INTERVAL '90 days';
-```
+Datos iniciales:
+- 3 planes (Estandar, Profesional, Corporativo)
+- 1 super admin
+- 1 empresa demo "Devsoft S.A." con status ACTIVE
+- 3 usuarios demo (COMPANY_ADMIN, ANALYST, VIEWER)
+- 5 empleados de ejemplo con distintos niveles de riesgo
