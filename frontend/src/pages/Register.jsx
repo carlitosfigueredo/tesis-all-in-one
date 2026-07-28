@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import PasswordInput from '../components/PasswordInput';
 import api from '../services/api';
 
 const PLANS = [
@@ -216,30 +217,22 @@ export default function Register() {
           {step === 3 && (
             <div className="space-y-4">
               <h2 className="text-sm font-semibold text-gray-700 mb-3">Crea tu contrasena</h2>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Contrasena</label>
-                <input
-                  name="password"
-                  type="password"
-                  value={form.password}
-                  onChange={handleChange}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/30"
-                  placeholder="Minimo 8 caracteres"
-                  required
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Confirmar contrasena</label>
-                <input
-                  name="confirmPassword"
-                  type="password"
-                  value={form.confirmPassword}
-                  onChange={handleChange}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/30"
-                  placeholder="Repeti tu contrasena"
-                  required
-                />
-              </div>
+              <PasswordInput
+                label="Contrasena"
+                name="password"
+                value={form.password}
+                onChange={handleChange}
+                placeholder="Minimo 8 caracteres"
+                required
+              />
+              <PasswordInput
+                label="Confirmar contrasena"
+                name="confirmPassword"
+                value={form.confirmPassword}
+                onChange={handleChange}
+                placeholder="Repeti tu contrasena"
+                required
+              />
 
               {errors.length > 0 && (
                 <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600 space-y-1">
