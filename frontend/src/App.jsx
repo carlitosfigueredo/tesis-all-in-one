@@ -30,6 +30,7 @@ import Employees     from './pages/Employees';
 import EmployeeDetail from './pages/EmployeeDetail';
 import Users         from './pages/Users';
 import ModelML       from './pages/ModelML';
+import Checkout      from './pages/Checkout';
 
 export default function App() {
   return (
@@ -59,6 +60,7 @@ export default function App() {
             </Route>
 
             {/* ── Portal Empresa ─────────────────────────────────────── */}
+            <Route path="/checkout" element={<Checkout />} />
             <Route element={<PrivateRoute />}>
               <Route path="/dashboard"      element={<Dashboard />} />
               <Route path="/employees"      element={<Employees />} />

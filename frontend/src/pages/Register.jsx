@@ -85,8 +85,8 @@ export default function Register() {
       localStorage.setItem('token', token);
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-      // Redirigir al dashboard (el PrivateRoute lo manejara)
-      navigate('/dashboard');
+      // Redirigir al checkout para activar el plan
+      navigate('/checkout');
       // Forzar recarga del usuario en el contexto
       window.location.reload();
     } catch (err) {

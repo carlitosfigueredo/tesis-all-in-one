@@ -47,15 +47,21 @@ export default function PendingActivation() {
 
         {/* Acciones */}
         <div className="space-y-3">
+          <Link
+            to="/checkout"
+            className="block w-full rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white text-center transition hover:bg-primary-700"
+          >
+            Activar mi plan ahora
+          </Link>
           <a
             href="mailto:soporte@sistemabi.edu.py?subject=Activacion de cuenta"
-            className="block w-full rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
+            className="block w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-gray-600 text-center hover:bg-gray-50 transition"
           >
             Contactar soporte
           </a>
           <button
             onClick={logout}
-            className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 transition"
+            className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-gray-400 hover:bg-gray-50 transition"
           >
             Cerrar sesion
           </button>
