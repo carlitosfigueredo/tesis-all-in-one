@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ReCAPTCHA from 'react-google-recaptcha';
+import AlertMessage from '../components/AlertMessage';
 import api from '../services/api';
 
 const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
@@ -102,7 +103,11 @@ export default function ForgotPassword() {
             )}
 
             {status === 'error' && (
-              <p className="rounded-lg bg-red-50 border border-red-100 px-4 py-2.5 text-sm text-red-600">{errorMsg}</p>
+              <AlertMessage
+                type="error"
+                message={errorMsg}
+                onClose={() => setStatus('idle')}
+              />
             )}
 
             <button

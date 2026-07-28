@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import ReCAPTCHA from 'react-google-recaptcha';
 import { useAuth } from '../context/AuthContext';
 import PasswordInput from '../components/PasswordInput';
+import AlertMessage from '../components/AlertMessage';
 import api from '../services/api';
 
 const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
@@ -259,11 +260,12 @@ export default function Register() {
               )}
 
               {errors.length > 0 && (
-                <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600 space-y-1">
-                  {errors.map((e, i) => (
-                    <p key={i}>&#8226; {e}</p>
-                  ))}
-                </div>
+                <AlertMessage
+                  type="error"
+                  message={errors.length === 1 ? errors[0] : 'Corrige los siguientes errores:'}
+                  messages={errors.length > 1 ? errors : undefined}
+                  onClose={() => setErrors([])}
+                />
               )}
 
               <div className="flex gap-3">

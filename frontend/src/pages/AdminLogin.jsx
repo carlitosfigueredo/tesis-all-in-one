@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import ReCAPTCHA from 'react-google-recaptcha';
 import { useAdminAuth } from '../context/AdminAuthContext';
 import PasswordInput from '../components/PasswordInput';
+import AlertMessage from '../components/AlertMessage';
 
 const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
 
@@ -107,9 +108,11 @@ export default function AdminLogin() {
             )}
 
             {error && (
-              <div className="rounded-lg bg-red-50 border border-red-100 px-4 py-2.5 text-sm text-red-600">
-                {error}
-              </div>
+              <AlertMessage
+                type="error"
+                message={error}
+                onClose={() => setError('')}
+              />
             )}
 
             <button
