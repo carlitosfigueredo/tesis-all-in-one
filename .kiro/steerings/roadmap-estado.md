@@ -56,6 +56,12 @@ El sistema funciona como SaaS multi-tenant:
 | Correos transaccionales | Nodemailer + Mailhog (reset, password-changed, account-locked) |
 | Validacion Zod | Schemas para login, register, forgot-password, reset-password |
 | Politica de contrasena | NIST/OWASP con PasswordStrengthIndicator en frontend |
+| reCAPTCHA v2 | Widget en login, register, forgot-password y admin login |
+| Componentes UI | PasswordInput (ojito), AlertMessage (animado con boton cerrar) |
+| Login rediseñado | Layout split branding/form, moderno con gradiente |
+| Admin login rediseñado | Estilo dark/slate, sin credenciales expuestas |
+| Landing rediseñada | CTA principal = registro, planes linkean a /register |
+| manifest.json | PWA manifest basico para eliminar error de consola |
 
 ---
 
@@ -125,7 +131,21 @@ El sistema funciona como SaaS multi-tenant:
 - **CompanyStatus**: Empresas nuevas quedan en PENDING_PAYMENT. Solo ACTIVE y TRIAL acceden a datos.
 - **Aislamiento por tenant**: Todos los queries de empleados/usuarios filtran por `companyId` segun el rol del usuario.
 - **Audit logs**: Cada accion importante (login, CRUD, import, cambio de contrasena) queda registrada en `audit_logs`.
+- **reCAPTCHA v2**: Checkbox en formularios publicos. Backend verifica token con Google. Si no hay `RECAPTCHA_SECRET_KEY`, hace pass-through.
 - **Pasarela de pago**: Proxima integracion recomendada es Mercado Pago (opera en Paraguay, tiene sandbox, suscripciones y webhooks).
+
+---
+
+## Componentes reutilizables del frontend
+
+| Componente | Ubicacion | Descripcion |
+|------------|-----------|-------------|
+| PasswordInput | `components/PasswordInput.jsx` | Input con toggle de visibilidad (ojito abierto/cerrado) |
+| AlertMessage | `components/AlertMessage.jsx` | Alerta con tipos (error/success/warning/info), icono, animacion entrada, boton X cerrar |
+| PasswordStrengthIndicator | `components/PasswordStrengthIndicator.jsx` | Barra de progreso + checklist de requisitos en tiempo real |
+| Sidebar | `components/layout/Sidebar.jsx` | Menu lateral del portal empresa |
+| Navbar | `components/layout/Navbar.jsx` | Barra superior con titulo y usuario |
+| AdminSidebar | `components/admin/AdminSidebar.jsx` | Menu lateral del panel admin |
 
 ---
 
