@@ -1,14 +1,19 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import ReCAPTCHA from 'react-google-recaptcha';
 import { useAuth } from '../context/AuthContext';
 import PasswordInput from '../components/PasswordInput';
+
+const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
 
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const recaptchaRef = useRef(null);
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState(null);
 
   const handleChange = (e) =>
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -16,12 +21,21 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (RECAPTCHA_SITE_KEY && !captchaToken) {
+      setError('Completa la verificacion de reCAPTCHA');
+      return;
+    }
+
     setLoading(true);
     try {
-      await login(form.email, form.password);
+      await login(form.email, form.password, captchaToken);
       navigate('/dashboard');
-    } catch {
-      setError('Credenciales incorrectas. Verifica tu correo y contrasena.');
+    } catch (err) {
+      const msg = err.response?.data?.message ?? 'Credenciales incorrectas. Verifica tu correo y contrasena.';
+      setError(msg);
+      recaptchaRef.current?.reset();
+      setCaptchaToken(null);
     } finally {
       setLoading(false);
     }
@@ -125,6 +139,18 @@ export default function Login() {
                 Olvidaste tu contrasena?
               </Link>
             </div>
+
+            {/* reCAPTCHA */}
+            {RECAPTCHA_SITE_KEY && (
+              <div className="flex justify-center">
+                <ReCAPTCHA
+                  ref={recaptchaRef}
+                  sitekey={RECAPTCHA_SITE_KEY}
+                  onChange={(token) => setCaptchaToken(token)}
+                  onExpired={() => setCaptchaToken(null)}
+                />
+              </div>
+            )}
 
             {error && (
               <div className="rounded-lg bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-600">

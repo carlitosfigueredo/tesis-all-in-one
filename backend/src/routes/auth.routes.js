@@ -1,6 +1,7 @@
 const { Router } = require('express');
 const { login, me, forgotPassword, resetPassword, changePassword, register } = require('../controllers/auth.controller');
 const { protect, requirePortal }                    = require('../middlewares/auth.middleware');
+const { verifyRecaptcha }                           = require('../middlewares/recaptcha.middleware');
 const { validate, forgotPasswordSchema,
         resetPasswordSchema, loginSchema,
         registerSchema }                            = require('../schemas/auth.schema');
@@ -8,16 +9,16 @@ const { validate, forgotPasswordSchema,
 const router = Router();
 
 // POST /api/auth/login
-router.post('/login', validate(loginSchema), login);
+router.post('/login', verifyRecaptcha, validate(loginSchema), login);
 
 // POST /api/auth/register — registro publico de empresa
-router.post('/register', validate(registerSchema), register);
+router.post('/register', verifyRecaptcha, validate(registerSchema), register);
 
 // GET  /api/auth/me
 router.get('/me', protect, requirePortal('company'), me);
 
 // POST /api/auth/forgot-password
-router.post('/forgot-password', validate(forgotPasswordSchema), forgotPassword);
+router.post('/forgot-password', verifyRecaptcha, validate(forgotPasswordSchema), forgotPassword);
 
 // POST /api/auth/reset-password
 router.post('/reset-password', validate(resetPasswordSchema), resetPassword);

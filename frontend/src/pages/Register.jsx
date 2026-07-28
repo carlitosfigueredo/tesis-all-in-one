@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import ReCAPTCHA from 'react-google-recaptcha';
 import { useAuth } from '../context/AuthContext';
 import PasswordInput from '../components/PasswordInput';
 import api from '../services/api';
+
+const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
 
 const PLANS = [
   { id: 'BASICO', name: 'Estandar', price: 'Gs. 999.000/mes' },
@@ -24,6 +27,8 @@ export default function Register() {
   });
   const [errors, setErrors] = useState([]);
   const [loading, setLoading] = useState(false);
+  const recaptchaRef = useRef(null);
+  const [captchaToken, setCaptchaToken] = useState(null);
 
   const handleChange = (e) =>
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -57,6 +62,10 @@ export default function Register() {
       setErrors(['Completa todos los campos']);
       return;
     }
+    if (RECAPTCHA_SITE_KEY && !captchaToken) {
+      setErrors(['Completa la verificacion de reCAPTCHA']);
+      return;
+    }
 
     setLoading(true);
     try {
@@ -67,6 +76,7 @@ export default function Register() {
         email: form.email,
         password: form.password,
         confirmPassword: form.confirmPassword,
+        recaptchaToken: captchaToken,
       });
 
       // Guardar token y setear usuario en contexto
@@ -82,6 +92,8 @@ export default function Register() {
       const msg = err.response?.data?.message ?? 'Error al registrar. Intenta de nuevo';
       const fieldErrors = err.response?.data?.errors?.map((e) => `${e.field}: ${e.message}`) ?? [];
       setErrors(fieldErrors.length > 0 ? fieldErrors : [msg]);
+      recaptchaRef.current?.reset();
+      setCaptchaToken(null);
     } finally {
       setLoading(false);
     }
@@ -233,6 +245,18 @@ export default function Register() {
                 placeholder="Repeti tu contrasena"
                 required
               />
+
+              {/* reCAPTCHA */}
+              {RECAPTCHA_SITE_KEY && (
+                <div className="flex justify-center">
+                  <ReCAPTCHA
+                    ref={recaptchaRef}
+                    sitekey={RECAPTCHA_SITE_KEY}
+                    onChange={(token) => setCaptchaToken(token)}
+                    onExpired={() => setCaptchaToken(null)}
+                  />
+                </div>
+              )}
 
               {errors.length > 0 && (
                 <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600 space-y-1">

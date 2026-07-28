@@ -25,8 +25,8 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const login = async (email, password) => {
-    const { data } = await api.post('/auth/login', { email, password });
+  const login = async (email, password, recaptchaToken) => {
+    const { data } = await api.post('/auth/login', { email, password, recaptchaToken });
     const { token, user: userData } = data.data;
     localStorage.setItem('token', token);
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
