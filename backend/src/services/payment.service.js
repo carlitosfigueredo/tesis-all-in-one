@@ -65,6 +65,13 @@ const validateCard = ({ cardNumber, expiryMonth, expiryYear, cvv, cardholderName
   return errors;
 };
 
+// Mapeo de plan_config.id al enum Plan de la tabla companies
+const PLAN_ID_TO_ENUM = {
+  ESTANDAR: 'BASICO',
+  PROFESIONAL: 'PROFESIONAL',
+  CORPORATIVO: 'EMPRESARIAL',
+};
+
 /**
  * Procesa un pago simulado.
  * Busca la tarjeta en TEST_CARDS y devuelve el resultado correspondiente.
@@ -121,9 +128,10 @@ const processPayment = async ({ companyId, planId, amount, cardData }) => {
 
   // Si el pago fue aprobado, activar la empresa
   if (status === 'APPROVED') {
+    const planEnum = PLAN_ID_TO_ENUM[planId] || 'BASICO';
     await prisma.company.update({
       where: { id: companyId },
-      data: { status: 'ACTIVE', plan: planId },
+      data: { status: 'ACTIVE', plan: planEnum },
     });
 
     await prisma.subscription.update({
