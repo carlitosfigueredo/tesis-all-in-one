@@ -40,6 +40,11 @@ const processCheckout = async (req, res, next) => {
 
     const { planId, cardNumber, expiryMonth, expiryYear, cvv, cardholderName } = req.body;
 
+    // Validar campos requeridos
+    if (!planId) {
+      return res.status(400).json({ success: false, message: 'Selecciona un plan' });
+    }
+
     // Validar que el usuario tenga empresa
     if (!req.user.companyId) {
       return res.status(400).json({ success: false, message: 'No tenes una empresa asociada' });

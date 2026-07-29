@@ -50,10 +50,15 @@ const validateCard = ({ cardNumber, expiryMonth, expiryYear, cvv, cardholderName
   } else {
     const month = parseInt(expiryMonth, 10);
     const year = parseInt(expiryYear, 10);
-    const now = new Date();
-    const expiry = new Date(year, month);
-    if (month < 1 || month > 12) errors.push('Mes invalido');
-    if (expiry < now) errors.push('Tarjeta vencida');
+    if (isNaN(month) || month < 1 || month > 12) {
+      errors.push('Mes invalido');
+    } else if (isNaN(year) || year < new Date().getFullYear()) {
+      errors.push('Ano invalido');
+    } else {
+      const now = new Date();
+      const expiry = new Date(year, month); // month es 1-12, new Date usa 0-11, asi que month = fin del mes
+      if (expiry <= now) errors.push('Tarjeta vencida');
+    }
   }
   if (!cvv || cvv.length < 3 || cvv.length > 4) {
     errors.push('CVV invalido');
