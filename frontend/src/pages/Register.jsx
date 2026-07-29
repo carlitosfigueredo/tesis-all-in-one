@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import ReCAPTCHA from 'react-google-recaptcha';
 import { useAuth } from '../context/AuthContext';
 import PasswordInput from '../components/PasswordInput';
+import PasswordStrengthIndicator from '../components/PasswordStrengthIndicator';
 import AlertMessage from '../components/AlertMessage';
 import api from '../services/api';
 
@@ -238,6 +239,7 @@ export default function Register() {
                 placeholder="Minimo 8 caracteres"
                 required
               />
+              <PasswordStrengthIndicator password={form.password} />
               <PasswordInput
                 label="Confirmar contrasena"
                 name="confirmPassword"
