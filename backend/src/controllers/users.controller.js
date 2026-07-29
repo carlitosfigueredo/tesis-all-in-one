@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────
 // Users Controller — Gestion de usuarios de empresa
-// Solo COMPANY_ADMIN puede crear/modificar usuarios de su empresa.
+// COMPANY_ADMIN puede crear/modificar usuarios de su empresa.
 // SUPER_ADMIN puede ver todos.
 // ─────────────────────────────────────────
 
@@ -8,6 +8,7 @@ const prisma = require('../lib/prisma');
 const bcrypt = require('bcryptjs');
 const { logAction } = require('../services/audit.service');
 const { getIp, getUserAgent } = require('../utils/request.utils');
+const { invalidatePermissionCache } = require('../middlewares/permission.middleware');
 
 // ─── GET /api/users ───────────────────────────────────────────────────────────
 
@@ -15,11 +16,8 @@ const getUsers = async (req, res, next) => {
   try {
     const where = {};
 
-    // SUPER_ADMIN ve todos (puede filtrar por companyId), los demas solo su empresa
-    if (req.user.role === 'SUPER_ADMIN') {
+    if (req.user.roleNames?.includes('SUPER_ADMIN')) {
       if (req.query.companyId) where.companyId = req.query.companyId;
-      // Excluir super admins del listado
-      where.role = { not: 'SUPER_ADMIN' };
     } else {
       where.companyId = req.user.companyId;
     }
@@ -30,23 +28,54 @@ const getUsers = async (req, res, next) => {
         id: true,
         name: true,
         email: true,
-        role: true,
         active: true,
         createdAt: true,
         updatedAt: true,
         companyId: true,
         company: { select: { name: true } },
+        userRoles: {
+          include: { role: { select: { name: true } } },
+        },
       },
       orderBy: { createdAt: 'asc' },
     });
 
-    const data = users.map((u) => ({
-      ...u,
-      companyName: u.company?.name ?? null,
-      company: undefined,
-    }));
+    // Excluir SUPER_ADMIN del listado
+    const data = users
+      .filter((u) => !u.userRoles.some((ur) => ur.role.name === 'SUPER_ADMIN'))
+      .map((u) => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        active: u.active,
+        createdAt: u.createdAt,
+        updatedAt: u.updatedAt,
+        companyId: u.companyId,
+        companyName: u.company?.name ?? null,
+        roles: u.userRoles.map((ur) => ur.role.name),
+        role: u.userRoles[0]?.role.name ?? 'VIEWER', // backward compat para el frontend
+      }));
 
     res.json({ success: true, data, total: data.length });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── GET /api/users/roles-available ───────────────────────────────────────────
+
+const getAvailableRoles = async (req, res, next) => {
+  try {
+    // Roles que un COMPANY_ADMIN puede asignar (no puede asignar SUPER_ADMIN)
+    const where = { isSystem: true, name: { not: 'SUPER_ADMIN' } };
+
+    const roles = await prisma.role.findMany({
+      where,
+      select: { id: true, name: true, description: true },
+      orderBy: { name: 'asc' },
+    });
+
+    res.json({ success: true, data: roles });
   } catch (error) {
     next(error);
   }
@@ -56,7 +85,7 @@ const getUsers = async (req, res, next) => {
 
 const createUser = async (req, res, next) => {
   try {
-    const { name, email, role, password } = req.body;
+    const { name, email, roleName, password } = req.body;
 
     // Validaciones
     if (!name || !email || !password) {
@@ -67,14 +96,23 @@ const createUser = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'La contrasena debe tener al menos 8 caracteres' });
     }
 
-    // Validar rol permitido
-    const allowedRoles = ['COMPANY_ADMIN', 'ANALYST', 'VIEWER'];
-    const finalRole = allowedRoles.includes(role) ? role : 'VIEWER';
-
     // Determinar companyId
-    const companyId = req.user.role === 'SUPER_ADMIN'
+    const companyId = req.user.roleNames?.includes('SUPER_ADMIN')
       ? (req.body.companyId || null)
       : req.user.companyId;
+
+    // Validar rol permitido (no puede asignar SUPER_ADMIN)
+    const allowedRoleNames = ['COMPANY_ADMIN', 'ANALYST', 'VIEWER'];
+    const finalRoleName = allowedRoleNames.includes(roleName) ? roleName : 'VIEWER';
+
+    // Buscar el rol en la BD
+    const role = await prisma.role.findFirst({
+      where: { name: finalRoleName, companyId: null, isSystem: true },
+    });
+
+    if (!role) {
+      return res.status(400).json({ success: false, message: 'Rol no valido' });
+    }
 
     // Verificar email unico
     const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
@@ -84,23 +122,22 @@ const createUser = async (req, res, next) => {
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email: email.toLowerCase(),
-        password: hashedPassword,
-        role: finalRole,
-        companyId,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        active: true,
-        createdAt: true,
-        companyId: true,
-      },
+    // Crear usuario + asignar rol en transaccion
+    const result = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          name,
+          email: email.toLowerCase(),
+          password: hashedPassword,
+          companyId,
+        },
+      });
+
+      await tx.userRole.create({
+        data: { userId: user.id, roleId: role.id },
+      });
+
+      return user;
     });
 
     await logAction({
@@ -108,14 +145,26 @@ const createUser = async (req, res, next) => {
       userId:     req.user.id,
       action:     'USER_CREATED',
       resource:   'users',
-      resourceId: user.id,
+      resourceId: result.id,
       ipAddress:  getIp(req),
       userAgent:  getUserAgent(req),
       status:     'SUCCESS',
-      newValue:   { name: user.name, email: user.email, role: user.role },
+      newValue:   { name: result.name, email: result.email, role: finalRoleName },
     });
 
-    res.status(201).json({ success: true, data: user });
+    res.status(201).json({
+      success: true,
+      data: {
+        id: result.id,
+        name: result.name,
+        email: result.email,
+        active: result.active,
+        createdAt: result.createdAt,
+        companyId: result.companyId,
+        role: finalRoleName,
+        roles: [finalRoleName],
+      },
+    });
   } catch (error) {
     next(error);
   }
@@ -127,9 +176,8 @@ const toggleUserActive = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    // Buscar usuario respetando tenant
     const where = { id };
-    if (req.user.role !== 'SUPER_ADMIN') {
+    if (!req.user.roleNames?.includes('SUPER_ADMIN')) {
       where.companyId = req.user.companyId;
     }
 
@@ -139,7 +187,6 @@ const toggleUserActive = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
     }
 
-    // No permitir desactivarse a si mismo
     if (user.id === req.user.id) {
       return res.status(400).json({ success: false, message: 'No podes desactivar tu propio usuario' });
     }
@@ -147,14 +194,7 @@ const toggleUserActive = async (req, res, next) => {
     const updated = await prisma.user.update({
       where: { id: user.id },
       data: { active: !user.active },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        active: true,
-        createdAt: true,
-      },
+      select: { id: true, name: true, email: true, active: true, createdAt: true },
     });
 
     await logAction({
@@ -179,37 +219,76 @@ const toggleUserActive = async (req, res, next) => {
 const updateUser = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, role } = req.body;
+    const { name, roleName } = req.body;
 
     const where = { id };
-    if (req.user.role !== 'SUPER_ADMIN') {
+    if (!req.user.roleNames?.includes('SUPER_ADMIN')) {
       where.companyId = req.user.companyId;
     }
 
-    const user = await prisma.user.findFirst({ where });
+    const user = await prisma.user.findFirst({
+      where,
+      include: { userRoles: { include: { role: true } } },
+    });
     if (!user) {
       return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
     }
 
+    // Actualizar nombre si se provee
     const data = {};
     if (name) data.name = name;
-    if (role) {
-      const allowedRoles = ['COMPANY_ADMIN', 'ANALYST', 'VIEWER'];
-      if (allowedRoles.includes(role)) data.role = role;
+
+    if (Object.keys(data).length > 0) {
+      await prisma.user.update({ where: { id: user.id }, data });
     }
 
-    const updated = await prisma.user.update({
+    // Actualizar rol si se provee
+    if (roleName) {
+      const allowedRoleNames = ['COMPANY_ADMIN', 'ANALYST', 'VIEWER'];
+      if (allowedRoleNames.includes(roleName)) {
+        const newRole = await prisma.role.findFirst({
+          where: { name: roleName, companyId: null, isSystem: true },
+        });
+
+        if (newRole) {
+          // Quitar roles actuales del sistema y asignar el nuevo
+          const systemRoleIds = await prisma.role.findMany({
+            where: { isSystem: true, companyId: null },
+            select: { id: true },
+          });
+
+          await prisma.userRole.deleteMany({
+            where: {
+              userId: user.id,
+              roleId: { in: systemRoleIds.map((r) => r.id) },
+            },
+          });
+
+          await prisma.userRole.create({
+            data: { userId: user.id, roleId: newRole.id },
+          });
+
+          // Invalidar cache de permisos
+          invalidatePermissionCache(user.id);
+        }
+      }
+    }
+
+    // Obtener usuario actualizado
+    const updated = await prisma.user.findUnique({
       where: { id: user.id },
-      data,
       select: {
         id: true,
         name: true,
         email: true,
-        role: true,
         active: true,
         createdAt: true,
+        userRoles: { include: { role: { select: { name: true } } } },
       },
     });
+
+    const oldRoleName = user.userRoles[0]?.role?.name ?? 'VIEWER';
+    const newRoleName = updated.userRoles[0]?.role?.name ?? 'VIEWER';
 
     await logAction({
       tenantId:   user.companyId,
@@ -220,14 +299,25 @@ const updateUser = async (req, res, next) => {
       ipAddress:  getIp(req),
       userAgent:  getUserAgent(req),
       status:     'SUCCESS',
-      oldValue:   { name: user.name, role: user.role },
-      newValue:   { name: updated.name, role: updated.role },
+      oldValue:   { name: user.name, role: oldRoleName },
+      newValue:   { name: updated.name, role: newRoleName },
     });
 
-    res.json({ success: true, data: updated });
+    res.json({
+      success: true,
+      data: {
+        id: updated.id,
+        name: updated.name,
+        email: updated.email,
+        active: updated.active,
+        createdAt: updated.createdAt,
+        role: newRoleName,
+        roles: updated.userRoles.map((ur) => ur.role.name),
+      },
+    });
   } catch (error) {
     next(error);
   }
 };
 
-module.exports = { getUsers, createUser, toggleUserActive, updateUser };
+module.exports = { getUsers, createUser, toggleUserActive, updateUser, getAvailableRoles };

@@ -2,11 +2,14 @@ const { Router } = require('express');
 const { protect } = require('../middlewares/auth.middleware');
 const { requireActiveCompany } = require('../middlewares/companyStatus.middleware');
 const { requirePermission } = require('../middlewares/permission.middleware');
-const { getUsers, createUser, toggleUserActive, updateUser } = require('../controllers/users.controller');
+const { getUsers, createUser, toggleUserActive, updateUser, getAvailableRoles } = require('../controllers/users.controller');
 
 const router = Router();
 
 router.use(protect, requireActiveCompany);
+
+// GET /api/users/roles-available — roles asignables
+router.get('/roles-available', requirePermission('users.read'), getAvailableRoles);
 
 // GET /api/users
 router.get('/', requirePermission('users.read'), getUsers);

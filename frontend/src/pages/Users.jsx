@@ -68,7 +68,7 @@ export default function Users() {
       const { data: res } = await api.post('/users', {
         name: form.name,
         email: form.email,
-        role: form.role,
+        roleName: form.role,
         password: form.password,
       });
       setUsers((prev) => [res.data, ...prev]);
