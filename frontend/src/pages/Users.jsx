@@ -161,6 +161,7 @@ export default function Users() {
                     name="role" value={form.role} onChange={handleChange}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-primary-500"
                   >
+                    <option value="COMPANY_ADMIN">Administrador — gestion completa de la empresa</option>
                     <option value="ANALYST">Analista — puede analizar y ver predicciones</option>
                     <option value="VIEWER">Solo lectura — solo puede ver datos</option>
                   </select>
