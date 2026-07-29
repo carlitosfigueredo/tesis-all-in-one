@@ -86,15 +86,17 @@ export default function Register() {
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
       // Redirigir al checkout para activar el plan
-      navigate('/checkout');
-      // Forzar recarga del usuario en el contexto
-      window.location.reload();
+      // Usamos window.location para que AuthContext se re-hidrate con el nuevo token
+      window.location.href = '/checkout';
     } catch (err) {
       const msg = err.response?.data?.message ?? 'Error al registrar. Intenta de nuevo';
       const fieldErrors = err.response?.data?.errors?.map((e) => `${e.field}: ${e.message}`) ?? [];
       setErrors(fieldErrors.length > 0 ? fieldErrors : [msg]);
-      recaptchaRef.current?.reset();
-      setCaptchaToken(null);
+      // Resetear captcha despues de setear errores (para que no cause flash)
+      setTimeout(() => {
+        recaptchaRef.current?.reset();
+        setCaptchaToken(null);
+      }, 100);
     } finally {
       setLoading(false);
     }

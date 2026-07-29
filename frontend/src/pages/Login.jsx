@@ -35,8 +35,10 @@ export default function Login() {
     } catch (err) {
       const msg = err.response?.data?.message ?? 'Credenciales incorrectas. Verifica tu correo y contrasena.';
       setError(msg);
-      recaptchaRef.current?.reset();
-      setCaptchaToken(null);
+      setTimeout(() => {
+        recaptchaRef.current?.reset();
+        setCaptchaToken(null);
+      }, 100);
     } finally {
       setLoading(false);
     }

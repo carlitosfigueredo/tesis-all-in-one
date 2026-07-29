@@ -34,8 +34,10 @@ export default function AdminLogin() {
       navigate('/admin/dashboard');
     } catch {
       setError('Credenciales incorrectas.');
-      recaptchaRef.current?.reset();
-      setCaptchaToken(null);
+      setTimeout(() => {
+        recaptchaRef.current?.reset();
+        setCaptchaToken(null);
+      }, 100);
     } finally {
       setLoading(false);
     }
