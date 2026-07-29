@@ -222,7 +222,11 @@ const sendEmail = async ({ to, subject, html, text }) => {
 
 ## Mailhog en desarrollo (Docker)
 
-Agregar al `docker-compose.yml` para desarrollo local:
+**IMPORTANTE:** En desarrollo, los correos NO llegan a Gmail ni a ningun correo real. Todos quedan capturados en Mailhog.
+
+Para ver los correos enviados por el sistema, abrir **http://localhost:8025** en el browser. Ahi esta la bandeja de entrada con todos los emails (reset password, account locked, password changed, etc.)
+
+El servicio Mailhog ya esta configurado en `docker-compose.yml`:
 
 ```yaml
 mailhog:
@@ -235,7 +239,7 @@ mailhog:
     - tesis_network
 ```
 
-Con esto, configurar en `.env` de desarrollo:
+Variables en `.env` para desarrollo (ya configuradas):
 ```env
 SMTP_HOST=mailhog
 SMTP_PORT=1025
@@ -244,4 +248,25 @@ SMTP_USER=
 SMTP_PASS=
 ```
 
-Acceder a los correos capturados en `http://localhost:8025`.
+---
+
+## Para enviar correos reales (Gmail SMTP)
+
+Si se necesita que los correos lleguen a casillas reales (demo, produccion), configurar Gmail SMTP:
+
+1. En la cuenta Google: Seguridad → Verificacion en 2 pasos → Contrasenas de aplicaciones
+2. Generar una contrasena de app para "Correo"
+3. Actualizar `.env`:
+
+```env
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=tu_correo@gmail.com
+SMTP_PASS=la_app_password_generada
+SMTP_FROM="Sistema BI <tu_correo@gmail.com>"
+```
+
+4. Reiniciar el backend (`docker compose restart backend`)
+
+**Nota:** Para la tesis, Mailhog en localhost:8025 es suficiente para demostrar que los correos funcionan correctamente. No es necesario configurar Gmail SMTP.
