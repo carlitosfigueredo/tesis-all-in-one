@@ -1,5 +1,6 @@
 const { Router } = require('express');
 const { protect, requireRole, requirePortal } = require('../middlewares/auth.middleware');
+const { requirePermission } = require('../middlewares/permission.middleware');
 const {
   getCompanies, getCompany, getAdminStats,
   getPlans, updatePlans, getAdminAuditLogs,
@@ -8,20 +9,19 @@ const { getAllPayments, toggleCompanyStatus } = require('../controllers/payments
 
 const router = Router();
 
+// Todas las rutas admin requieren autenticacion + portal admin + rol SUPER_ADMIN
 router.use(protect, requirePortal('admin'), requireRole('SUPER_ADMIN'));
 
-router.get('/stats',       getAdminStats);
-router.get('/companies',   getCompanies);
-router.get('/companies/:id', getCompany);
-router.patch('/companies/:id/status', toggleCompanyStatus);
+router.get('/stats',       requirePermission('admin.companies'), getAdminStats);
+router.get('/companies',   requirePermission('admin.companies'), getCompanies);
+router.get('/companies/:id', requirePermission('admin.companies'), getCompany);
+router.patch('/companies/:id/status', requirePermission('admin.companies'), toggleCompanyStatus);
 
-// Planes — GET y PUT
-router.get('/plans',  getPlans);
-router.put('/plans',  updatePlans);
+router.get('/plans',  requirePermission('admin.plans'), getPlans);
+router.put('/plans',  requirePermission('admin.plans'), updatePlans);
 
-// Pagos — ver todos los pagos del sistema
-router.get('/payments', getAllPayments);
+router.get('/payments', requirePermission('admin.payments'), getAllPayments);
 
-router.get('/audit-logs', getAdminAuditLogs);
+router.get('/audit-logs', requirePermission('admin.audit'), getAdminAuditLogs);
 
 module.exports = router;

@@ -21,11 +21,12 @@ model Company {
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 
-  users     User[]
-  employees Employee[]
-  auditLogs AuditLog[]
+  users        User[]
+  employees    Employee[]
+  auditLogs    AuditLog[]
   payments     Payment[]
   subscription Subscription?
+  roles        Role[]
 
   @@map("companies")
 }
@@ -38,21 +39,94 @@ model User {
   name           String
   email          String   @unique
   password       String
-  role           Role     @default(VIEWER)
   active         Boolean  @default(true)
   failedAttempts Int      @default(0)
   lockedUntil    DateTime?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  // SUPER_ADMIN no pertenece a ninguna empresa (null)
+  // Tenant (SUPER_ADMIN no pertenece a ninguna empresa)
   companyId String?
   company   Company? @relation(fields: [companyId], references: [id])
 
+  // RBAC: relacion muchos-a-muchos con roles
+  userRoles   UserRole[]
   auditLogs   AuditLog[]
   resetTokens PasswordResetToken[]
 
   @@map("users")
+}
+
+// ─────────────────────────────────────────
+// RBAC — Roles
+// ─────────────────────────────────────────
+model Role {
+  id          String   @id @default(uuid())
+  name        String   // SUPER_ADMIN, COMPANY_ADMIN, ANALYST, VIEWER, custom...
+  description String?
+  isSystem    Boolean  @default(false) // true = no se puede eliminar ni renombrar
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Un rol puede ser global (companyId=null) o especifico de una empresa
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+
+  // Relaciones muchos-a-muchos
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+
+  @@unique([name, companyId]) // nombre unico por empresa (o global)
+  @@map("roles")
+}
+
+// ─────────────────────────────────────────
+// RBAC — Permisos
+// ─────────────────────────────────────────
+model Permission {
+  id          String   @id @default(uuid())
+  code        String   @unique // employees.read, predictions.run, etc.
+  name        String           // Nombre legible: "Ver empleados"
+  module      String           // Agrupacion: employees, predictions, users, etc.
+  description String?
+  createdAt   DateTime @default(now())
+
+  rolePermissions RolePermission[]
+
+  @@index([module])
+  @@map("permissions")
+}
+
+// ─────────────────────────────────────────
+// RBAC — Tabla intermedia Role <-> Permission
+// ─────────────────────────────────────────
+model RolePermission {
+  id           String   @id @default(uuid())
+  roleId       String
+  permissionId String
+  createdAt    DateTime @default(now())
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// ─────────────────────────────────────────
+// RBAC — Tabla intermedia User <-> Role
+// ─────────────────────────────────────────
+model UserRole {
+  id        String   @id @default(uuid())
+  userId    String
+  roleId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@map("user_roles")
 }
 
 // ─────────────────────────────────────────
@@ -76,17 +150,14 @@ model PasswordResetToken {
 // ─────────────────────────────────────────
 model Employee {
   id                         String         @id @default(uuid())
-  // Datos basicos
   name                       String?
   job_role                   String
   department                 String
-  // Datos personales
   age                        Int
   gender                     String
   marital_status             String?
   education                  Int?
   education_field            String?
-  // Datos laborales
   monthly_income             Float
   job_satisfaction           Int
   environment_satisfaction   Int?
@@ -100,16 +171,13 @@ model Employee {
   distance_from_home         Int?
   overtime                   Boolean        @default(false)
   business_travel            String?
-  // Resultado de attrition historico
   attrition                  Boolean        @default(false)
-  // Score ML
   flight_risk                Float          @default(0)
   risk_level                 String         @default("BAJO")
   status                     EmployeeStatus @default(ACTIVE)
   createdAt                  DateTime       @default(now())
   updatedAt                  DateTime       @updatedAt
 
-  // Tenant
   companyId String?
   company   Company? @relation(fields: [companyId], references: [id])
 
@@ -127,7 +195,7 @@ model PlanConfig {
   employeeLimit       Int
   predictionFrequency String
   dashboardType       String
-  features            String[] // Array de strings con las features del plan
+  features            String[]
   cta                 String   @default("Contratar")
   active              Boolean  @default(true)
   createdAt           DateTime @default(now())
@@ -141,22 +209,20 @@ model PlanConfig {
 // ─────────────────────────────────────────
 model AuditLog {
   id         String   @id @default(uuid())
-  action     String   // LOGIN_SUCCESS, EMPLOYEE_CREATED, etc.
-  resource   String?  // 'users', 'employees', etc.
+  action     String
+  resource   String?
   resourceId String?
   oldValue   Json?
   newValue   Json?
   ipAddress  String?
   userAgent  String?
-  status     String   @default("SUCCESS") // SUCCESS, FAILURE, WARNING
+  status     String   @default("SUCCESS")
   errorMsg   String?
   createdAt  DateTime @default(now())
 
-  // Relacion con tenant (empresa)
   tenantId String?
   company  Company? @relation(fields: [tenantId], references: [id])
 
-  // Relacion con usuario que realizo la accion
   userId String?
   user   User?  @relation(fields: [userId], references: [id])
 
@@ -172,23 +238,21 @@ model AuditLog {
 // ─────────────────────────────────────────
 model Payment {
   id              String        @id @default(uuid())
-  amount          Int           // Monto en Guaranies
+  amount          Int
   currency        String        @default("PYG")
   status          PaymentStatus @default(PENDING)
-  paymentMethod   String        @default("card") // card, transfer, etc.
-  cardLast4       String?       // Ultimos 4 digitos de la tarjeta
-  cardBrand       String?       // VISA, MASTERCARD, etc.
+  paymentMethod   String        @default("card")
+  cardLast4       String?
+  cardBrand       String?
   description     String?
-  failureReason   String?       // Razon del rechazo si fallo
+  failureReason   String?
   processedAt     DateTime?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
-  // Relacion con empresa
   companyId String
   company   Company @relation(fields: [companyId], references: [id])
 
-  // Relacion con suscripcion (si aplica)
   subscriptionId String?
   subscription   Subscription? @relation(fields: [subscriptionId], references: [id])
 
@@ -198,16 +262,15 @@ model Payment {
 }
 
 model Subscription {
-  id            String             @id @default(uuid())
-  planId        String             // ID del PlanConfig
-  status        SubscriptionStatus @default(ACTIVE)
-  currentPeriodStart DateTime     @default(now())
+  id                 String             @id @default(uuid())
+  planId             String
+  status             SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart DateTime           @default(now())
   currentPeriodEnd   DateTime
-  canceledAt    DateTime?
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
+  canceledAt         DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
 
-  // Relacion con empresa
   companyId String   @unique
   company   Company  @relation(fields: [companyId], references: [id])
 
@@ -216,6 +279,10 @@ model Subscription {
   @@index([status])
   @@map("subscriptions")
 }
+
+// ─────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────
 
 enum PaymentStatus {
   PENDING
@@ -229,17 +296,6 @@ enum SubscriptionStatus {
   PAST_DUE
   CANCELED
   EXPIRED
-}
-
-// ─────────────────────────────────────────
-// Enums
-// ─────────────────────────────────────────
-
-enum Role {
-  SUPER_ADMIN
-  COMPANY_ADMIN
-  ANALYST
-  VIEWER
 }
 
 enum Plan {

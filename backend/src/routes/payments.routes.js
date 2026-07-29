@@ -1,31 +1,27 @@
 const { Router } = require('express');
 const { protect, requirePortal } = require('../middlewares/auth.middleware');
+const { requirePermission } = require('../middlewares/permission.middleware');
 const {
-  getCheckoutPlans,
-  processCheckout,
-  getHistory,
-  getActiveSubscription,
-  getTestCards,
+  getCheckoutPlans, processCheckout, getHistory, getActiveSubscription, getTestCards,
 } = require('../controllers/payments.controller');
 
 const router = Router();
 
-// Todas las rutas de pagos requieren autenticacion + portal empresa
 router.use(protect, requirePortal('company'));
 
-// GET /api/payments/plans — planes disponibles para checkout
+// GET /api/payments/plans
 router.get('/plans', getCheckoutPlans);
 
-// GET /api/payments/test-cards — tarjetas de prueba (solo dev)
+// GET /api/payments/test-cards (solo dev)
 router.get('/test-cards', getTestCards);
 
-// POST /api/payments/process — procesar pago con tarjeta
-router.post('/process', processCheckout);
+// POST /api/payments/process
+router.post('/process', requirePermission('payments.process'), processCheckout);
 
-// GET /api/payments/history — historial de pagos de la empresa
-router.get('/history', getHistory);
+// GET /api/payments/history
+router.get('/history', requirePermission('payments.view'), getHistory);
 
-// GET /api/payments/subscription — suscripcion activa
-router.get('/subscription', getActiveSubscription);
+// GET /api/payments/subscription
+router.get('/subscription', requirePermission('payments.view'), getActiveSubscription);
 
 module.exports = router;

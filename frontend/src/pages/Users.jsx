@@ -19,8 +19,8 @@ const ROLE_COLORS = {
 const EMPTY_FORM = { name: '', email: '', role: 'ANALYST', password: '', confirmPassword: '' };
 
 export default function Users() {
-  const { user: currentUser } = useAuth();
-  const isAdmin = currentUser?.role === 'COMPANY_ADMIN';
+  const { user: currentUser, hasPermission } = useAuth();
+  const canManageUsers = hasPermission('users.write');
 
   const [users, setUsers]       = useState([]);
   const [loading, setLoading]   = useState(true);
@@ -107,7 +107,7 @@ export default function Users() {
                 {users.length} usuario(s) en <strong>{currentUser?.companyName}</strong>
               </p>
             </div>
-            {isAdmin && (
+            {canManageUsers && (
               <button
                 onClick={() => { setShowForm((v) => !v); setErrors([]); }}
                 className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 transition-colors"
@@ -121,7 +121,7 @@ export default function Users() {
           </div>
 
           {/* Aviso de solo lectura para no-admin */}
-          {!isAdmin && (
+          {!canManageUsers && (
             <div className="mb-4 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-700">
               Solo el Administrador de empresa puede crear o modificar usuarios.
             </div>
@@ -135,7 +135,7 @@ export default function Users() {
           )}
 
           {/* Formulario de creacion */}
-          {showForm && isAdmin && (
+          {showForm && canManageUsers && (
             <div className="mb-6 rounded-xl bg-white border border-gray-100 shadow-sm p-6">
               <h2 className="text-base font-semibold text-gray-900 mb-4">Crear nuevo usuario</h2>
               <form onSubmit={handleCreate} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -221,7 +221,7 @@ export default function Users() {
                     <th className="px-5 py-3 text-left">Rol</th>
                     <th className="px-5 py-3 text-left">Estado</th>
                     <th className="px-5 py-3 text-left">Registrado</th>
-                    {isAdmin && <th className="px-5 py-3 text-left">Acciones</th>}
+                    {canManageUsers && <th className="px-5 py-3 text-left">Acciones</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
@@ -253,7 +253,7 @@ export default function Users() {
                       <td className="px-5 py-3 text-xs text-gray-400">
                         {new Date(u.createdAt).toLocaleDateString('es-PY')}
                       </td>
-                      {isAdmin && (
+                      {canManageUsers && (
                         <td className="px-5 py-3">
                           {u.id !== currentUser?.id && (
                             <button

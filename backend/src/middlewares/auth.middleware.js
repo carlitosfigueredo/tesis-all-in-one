@@ -1,8 +1,9 @@
 const jwt = require('jsonwebtoken');
 const prisma = require('../lib/prisma');
+const { getUserPermissions } = require('./permission.middleware');
 
 // ─────────────────────────────────────────
-// protect — valida JWT y adjunta req.user desde la BD
+// protect — valida JWT, busca usuario en BD y carga permisos
 // ─────────────────────────────────────────
 const protect = async (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -22,10 +23,9 @@ const protect = async (req, res, next) => {
         id: true,
         name: true,
         email: true,
-        role: true,
         active: true,
         companyId: true,
-        company: { select: { name: true } },
+        company: { select: { name: true, status: true } },
       },
     });
 
@@ -33,15 +33,20 @@ const protect = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'Token invalido o usuario desactivado' });
     }
 
+    // Cargar permisos y roles
+    const { permissions, roleNames } = await getUserPermissions(user.id);
+
     // Adjuntar usuario al request
     req.user = {
       id: user.id,
       name: user.name,
       email: user.email,
-      role: user.role,
       companyId: user.companyId,
       companyName: user.company?.name ?? null,
+      companyStatus: user.company?.status ?? null,
       portal: decoded.portal,
+      permissions,
+      roleNames,
     };
 
     next();
@@ -51,7 +56,7 @@ const protect = async (req, res, next) => {
 };
 
 // ─────────────────────────────────────────
-// requireRole — autorizacion por rol
+// requireRole — autorizacion por nombre de rol (backward compat)
 // Uso: requireRole('SUPER_ADMIN')
 //      requireRole('COMPANY_ADMIN', 'ANALYST')
 // ─────────────────────────────────────────
@@ -59,16 +64,15 @@ const requireRole = (...roles) => (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({ success: false, message: 'No autorizado' });
   }
-  if (!roles.includes(req.user.role)) {
+  const hasRole = roles.some((r) => req.user.roleNames?.includes(r));
+  if (!hasRole) {
     return res.status(403).json({ success: false, message: 'Acceso denegado: permisos insuficientes' });
   }
   next();
 };
 
 // ─────────────────────────────────────────
-// requirePortal — asegura que el token
-// pertenece al portal correcto
-// Uso: requirePortal('admin') | requirePortal('company')
+// requirePortal — asegura que el token pertenece al portal correcto
 // ─────────────────────────────────────────
 const requirePortal = (portal) => (req, res, next) => {
   if (req.user?.portal !== portal) {
