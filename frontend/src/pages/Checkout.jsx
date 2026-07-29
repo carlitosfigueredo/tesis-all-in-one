@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AlertMessage from '../components/AlertMessage';
 import api from '../services/api';
@@ -27,7 +27,7 @@ const BRAND_COLORS = {
 
 export default function Checkout() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [plans, setPlans] = useState([]);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [testCards, setTestCards] = useState([]);
@@ -47,17 +47,18 @@ export default function Checkout() {
 
   useEffect(() => {
     // Cargar planes
-    api.get('/payments/plans').then(({ data }) => {
-      setPlans(data.data);
-      // Preseleccionar el plan de la empresa si existe
-      if (user?.companyPlan) {
-        const match = data.data.find((p) => p.id === user.companyPlan);
-        if (match) setSelectedPlan(match);
-      }
-      if (!selectedPlan && data.data.length > 0) {
-        setSelectedPlan(data.data[0]);
-      }
-    });
+    api.get('/payments/plans')
+      .then(({ data }) => {
+        setPlans(data.data);
+        // Preseleccionar primer plan si no hay seleccion
+        if (data.data.length > 0) {
+          setSelectedPlan(data.data[0]);
+        }
+      })
+      .catch((err) => {
+        console.error('Error al cargar planes:', err);
+        setError('No se pudieron cargar los planes. Intenta recargar la pagina.');
+      });
 
     // Cargar tarjetas de prueba
     api.get('/payments/test-cards').then(({ data }) => {
@@ -108,7 +109,8 @@ export default function Checkout() {
       if (res.success && res.data.status === 'APPROVED') {
         setSuccess('Pago aprobado! Tu empresa esta activa. Redirigiendo...');
         setTimeout(() => {
-          window.location.href = '/dashboard';
+          navigate('/dashboard', { replace: true });
+          window.location.reload();
         }, 2000);
       } else if (res.data?.status === 'PENDING') {
         setSuccess('Pago en proceso de verificacion. Te notificaremos cuando se confirme.');
@@ -127,6 +129,20 @@ export default function Checkout() {
   };
 
   const formatGs = (n) => `Gs. ${Number(n).toLocaleString('es-PY')}`;
+
+  // Guard: si todavia esta cargando el auth, mostrar spinner
+  if (authLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary-500 border-t-transparent" />
+      </div>
+    );
+  }
+
+  // Guard: si no esta autenticado, redirigir al login
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">

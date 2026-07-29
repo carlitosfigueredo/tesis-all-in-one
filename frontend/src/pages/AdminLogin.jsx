@@ -132,6 +132,15 @@ export default function AdminLogin() {
                 'Ingresar al panel'
               )}
             </button>
+
+            <div className="text-center">
+              <Link
+                to="/admin/forgot-password"
+                className="text-xs text-gray-400 hover:text-gray-600 font-medium"
+              >
+                Olvidaste tu contrasena?
+              </Link>
+            </div>
           </form>
         </div>
 

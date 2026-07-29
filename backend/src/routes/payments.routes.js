@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const { protect, requireRole } = require('../middlewares/auth.middleware');
+const { protect, requirePortal } = require('../middlewares/auth.middleware');
 const {
   getCheckoutPlans,
   processCheckout,
@@ -10,8 +10,8 @@ const {
 
 const router = Router();
 
-// Todas las rutas de pagos requieren autenticacion
-router.use(protect);
+// Todas las rutas de pagos requieren autenticacion + portal empresa
+router.use(protect, requirePortal('company'));
 
 // GET /api/payments/plans — planes disponibles para checkout
 router.get('/plans', getCheckoutPlans);

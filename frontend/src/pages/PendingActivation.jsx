@@ -61,7 +61,7 @@ export default function PendingActivation() {
           </a>
           <button
             onClick={logout}
-            className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-gray-400 hover:bg-gray-50 transition"
+            className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 transition"
           >
             Cerrar sesion
           </button>

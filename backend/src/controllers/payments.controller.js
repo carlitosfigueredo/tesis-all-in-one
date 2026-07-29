@@ -33,6 +33,11 @@ const processCheckout = async (req, res, next) => {
   const ua = getUserAgent(req);
 
   try {
+    // Bloquear en produccion (mock no debe usarse en prod)
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(501).json({ success: false, message: 'Pasarela de pagos no configurada para produccion' });
+    }
+
     const { planId, cardNumber, expiryMonth, expiryYear, cvv, cardholderName } = req.body;
 
     // Validar que el usuario tenga empresa
@@ -65,15 +70,22 @@ const processCheckout = async (req, res, next) => {
     });
 
     // Auditar
+    const auditAction = result.status === 'APPROVED' ? 'PAYMENT_APPROVED'
+      : result.status === 'PENDING' ? 'PAYMENT_PENDING'
+      : 'PAYMENT_REJECTED';
+    const auditStatus = result.status === 'APPROVED' ? 'SUCCESS'
+      : result.status === 'PENDING' ? 'WARNING'
+      : 'FAILURE';
+
     await logAction({
       tenantId: req.user.companyId,
       userId: req.user.id,
-      action: result.status === 'APPROVED' ? 'PAYMENT_APPROVED' : 'PAYMENT_REJECTED',
+      action: auditAction,
       resource: 'payments',
       resourceId: result.paymentId,
       ipAddress: ip,
       userAgent: ua,
-      status: result.status === 'APPROVED' ? 'SUCCESS' : 'FAILURE',
+      status: auditStatus,
       errorMsg: result.failureReason,
       newValue: {
         amount: result.amount,
@@ -200,7 +212,7 @@ const getAllPayments = async (req, res, next) => {
 };
 
 /**
- * PATCH /api/admin/companies/:id/activate
+ * PATCH /api/admin/companies/:id/status
  * Activar/suspender empresa manualmente (SUPER_ADMIN).
  */
 const toggleCompanyStatus = async (req, res, next) => {

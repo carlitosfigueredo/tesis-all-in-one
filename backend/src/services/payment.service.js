@@ -129,6 +129,9 @@ const processPayment = async ({ companyId, planId, amount, cardData }) => {
   // Si el pago fue aprobado, activar la empresa
   if (status === 'APPROVED') {
     const planEnum = PLAN_ID_TO_ENUM[planId] || 'BASICO';
+    const periodEnd = new Date();
+    periodEnd.setMonth(periodEnd.getMonth() + 1); // Renovar 1 mes
+
     await prisma.company.update({
       where: { id: companyId },
       data: { status: 'ACTIVE', plan: planEnum },
@@ -136,7 +139,7 @@ const processPayment = async ({ companyId, planId, amount, cardData }) => {
 
     await prisma.subscription.update({
       where: { id: subscription.id },
-      data: { status: 'ACTIVE' },
+      data: { status: 'ACTIVE', planId, currentPeriodEnd: periodEnd },
     });
   }
 
