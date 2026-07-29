@@ -34,6 +34,13 @@ export function AuthProvider({ children }) {
     return userData;
   };
 
+  // Permite setear sesion manualmente (usado por Register)
+  const setSession = (token, userData) => {
+    localStorage.setItem('token', token);
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    setUser(userData);
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     delete api.defaults.headers.common['Authorization'];
@@ -46,6 +53,7 @@ export function AuthProvider({ children }) {
         user,
         login,
         logout,
+        setSession,
         loading,
         isAuthenticated: !!user,
         // Helpers de rol para usar en componentes

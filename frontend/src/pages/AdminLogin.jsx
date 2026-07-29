@@ -34,8 +34,10 @@ export default function AdminLogin() {
       navigate('/admin/dashboard');
     } catch {
       setError('Credenciales incorrectas.');
-      recaptchaRef.current?.reset();
-      setCaptchaToken(null);
+      setTimeout(() => {
+        recaptchaRef.current?.reset();
+        setCaptchaToken(null);
+      }, 100);
     } finally {
       setLoading(false);
     }
@@ -132,6 +134,15 @@ export default function AdminLogin() {
                 'Ingresar al panel'
               )}
             </button>
+
+            <div className="text-center">
+              <Link
+                to="/admin/forgot-password"
+                className="text-xs text-gray-400 hover:text-gray-600 font-medium"
+              >
+                Olvidaste tu contrasena?
+              </Link>
+            </div>
           </form>
         </div>
 

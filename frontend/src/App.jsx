@@ -19,6 +19,7 @@ import Legal              from './pages/Legal';
 
 // Portal admin (SUPER_ADMIN)
 import AdminLogin      from './pages/AdminLogin';
+import AdminForgotPassword from './pages/AdminForgotPassword';
 import AdminDashboard  from './pages/admin/AdminDashboard';
 import AdminCompanies  from './pages/admin/AdminCompanies';
 import AdminPlans      from './pages/admin/AdminPlans';
@@ -30,6 +31,7 @@ import Employees     from './pages/Employees';
 import EmployeeDetail from './pages/EmployeeDetail';
 import Users         from './pages/Users';
 import ModelML       from './pages/ModelML';
+import Checkout      from './pages/Checkout';
 
 export default function App() {
   return (
@@ -50,6 +52,7 @@ export default function App() {
 
             {/* ── Portal Super Admin ─────────────────────────────────── */}
             <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin/forgot-password" element={<AdminForgotPassword />} />
             <Route element={<AdminRoute />}>
               <Route path="/admin"           element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
@@ -59,6 +62,7 @@ export default function App() {
             </Route>
 
             {/* ── Portal Empresa ─────────────────────────────────────── */}
+            <Route path="/checkout" element={<Checkout />} />
             <Route element={<PrivateRoute />}>
               <Route path="/dashboard"      element={<Dashboard />} />
               <Route path="/employees"      element={<Employees />} />

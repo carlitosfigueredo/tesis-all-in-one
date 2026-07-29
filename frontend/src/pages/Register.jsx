@@ -16,7 +16,7 @@ const PLANS = [
 
 export default function Register() {
   const navigate = useNavigate();
-  const { login: authLogin } = useAuth();
+  const { setSession } = useAuth();
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
     companyName: '',
@@ -82,19 +82,19 @@ export default function Register() {
 
       // Guardar token y setear usuario en contexto
       const { token, user } = res.data;
-      localStorage.setItem('token', token);
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      setSession(token, user);
 
-      // Redirigir al dashboard (el PrivateRoute lo manejara)
-      navigate('/dashboard');
-      // Forzar recarga del usuario en el contexto
-      window.location.reload();
+      // Redirigir al checkout para activar el plan
+      navigate('/checkout', { replace: true });
     } catch (err) {
       const msg = err.response?.data?.message ?? 'Error al registrar. Intenta de nuevo';
       const fieldErrors = err.response?.data?.errors?.map((e) => `${e.field}: ${e.message}`) ?? [];
       setErrors(fieldErrors.length > 0 ? fieldErrors : [msg]);
-      recaptchaRef.current?.reset();
-      setCaptchaToken(null);
+      // Resetear captcha despues de setear errores (para que no cause flash)
+      setTimeout(() => {
+        recaptchaRef.current?.reset();
+        setCaptchaToken(null);
+      }, 100);
     } finally {
       setLoading(false);
     }

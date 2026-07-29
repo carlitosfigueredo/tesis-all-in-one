@@ -24,6 +24,8 @@ model Company {
   users     User[]
   employees Employee[]
   auditLogs AuditLog[]
+  payments     Payment[]
+  subscription Subscription?
 
   @@map("companies")
 }
@@ -163,6 +165,70 @@ model AuditLog {
   @@index([action])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+// ─────────────────────────────────────────
+// Pagos y suscripciones
+// ─────────────────────────────────────────
+model Payment {
+  id              String        @id @default(uuid())
+  amount          Int           // Monto en Guaranies
+  currency        String        @default("PYG")
+  status          PaymentStatus @default(PENDING)
+  paymentMethod   String        @default("card") // card, transfer, etc.
+  cardLast4       String?       // Ultimos 4 digitos de la tarjeta
+  cardBrand       String?       // VISA, MASTERCARD, etc.
+  description     String?
+  failureReason   String?       // Razon del rechazo si fallo
+  processedAt     DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relacion con empresa
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id])
+
+  // Relacion con suscripcion (si aplica)
+  subscriptionId String?
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id])
+
+  @@index([companyId])
+  @@index([status])
+  @@map("payments")
+}
+
+model Subscription {
+  id            String             @id @default(uuid())
+  planId        String             // ID del PlanConfig
+  status        SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart DateTime     @default(now())
+  currentPeriodEnd   DateTime
+  canceledAt    DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  // Relacion con empresa
+  companyId String   @unique
+  company   Company  @relation(fields: [companyId], references: [id])
+
+  payments Payment[]
+
+  @@index([status])
+  @@map("subscriptions")
+}
+
+enum PaymentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REFUNDED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  EXPIRED
 }
 
 // ─────────────────────────────────────────
