@@ -16,7 +16,7 @@ const PLANS = [
 
 export default function Register() {
   const navigate = useNavigate();
-  const { login: authLogin } = useAuth();
+  const { setSession } = useAuth();
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
     companyName: '',
@@ -82,12 +82,10 @@ export default function Register() {
 
       // Guardar token y setear usuario en contexto
       const { token, user } = res.data;
-      localStorage.setItem('token', token);
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      setSession(token, user);
 
       // Redirigir al checkout para activar el plan
-      // Usamos window.location para que AuthContext se re-hidrate con el nuevo token
-      window.location.href = '/checkout';
+      navigate('/checkout', { replace: true });
     } catch (err) {
       const msg = err.response?.data?.message ?? 'Error al registrar. Intenta de nuevo';
       const fieldErrors = err.response?.data?.errors?.map((e) => `${e.field}: ${e.message}`) ?? [];
