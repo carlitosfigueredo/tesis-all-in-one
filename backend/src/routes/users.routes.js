@@ -1,23 +1,26 @@
 const { Router } = require('express');
-const { protect, requireRole } = require('../middlewares/auth.middleware');
+const { protect } = require('../middlewares/auth.middleware');
 const { requireActiveCompany } = require('../middlewares/companyStatus.middleware');
-const { getUsers, createUser, toggleUserActive, updateUser } = require('../controllers/users.controller');
+const { requirePermission } = require('../middlewares/permission.middleware');
+const { getUsers, createUser, toggleUserActive, updateUser, getAvailableRoles } = require('../controllers/users.controller');
 
 const router = Router();
 
-// Todas las rutas requieren autenticacion + empresa activa
 router.use(protect, requireActiveCompany);
 
-// GET /api/users — listar usuarios de la empresa (o todos para SUPER_ADMIN)
-router.get('/', getUsers);
+// GET /api/users/roles-available — roles asignables
+router.get('/roles-available', requirePermission('users.read'), getAvailableRoles);
 
-// POST /api/users — crear usuario (solo COMPANY_ADMIN o SUPER_ADMIN)
-router.post('/', requireRole('COMPANY_ADMIN', 'SUPER_ADMIN'), createUser);
+// GET /api/users
+router.get('/', requirePermission('users.read'), getUsers);
 
-// PUT /api/users/:id — actualizar usuario (solo COMPANY_ADMIN o SUPER_ADMIN)
-router.put('/:id', requireRole('COMPANY_ADMIN', 'SUPER_ADMIN'), updateUser);
+// POST /api/users
+router.post('/', requirePermission('users.write'), createUser);
 
-// PATCH /api/users/:id/toggle-active — activar/desactivar (solo COMPANY_ADMIN o SUPER_ADMIN)
-router.patch('/:id/toggle-active', requireRole('COMPANY_ADMIN', 'SUPER_ADMIN'), toggleUserActive);
+// PUT /api/users/:id
+router.put('/:id', requirePermission('users.write'), updateUser);
+
+// PATCH /api/users/:id/toggle-active
+router.patch('/:id/toggle-active', requirePermission('users.toggle'), toggleUserActive);
 
 module.exports = router;

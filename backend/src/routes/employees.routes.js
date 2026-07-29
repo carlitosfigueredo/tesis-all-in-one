@@ -1,40 +1,36 @@
 const { Router } = require('express');
 const {
-  getAllEmployees,
-  getEmployeeById,
-  getEmployeesStats,
-  createEmployee,
-  updateEmployee,
-  deleteEmployee,
-  importEmployees,
+  getAllEmployees, getEmployeeById, getEmployeesStats,
+  createEmployee, updateEmployee, deleteEmployee, importEmployees,
 } = require('../controllers/employees.controller');
 const { protect } = require('../middlewares/auth.middleware');
 const { requireActiveCompany } = require('../middlewares/companyStatus.middleware');
+const { requirePermission } = require('../middlewares/permission.middleware');
 
 const router = Router();
 
-// Todas las rutas de empleados requieren autenticacion + empresa activa
+// Todas las rutas requieren autenticacion + empresa activa
 router.use(protect, requireActiveCompany);
 
-// GET    /api/employees/stats  — debe ir ANTES de /:id
-router.get('/stats', getEmployeesStats);
+// GET /api/employees/stats
+router.get('/stats', requirePermission('dashboard.view', 'employees.read'), getEmployeesStats);
 
-// POST   /api/employees/import — debe ir ANTES de /:id
-router.post('/import', importEmployees);
+// POST /api/employees/import
+router.post('/import', requirePermission('employees.import'), importEmployees);
 
-// GET    /api/employees
-router.get('/', getAllEmployees);
+// GET /api/employees
+router.get('/', requirePermission('employees.read'), getAllEmployees);
 
-// GET    /api/employees/:id
-router.get('/:id', getEmployeeById);
+// GET /api/employees/:id
+router.get('/:id', requirePermission('employees.read'), getEmployeeById);
 
-// POST   /api/employees
-router.post('/', createEmployee);
+// POST /api/employees
+router.post('/', requirePermission('employees.write'), createEmployee);
 
-// PUT    /api/employees/:id
-router.put('/:id', updateEmployee);
+// PUT /api/employees/:id
+router.put('/:id', requirePermission('employees.write'), updateEmployee);
 
 // DELETE /api/employees/:id
-router.delete('/:id', deleteEmployee);
+router.delete('/:id', requirePermission('employees.delete'), deleteEmployee);
 
 module.exports = router;

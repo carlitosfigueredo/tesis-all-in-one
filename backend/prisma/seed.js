@@ -6,8 +6,125 @@ const bcrypt = require('bcryptjs');
 
 const prisma = new PrismaClient();
 
+// ─── Definicion de permisos del sistema ───────────────────────────────────────
+
+const PERMISSIONS = [
+  // Empleados
+  { code: 'employees.read',    name: 'Ver empleados',           module: 'employees' },
+  { code: 'employees.write',   name: 'Crear/editar empleados',  module: 'employees' },
+  { code: 'employees.delete',  name: 'Eliminar empleados',      module: 'employees' },
+  { code: 'employees.import',  name: 'Importar empleados CSV',  module: 'employees' },
+  // Predicciones ML
+  { code: 'predictions.run',   name: 'Ejecutar prediccion',     module: 'predictions' },
+  { code: 'predictions.batch', name: 'Prediccion en batch',     module: 'predictions' },
+  // Dashboard
+  { code: 'dashboard.view',    name: 'Ver dashboard',           module: 'dashboard' },
+  // Modelo ML
+  { code: 'model.view',        name: 'Ver estado del modelo',   module: 'model' },
+  { code: 'model.train',       name: 'Entrenar modelo',         module: 'model' },
+  // Usuarios de empresa
+  { code: 'users.read',        name: 'Ver usuarios',            module: 'users' },
+  { code: 'users.write',       name: 'Crear/editar usuarios',   module: 'users' },
+  { code: 'users.toggle',      name: 'Activar/desactivar usuarios', module: 'users' },
+  // Pagos
+  { code: 'payments.view',     name: 'Ver pagos/suscripcion',   module: 'payments' },
+  { code: 'payments.process',  name: 'Procesar pagos',          module: 'payments' },
+  // Admin global
+  { code: 'admin.companies',   name: 'Gestionar empresas',      module: 'admin' },
+  { code: 'admin.plans',       name: 'Gestionar planes',        module: 'admin' },
+  { code: 'admin.audit',       name: 'Ver auditoria global',    module: 'admin' },
+  { code: 'admin.payments',    name: 'Ver pagos globales',      module: 'admin' },
+  { code: 'admin.roles',       name: 'Gestionar roles/permisos', module: 'admin' },
+];
+
+// ─── Definicion de roles default con sus permisos ─────────────────────────────
+
+const SYSTEM_ROLES = [
+  {
+    name: 'SUPER_ADMIN',
+    description: 'Administrador global de la plataforma',
+    permissions: PERMISSIONS.map((p) => p.code), // Todos los permisos
+  },
+  {
+    name: 'COMPANY_ADMIN',
+    description: 'Administrador de empresa cliente',
+    permissions: [
+      'employees.read', 'employees.write', 'employees.delete', 'employees.import',
+      'predictions.run', 'predictions.batch',
+      'dashboard.view',
+      'model.view', 'model.train',
+      'users.read', 'users.write', 'users.toggle',
+      'payments.view', 'payments.process',
+    ],
+  },
+  {
+    name: 'ANALYST',
+    description: 'Analista - puede ver y analizar datos',
+    permissions: [
+      'employees.read',
+      'predictions.run', 'predictions.batch',
+      'dashboard.view',
+      'model.view',
+    ],
+  },
+  {
+    name: 'VIEWER',
+    description: 'Solo lectura - puede ver datos sin modificar',
+    permissions: [
+      'employees.read',
+      'dashboard.view',
+    ],
+  },
+];
+
 async function main() {
   console.log('Seeding database...');
+
+  // ─── Permisos ───────────────────────────────────────────────────────────────
+  for (const perm of PERMISSIONS) {
+    await prisma.permission.upsert({
+      where: { code: perm.code },
+      update: { name: perm.name, module: perm.module },
+      create: perm,
+    });
+  }
+  console.log(`  ✓ ${PERMISSIONS.length} permisos creados/actualizados`);
+
+  // ─── Roles del sistema (globales, companyId = null) ─────────────────────────
+  for (const roleDef of SYSTEM_ROLES) {
+    let role = await prisma.role.findFirst({
+      where: { name: roleDef.name, companyId: null },
+    });
+
+    if (!role) {
+      role = await prisma.role.create({
+        data: {
+          name: roleDef.name,
+          description: roleDef.description,
+          isSystem: true,
+          companyId: null,
+        },
+      });
+    } else {
+      await prisma.role.update({
+        where: { id: role.id },
+        data: { description: roleDef.description, isSystem: true },
+      });
+    }
+
+    // Asignar permisos al rol
+    for (const permCode of roleDef.permissions) {
+      const permission = await prisma.permission.findUnique({ where: { code: permCode } });
+      if (permission) {
+        await prisma.rolePermission.upsert({
+          where: { roleId_permissionId: { roleId: role.id, permissionId: permission.id } },
+          update: {},
+          create: { roleId: role.id, permissionId: permission.id },
+        });
+      }
+    }
+  }
+  console.log(`  ✓ ${SYSTEM_ROLES.length} roles del sistema creados con permisos`);
 
   // ─── Planes ─────────────────────────────────────────────────────────────────
   const planes = [
@@ -85,10 +202,19 @@ async function main() {
       name: 'Carlos Figueredo',
       email: 'carlosalberto.figueredoquevedo@gmail.com',
       password: superAdminPassword,
-      role: 'SUPER_ADMIN',
       companyId: null,
     },
   });
+
+  // Asignar rol SUPER_ADMIN
+  const superAdminRole = await prisma.role.findFirst({ where: { name: 'SUPER_ADMIN', companyId: null } });
+  if (superAdminRole) {
+    await prisma.userRole.upsert({
+      where: { userId_roleId: { userId: superAdmin.id, roleId: superAdminRole.id } },
+      update: {},
+      create: { userId: superAdmin.id, roleId: superAdminRole.id },
+    });
+  }
   console.log(`  ✓ Super Admin creado (${superAdmin.id})`);
 
   // ─── Empresa demo ───────────────────────────────────────────────────────────
@@ -109,173 +235,57 @@ async function main() {
   const userPassword = await bcrypt.hash('Demo2025!', 12);
 
   const demoUsers = [
-    { name: 'Ana Garcia',   email: 'admin@empresa.com',    role: 'COMPANY_ADMIN' },
-    { name: 'Carlos Lopez', email: 'analista@empresa.com', role: 'ANALYST' },
-    { name: 'Maria Torres', email: 'viewer@empresa.com',   role: 'VIEWER' },
+    { name: 'Ana Garcia',   email: 'admin@empresa.com',    roleName: 'COMPANY_ADMIN' },
+    { name: 'Carlos Lopez', email: 'analista@empresa.com', roleName: 'ANALYST' },
+    { name: 'Maria Torres', email: 'viewer@empresa.com',   roleName: 'VIEWER' },
   ];
 
   for (const u of demoUsers) {
-    await prisma.user.upsert({
+    const user = await prisma.user.upsert({
       where: { email: u.email },
       update: {},
       create: {
         name: u.name,
         email: u.email,
         password: userPassword,
-        role: u.role,
         companyId: demoCompany.id,
       },
     });
+
+    // Asignar rol
+    const role = await prisma.role.findFirst({ where: { name: u.roleName, companyId: null } });
+    if (role) {
+      await prisma.userRole.upsert({
+        where: { userId_roleId: { userId: user.id, roleId: role.id } },
+        update: {},
+        create: { userId: user.id, roleId: role.id },
+      });
+    }
   }
-  console.log(`  ✓ ${demoUsers.length} usuarios demo creados`);
+  console.log(`  ✓ ${demoUsers.length} usuarios demo creados con roles`);
 
   // ─── Empleados de ejemplo ───────────────────────────────────────────────────
-  const sampleEmployees = [
-    {
-      name: 'Juan Perez',
-      job_role: 'Sales Executive',
-      department: 'Sales',
-      age: 32,
-      gender: 'Male',
-      marital_status: 'Married',
-      education: 3,
-      education_field: 'Marketing',
-      monthly_income: 4500,
-      job_satisfaction: 3,
-      environment_satisfaction: 4,
-      work_life_balance: 3,
-      performance_rating: 3,
-      years_at_company: 5,
-      years_in_current_role: 3,
-      years_since_last_promotion: 1,
-      total_working_years: 10,
-      num_companies_worked: 2,
-      distance_from_home: 8,
-      overtime: false,
-      business_travel: 'Travel_Rarely',
-      attrition: false,
-      flight_risk: 0.25,
-      risk_level: 'BAJO',
-      companyId: demoCompany.id,
-    },
-    {
-      name: 'Laura Gomez',
-      job_role: 'Research Scientist',
-      department: 'Research & Development',
-      age: 28,
-      gender: 'Female',
-      marital_status: 'Single',
-      education: 4,
-      education_field: 'Life Sciences',
-      monthly_income: 3200,
-      job_satisfaction: 2,
-      environment_satisfaction: 2,
-      work_life_balance: 2,
-      performance_rating: 3,
-      years_at_company: 2,
-      years_in_current_role: 1,
-      years_since_last_promotion: 2,
-      total_working_years: 4,
-      num_companies_worked: 3,
-      distance_from_home: 22,
-      overtime: true,
-      business_travel: 'Travel_Frequently',
-      attrition: false,
-      flight_risk: 0.78,
-      risk_level: 'ALTO',
-      companyId: demoCompany.id,
-    },
-    {
-      name: 'Roberto Sanchez',
-      job_role: 'Human Resources',
-      department: 'Human Resources',
-      age: 45,
-      gender: 'Male',
-      marital_status: 'Married',
-      education: 3,
-      education_field: 'Human Resources',
-      monthly_income: 5800,
-      job_satisfaction: 4,
-      environment_satisfaction: 3,
-      work_life_balance: 3,
-      performance_rating: 4,
-      years_at_company: 12,
-      years_in_current_role: 5,
-      years_since_last_promotion: 0,
-      total_working_years: 20,
-      num_companies_worked: 2,
-      distance_from_home: 5,
-      overtime: false,
-      business_travel: 'Non-Travel',
-      attrition: false,
-      flight_risk: 0.12,
-      risk_level: 'BAJO',
-      companyId: demoCompany.id,
-    },
-    {
-      name: 'Carolina Benitez',
-      job_role: 'Sales Representative',
-      department: 'Sales',
-      age: 24,
-      gender: 'Female',
-      marital_status: 'Single',
-      education: 2,
-      education_field: 'Marketing',
-      monthly_income: 2100,
-      job_satisfaction: 1,
-      environment_satisfaction: 1,
-      work_life_balance: 1,
-      performance_rating: 3,
-      years_at_company: 1,
-      years_in_current_role: 1,
-      years_since_last_promotion: 1,
-      total_working_years: 2,
-      num_companies_worked: 2,
-      distance_from_home: 28,
-      overtime: true,
-      business_travel: 'Travel_Frequently',
-      attrition: false,
-      flight_risk: 0.91,
-      risk_level: 'ALTO',
-      companyId: demoCompany.id,
-    },
-    {
-      name: 'Miguel Villalba',
-      job_role: 'Laboratory Technician',
-      department: 'Research & Development',
-      age: 35,
-      gender: 'Male',
-      marital_status: 'Married',
-      education: 3,
-      education_field: 'Medical',
-      monthly_income: 3800,
-      job_satisfaction: 3,
-      environment_satisfaction: 3,
-      work_life_balance: 3,
-      performance_rating: 3,
-      years_at_company: 7,
-      years_in_current_role: 4,
-      years_since_last_promotion: 2,
-      total_working_years: 12,
-      num_companies_worked: 1,
-      distance_from_home: 10,
-      overtime: false,
-      business_travel: 'Travel_Rarely',
-      attrition: false,
-      flight_risk: 0.45,
-      risk_level: 'MEDIO',
-      companyId: demoCompany.id,
-    },
-  ];
+  const existingEmployees = await prisma.employee.count({ where: { companyId: demoCompany.id } });
+  if (existingEmployees === 0) {
+    const sampleEmployees = [
+      { name: 'Juan Perez', job_role: 'Sales Executive', department: 'Sales', age: 32, gender: 'Male', monthly_income: 4500, job_satisfaction: 3, years_at_company: 5, flight_risk: 0.25, risk_level: 'BAJO', companyId: demoCompany.id },
+      { name: 'Laura Gomez', job_role: 'Research Scientist', department: 'Research & Development', age: 28, gender: 'Female', monthly_income: 3200, job_satisfaction: 2, years_at_company: 2, overtime: true, flight_risk: 0.78, risk_level: 'ALTO', companyId: demoCompany.id },
+      { name: 'Roberto Sanchez', job_role: 'Human Resources', department: 'Human Resources', age: 45, gender: 'Male', monthly_income: 5800, job_satisfaction: 4, years_at_company: 12, flight_risk: 0.12, risk_level: 'BAJO', companyId: demoCompany.id },
+      { name: 'Carolina Benitez', job_role: 'Sales Representative', department: 'Sales', age: 24, gender: 'Female', monthly_income: 2100, job_satisfaction: 1, years_at_company: 1, overtime: true, flight_risk: 0.91, risk_level: 'ALTO', companyId: demoCompany.id },
+      { name: 'Miguel Villalba', job_role: 'Laboratory Technician', department: 'Research & Development', age: 35, gender: 'Male', monthly_income: 3800, job_satisfaction: 3, years_at_company: 7, flight_risk: 0.45, risk_level: 'MEDIO', companyId: demoCompany.id },
+    ];
 
-  for (const emp of sampleEmployees) {
-    await prisma.employee.create({ data: emp });
+    for (const emp of sampleEmployees) {
+      await prisma.employee.create({ data: emp });
+    }
+    console.log(`  ✓ ${sampleEmployees.length} empleados de ejemplo creados`);
+  } else {
+    console.log(`  ✓ Empleados ya existen (${existingEmployees}), no se recrean`);
   }
-  console.log(`  ✓ ${sampleEmployees.length} empleados de ejemplo creados`);
 
   console.log('\nSeed completado exitosamente!');
   console.log('\n── Credenciales de acceso ──');
-  console.log('Super Admin:  carlosalberto.figueredoquevedo@gmail.com / Admin2025!');
+  console.log('Super Admin:   carlosalberto.figueredoquevedo@gmail.com / Admin2025!');
   console.log('Admin Empresa: admin@empresa.com / Demo2025!');
   console.log('Analista:      analista@empresa.com / Demo2025!');
   console.log('Viewer:        viewer@empresa.com / Demo2025!');
