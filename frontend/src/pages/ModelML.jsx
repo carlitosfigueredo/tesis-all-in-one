@@ -384,7 +384,7 @@ export default function ModelML() {
                       Aguarda unos dias para tener tus resultados actualizados.
                     </p>
                     <button
-                      onClick={() => navigate('/plans')}
+                      onClick={() => navigate('/checkout')}
                       className="mt-2 text-xs font-semibold text-blue-600 hover:text-blue-800 underline"
                     >
                       Actualiza tu plan y obtenelo ahora

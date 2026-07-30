@@ -306,7 +306,7 @@ enum SubscriptionStatus {
 enum Plan {
   BASICO
   PROFESIONAL
-  EMPRESARIAL
+  CORPORATIVO
 }
 
 enum EmployeeStatus {
