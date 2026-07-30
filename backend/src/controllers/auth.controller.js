@@ -66,7 +66,15 @@ const login = async (req, res, next) => {
     }
 
     // Cargar roles/permisos del usuario
-    const { permissions = [], roleNames = [] } = await getUserPermissions(user.id);
+    let permissions = [];
+    let roleNames = [];
+    try {
+      const result = await getUserPermissions(user.id);
+      permissions = result?.permissions ?? [];
+      roleNames = result?.roleNames ?? [];
+    } catch (permErr) {
+      console.error('[Login] Error al cargar permisos:', permErr.message);
+    }
 
     // SUPER_ADMIN no puede loguear por el portal de empresas
     if (roleNames.includes('SUPER_ADMIN')) {

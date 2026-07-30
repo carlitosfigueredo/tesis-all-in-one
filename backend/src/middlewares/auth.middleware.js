@@ -34,7 +34,9 @@ const protect = async (req, res, next) => {
     }
 
     // Cargar permisos y roles
-    const { permissions, roleNames } = await getUserPermissions(user.id);
+    const result = await getUserPermissions(user.id);
+    const permissions = result?.permissions ?? [];
+    const roleNames = result?.roleNames ?? [];
 
     // Adjuntar usuario al request
     req.user = {
