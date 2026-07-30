@@ -8,36 +8,86 @@ from pydantic import BaseModel
 from typing import Optional
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import (
     classification_report, roc_auc_score, confusion_matrix
 )
 
 router = APIRouter(tags=["Entrenamiento"])
 
-DATASET_PATH = "notebooks/data/WA_Fn-UseC_-HR-Employee-Attrition.csv"
+DATASET_PATH = "notebooks/data/dataset_desercion_software_py.csv"
 MODEL_PATH   = "model/model.pkl"
+ENCODERS_PATH = "model/encoders.pkl"
 
-FEATURES = [
-    "Age", "MonthlyIncome", "YearsAtCompany", "YearsInCurrentRole",
-    "YearsSinceLastPromotion", "JobSatisfaction", "EnvironmentSatisfaction",
-    "WorkLifeBalance", "NumCompaniesWorked", "OverTime",
-    "DistanceFromHome", "PerformanceRating",
+# ─── Definicion de features ──────────────────────────────────────────────────
+# Todas las columnas que usa el modelo (sin el target)
+
+FEATURES_NUMERICAS = [
+    "edad",
+    "antiguedad_meses",
+    "salario_mensual",
+    "cantidad_horas_extra_mes",
+    "evaluacion_desempeno",
+    "cantidad_empresas_anteriores",
+    "satisfaccion_laboral",
+    "satisfaccion_ambiente",
+    "equilibrio_vida_trabajo",
+    "estancamiento_carrera",
+    "feedback_lider",
 ]
-TARGET = "Attrition"
 
+FEATURES_CATEGORICAS = [
+    "nivel_formacion",
+    "rol_tecnologico",
+    "seniority",
+    "modalidad_trabajo",
+    "tipo_contrato",
+    "capacitacion_ultimo_anio",
+]
+
+FEATURES = FEATURES_NUMERICAS + FEATURES_CATEGORICAS
+TARGET = "desercion"
+
+# Etiquetas legibles para el frontend y reportes
 FEATURE_LABELS = {
-    "Age": "Edad",
-    "MonthlyIncome": "Ingreso Mensual",
-    "YearsAtCompany": "Años en la Empresa",
-    "YearsInCurrentRole": "Años en el Cargo",
-    "YearsSinceLastPromotion": "Años sin Ascenso",
-    "JobSatisfaction": "Satisfacción Laboral",
-    "EnvironmentSatisfaction": "Satisfacción con el Ambiente",
-    "WorkLifeBalance": "Balance Vida-Trabajo",
-    "NumCompaniesWorked": "Empresas Anteriores",
-    "OverTime": "Horas Extra",
-    "DistanceFromHome": "Distancia al Trabajo",
-    "PerformanceRating": "Calificación de Desempeño",
+    "edad": "Edad",
+    "nivel_formacion": "Nivel de Formacion",
+    "rol_tecnologico": "Rol Tecnologico",
+    "seniority": "Seniority",
+    "antiguedad_meses": "Antiguedad en la Empresa (meses)",
+    "modalidad_trabajo": "Modalidad de Trabajo",
+    "tipo_contrato": "Tipo de Contrato",
+    "salario_mensual": "Salario Mensual (Gs.)",
+    "cantidad_horas_extra_mes": "Horas Extra por Mes",
+    "capacitacion_ultimo_anio": "Capacitacion (ultimo anio)",
+    "evaluacion_desempeno": "Evaluacion de Desempeno",
+    "cantidad_empresas_anteriores": "Empresas Anteriores",
+    "satisfaccion_laboral": "Satisfaccion Laboral",
+    "satisfaccion_ambiente": "Satisfaccion con el Ambiente",
+    "equilibrio_vida_trabajo": "Equilibrio Vida-Trabajo",
+    "estancamiento_carrera": "Estancamiento de Carrera",
+    "feedback_lider": "Feedback del Lider",
+}
+
+# Clasificacion de importancia para el frontend
+FEATURE_IMPORTANCE_TIER = {
+    "satisfaccion_laboral": "critica",
+    "equilibrio_vida_trabajo": "critica",
+    "estancamiento_carrera": "critica",
+    "salario_mensual": "critica",
+    "cantidad_horas_extra_mes": "alta",
+    "feedback_lider": "alta",
+    "capacitacion_ultimo_anio": "alta",
+    "antiguedad_meses": "alta",
+    "tipo_contrato": "media",
+    "cantidad_empresas_anteriores": "media",
+    "evaluacion_desempeno": "media",
+    "satisfaccion_ambiente": "media",
+    "modalidad_trabajo": "baja",
+    "edad": "baja",
+    "nivel_formacion": "baja",
+    "rol_tecnologico": "baja",
+    "seniority": "baja",
 }
 
 
@@ -48,6 +98,7 @@ class FeatureImportance(BaseModel):
     label: str
     importance: float
     importance_pct: float
+    tier: str  # critica, alta, media, baja
 
 
 class ConfusionMatrixResult(BaseModel):
@@ -80,6 +131,7 @@ class ModelStatus(BaseModel):
     model_ready: bool
     model_version: Optional[str]
     dataset_available: bool
+    dataset_records: Optional[int]
     model_size_kb: Optional[float]
     last_metrics: Optional[TrainingMetrics]
 
@@ -88,19 +140,50 @@ class ModelStatus(BaseModel):
 _last_metrics: Optional[TrainingMetrics] = None
 
 
+# ─── Funciones auxiliares ────────────────────────────────────────────────────
+
+def _preprocess_dataset(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
+    """
+    Preprocesa el dataset: codifica variables categoricas con LabelEncoder.
+    Retorna el DataFrame procesado y un dict con los encoders para reusar.
+    """
+    df_model = df[FEATURES + [TARGET]].copy()
+
+    # Target: Si=1, No=0
+    df_model[TARGET] = (df_model[TARGET] == "Si").astype(int)
+
+    # Codificar categoricas
+    encoders = {}
+    for col in FEATURES_CATEGORICAS:
+        le = LabelEncoder()
+        df_model[col] = le.fit_transform(df_model[col].astype(str))
+        encoders[col] = le
+
+    return df_model, encoders
+
+
 # ─── Endpoints ───────────────────────────────────────────────────────────────
 
 @router.get("/model/status", response_model=ModelStatus)
 def model_status():
-    """Devuelve el estado actual del modelo y si el dataset está disponible."""
+    """Devuelve el estado actual del modelo y si el dataset esta disponible."""
     model_ready = os.path.exists(MODEL_PATH)
     dataset_ok  = os.path.exists(DATASET_PATH)
     size_kb     = os.path.getsize(MODEL_PATH) / 1024 if model_ready else None
 
+    dataset_records = None
+    if dataset_ok:
+        try:
+            df = pd.read_csv(DATASET_PATH)
+            dataset_records = len(df)
+        except Exception:
+            pass
+
     return ModelStatus(
         model_ready=model_ready,
-        model_version="1.0.0-trained" if model_ready else None,
+        model_version="2.0.0-desercion-py" if model_ready else None,
         dataset_available=dataset_ok,
+        dataset_records=dataset_records,
         model_size_kb=round(size_kb, 1) if size_kb else None,
         last_metrics=_last_metrics,
     )
@@ -109,8 +192,10 @@ def model_status():
 @router.post("/train", response_model=TrainingMetrics)
 def train_model():
     """
-    Entrena el modelo Random Forest con el dataset IBM HR Attrition.
-    Guarda el modelo en model/model.pkl y devuelve las métricas completas.
+    Entrena el modelo Random Forest con el dataset de desercion
+    para empresas de desarrollo de software de Paraguay.
+    Guarda el modelo en model/model.pkl y los encoders en model/encoders.pkl.
+    Devuelve las metricas completas del entrenamiento.
     """
     global _last_metrics
 
@@ -118,18 +203,16 @@ def train_model():
         raise HTTPException(
             status_code=404,
             detail=f"Dataset no encontrado en {DATASET_PATH}. "
-                   "Colocá el archivo WA_Fn-UseC_-HR-Employee-Attrition.csv en notebooks/data/"
+                   "Coloca el archivo dataset_desercion_software_py.csv en notebooks/data/"
         )
 
     start_time = time.time()
 
     # 1. Cargar y preprocesar
     df = pd.read_csv(DATASET_PATH)
-    df_model = df[FEATURES + [TARGET]].copy()
-    df_model["OverTime"] = (df_model["OverTime"] == "Yes").astype(int)
-    df_model[TARGET]     = (df_model[TARGET] == "Yes").astype(int)
+    df_model, encoders = _preprocess_dataset(df)
 
-    X = df_model[FEATURES]
+    X = df_model[FEATURES_NUMERICAS + FEATURES_CATEGORICAS]
     y = df_model[TARGET]
 
     # 2. Split estratificado
@@ -140,7 +223,7 @@ def train_model():
     # 3. Entrenar
     model = RandomForestClassifier(
         n_estimators=200,
-        max_depth=10,
+        max_depth=12,
         min_samples_leaf=5,
         class_weight="balanced",
         random_state=42,
@@ -158,12 +241,14 @@ def train_model():
 
     elapsed = round(time.time() - start_time, 2)
 
-    # 5. Guardar modelo
+    # 5. Guardar modelo y encoders
     os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
     joblib.dump(model, MODEL_PATH)
+    joblib.dump(encoders, ENCODERS_PATH)
     size_kb = os.path.getsize(MODEL_PATH) / 1024
 
     # 6. Feature importances
+    all_features = FEATURES_NUMERICAS + FEATURES_CATEGORICAS
     importances_raw = model.feature_importances_
     total = importances_raw.sum()
     feature_importances = [
@@ -172,9 +257,10 @@ def train_model():
             label=FEATURE_LABELS.get(feat, feat),
             importance=round(float(imp), 4),
             importance_pct=round(float(imp / total) * 100, 2),
+            tier=FEATURE_IMPORTANCE_TIER.get(feat, "baja"),
         )
         for feat, imp in sorted(
-            zip(FEATURES, importances_raw),
+            zip(all_features, importances_raw),
             key=lambda x: x[1],
             reverse=True,
         )
@@ -201,7 +287,7 @@ def train_model():
         test_samples=len(X_test),
         training_time_seconds=elapsed,
         model_size_kb=round(size_kb, 1),
-        model_version="1.0.0-trained",
+        model_version="2.0.0-desercion-py",
     )
 
     _last_metrics = metrics

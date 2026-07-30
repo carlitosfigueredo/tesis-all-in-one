@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
 import Navbar from '../components/layout/Navbar';
+import CsvImportGuide from '../components/employees/CsvImportGuide';
 import api from '../services/api';
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
@@ -9,21 +10,23 @@ import api from '../services/api';
 // Tasa de cambio referencial GS/USD — se puede mover a una variable de entorno
 const USD_TO_GS = 7500;
 
-// Etiquetas legibles para la escala 1-4 de satisfacción del dataset IBM HR
+// Etiquetas legibles para la escala 1-5 de satisfaccion
 const SATISFACTION_LABELS = {
   1: { text: 'Muy baja',  color: 'text-red-600',   bg: 'bg-red-50'    },
-  2: { text: 'Baja',      color: 'text-amber-600',  bg: 'bg-amber-50'  },
-  3: { text: 'Alta',      color: 'text-blue-600',   bg: 'bg-blue-50'   },
-  4: { text: 'Muy alta',  color: 'text-green-600',  bg: 'bg-green-50'  },
+  2: { text: 'Baja',      color: 'text-orange-600', bg: 'bg-orange-50' },
+  3: { text: 'Media',     color: 'text-blue-600',   bg: 'bg-blue-50'   },
+  4: { text: 'Alta',      color: 'text-green-600',  bg: 'bg-green-50'  },
+  5: { text: 'Muy alta',  color: 'text-emerald-600', bg: 'bg-emerald-50' },
 };
 
 // ─── Componentes de UI ────────────────────────────────────────────────────────
 
 const RiskBadge = ({ level }) => {
   const styles = {
-    ALTO:  'bg-red-100 text-red-700',
-    MEDIO: 'bg-amber-100 text-amber-700',
-    BAJO:  'bg-green-100 text-green-700',
+    CRITICO: 'bg-red-200 text-red-800',
+    ALTO:    'bg-red-100 text-red-700',
+    MEDIO:   'bg-amber-100 text-amber-700',
+    BAJO:    'bg-green-100 text-green-700',
   };
   return (
     <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${styles[level] ?? styles.BAJO}`}>
@@ -40,7 +43,7 @@ const SatisfactionCell = ({ value }) => {
   const meta = SATISFACTION_LABELS[value] ?? SATISFACTION_LABELS[1];
   return (
     <span
-      title={`Satisfacción laboral: ${meta.text} (${value}/4)\nEscala IBM HR: 1=Muy baja, 2=Baja, 3=Alta, 4=Muy alta`}
+      title={`Satisfaccion laboral: ${meta.text} (${value}/5)\nEscala: 1=Muy baja, 2=Baja, 3=Media, 4=Alta, 5=Muy alta`}
       className={`cursor-default rounded-full px-2 py-0.5 text-xs font-medium ${meta.bg} ${meta.color}`}
     >
       {meta.text}
@@ -68,33 +71,38 @@ const formatIncome = (usdValue, inGs) => {
  */
 const validateCsvRow = (row, lineNum) => {
   const errors = [];
-  const required = ['department', 'job_role', 'age', 'gender', 'monthly_income',
-                    'job_satisfaction', 'years_at_company', 'overtime', 'attrition'];
+  const required = ['rol_tecnologico', 'seniority', 'edad', 'salario_mensual',
+                    'antiguedad_meses', 'modalidad_trabajo', 'tipo_contrato'];
 
   for (const field of required) {
     if (row[field] === undefined || row[field] === '') {
-      errors.push(`Línea ${lineNum}: falta el campo "${field}"`);
+      errors.push(`Linea ${lineNum}: falta el campo "${field}"`);
     }
   }
 
-  const age = Number(row.age);
-  if (!isNaN(age) && (age < 18 || age > 70)) {
-    errors.push(`Línea ${lineNum}: edad fuera de rango (18-70)`);
+  const edad = Number(row.edad);
+  if (!isNaN(edad) && (edad < 18 || edad > 65)) {
+    errors.push(`Linea ${lineNum}: edad fuera de rango (18-65)`);
   }
 
-  const income = Number(row.monthly_income);
-  if (!isNaN(income) && income < 0) {
-    errors.push(`Línea ${lineNum}: ingreso no puede ser negativo`);
+  const salario = Number(row.salario_mensual);
+  if (!isNaN(salario) && salario < 0) {
+    errors.push(`Linea ${lineNum}: salario no puede ser negativo`);
   }
 
-  const sat = Number(row.job_satisfaction);
-  if (row.job_satisfaction !== '' && (sat < 1 || sat > 4 || isNaN(sat))) {
-    errors.push(`Línea ${lineNum}: job_satisfaction debe ser 1, 2, 3 o 4`);
+  const sat = Number(row.satisfaccion_laboral);
+  if (row.satisfaccion_laboral !== '' && row.satisfaccion_laboral !== undefined && (sat < 1 || sat > 5 || isNaN(sat))) {
+    errors.push(`Linea ${lineNum}: satisfaccion_laboral debe ser 1 a 5`);
   }
 
-  const validDepts = ['Sales', 'Research & Development', 'Human Resources'];
-  if (row.department && !validDepts.includes(row.department)) {
-    errors.push(`Línea ${lineNum}: department inválido ("${row.department}")`);
+  const validRoles = ['Frontend', 'Backend', 'Fullstack', 'Mobile', 'DevOps', 'QA', 'Data'];
+  if (row.rol_tecnologico && !validRoles.includes(row.rol_tecnologico)) {
+    errors.push(`Linea ${lineNum}: rol_tecnologico invalido ("${row.rol_tecnologico}")`);
+  }
+
+  const validSeniority = ['Trainee', 'Junior', 'Semi-Senior', 'Senior', 'Lead'];
+  if (row.seniority && !validSeniority.includes(row.seniority)) {
+    errors.push(`Linea ${lineNum}: seniority invalido ("${row.seniority}")`);
   }
 
   return errors;
@@ -128,16 +136,16 @@ const parseCsv = (text) => {
 };
 
 
-// Datos de ejemplo inline (espejo del CSV de la plantilla)
+// Datos de ejemplo para la plantilla CSV
 const EXAMPLE_ROWS = [
-  { department: 'Sales', job_role: 'Sales Executive', age: '35', gender: 'Male', marital_status: 'Single', education: '3', education_field: 'Marketing', monthly_income: '5000', job_satisfaction: '3', environment_satisfaction: '3', work_life_balance: '3', performance_rating: '3', years_at_company: '5', years_in_current_role: '3', years_since_last_promotion: '1', total_working_years: '10', num_companies_worked: '2', distance_from_home: '10', overtime: 'No', attrition: 'No', business_travel: 'Travel_Rarely' },
-  { department: 'Research & Development', job_role: 'Research Scientist', age: '28', gender: 'Female', marital_status: 'Married', education: '4', education_field: 'Life Sciences', monthly_income: '4500', job_satisfaction: '4', environment_satisfaction: '4', work_life_balance: '4', performance_rating: '4', years_at_company: '3', years_in_current_role: '2', years_since_last_promotion: '0', total_working_years: '6', num_companies_worked: '1', distance_from_home: '5', overtime: 'No', attrition: 'No', business_travel: 'Non-Travel' },
-  { department: 'Human Resources', job_role: 'Human Resources', age: '42', gender: 'Male', marital_status: 'Divorced', education: '2', education_field: 'Human Resources', monthly_income: '3800', job_satisfaction: '2', environment_satisfaction: '2', work_life_balance: '2', performance_rating: '3', years_at_company: '10', years_in_current_role: '5', years_since_last_promotion: '3', total_working_years: '15', num_companies_worked: '4', distance_from_home: '25', overtime: 'Yes', attrition: 'Yes', business_travel: 'Travel_Frequently' },
-  { department: 'Sales', job_role: 'Sales Representative', age: '24', gender: 'Female', marital_status: 'Single', education: '1', education_field: 'Marketing', monthly_income: '2500', job_satisfaction: '1', environment_satisfaction: '1', work_life_balance: '1', performance_rating: '3', years_at_company: '1', years_in_current_role: '1', years_since_last_promotion: '0', total_working_years: '2', num_companies_worked: '1', distance_from_home: '20', overtime: 'Yes', attrition: 'Yes', business_travel: 'Travel_Rarely' },
-  { department: 'Research & Development', job_role: 'Laboratory Technician', age: '30', gender: 'Male', marital_status: 'Married', education: '3', education_field: 'Life Sciences', monthly_income: '3200', job_satisfaction: '3', environment_satisfaction: '3', work_life_balance: '2', performance_rating: '3', years_at_company: '4', years_in_current_role: '2', years_since_last_promotion: '1', total_working_years: '8', num_companies_worked: '2', distance_from_home: '8', overtime: 'No', attrition: 'No', business_travel: 'Travel_Rarely' },
+  { edad: '28', nivel_formacion: 'Universitario', rol_tecnologico: 'Backend', seniority: 'Semi-Senior', antiguedad_meses: '18', modalidad_trabajo: 'Hibrido', tipo_contrato: 'Indefinido', salario_mensual: '8500000', cantidad_horas_extra_mes: '10', capacitacion_ultimo_anio: 'Si', evaluacion_desempeno: '4', cantidad_empresas_anteriores: '2', satisfaccion_laboral: '3', satisfaccion_ambiente: '4', equilibrio_vida_trabajo: '3', estancamiento_carrera: '2', feedback_lider: '4' },
+  { edad: '24', nivel_formacion: 'Tecnico', rol_tecnologico: 'Frontend', seniority: 'Junior', antiguedad_meses: '6', modalidad_trabajo: 'Remoto', tipo_contrato: 'Plazo fijo', salario_mensual: '5000000', cantidad_horas_extra_mes: '20', capacitacion_ultimo_anio: 'No', evaluacion_desempeno: '3', cantidad_empresas_anteriores: '1', satisfaccion_laboral: '2', satisfaccion_ambiente: '2', equilibrio_vida_trabajo: '2', estancamiento_carrera: '4', feedback_lider: '2' },
+  { edad: '35', nivel_formacion: 'Posgrado', rol_tecnologico: 'DevOps', seniority: 'Senior', antiguedad_meses: '48', modalidad_trabajo: 'Presencial', tipo_contrato: 'Indefinido', salario_mensual: '16000000', cantidad_horas_extra_mes: '5', capacitacion_ultimo_anio: 'Si', evaluacion_desempeno: '5', cantidad_empresas_anteriores: '3', satisfaccion_laboral: '4', satisfaccion_ambiente: '5', equilibrio_vida_trabajo: '4', estancamiento_carrera: '1', feedback_lider: '5' },
+  { edad: '22', nivel_formacion: 'Universitario', rol_tecnologico: 'QA', seniority: 'Trainee', antiguedad_meses: '3', modalidad_trabajo: 'Hibrido', tipo_contrato: 'Eventual', salario_mensual: '3500000', cantidad_horas_extra_mes: '25', capacitacion_ultimo_anio: 'No', evaluacion_desempeno: '3', cantidad_empresas_anteriores: '0', satisfaccion_laboral: '1', satisfaccion_ambiente: '2', equilibrio_vida_trabajo: '1', estancamiento_carrera: '3', feedback_lider: '2' },
+  { edad: '30', nivel_formacion: 'Universitario', rol_tecnologico: 'Fullstack', seniority: 'Semi-Senior', antiguedad_meses: '24', modalidad_trabajo: 'Remoto', tipo_contrato: 'Indefinido', salario_mensual: '10000000', cantidad_horas_extra_mes: '8', capacitacion_ultimo_anio: 'Si', evaluacion_desempeno: '4', cantidad_empresas_anteriores: '2', satisfaccion_laboral: '4', satisfaccion_ambiente: '4', equilibrio_vida_trabajo: '4', estancamiento_carrera: '2', feedback_lider: '4' },
 ];
 
-const EXAMPLE_COLS = ['department', 'job_role', 'age', 'gender', 'monthly_income', 'job_satisfaction', 'overtime', 'attrition'];
+const EXAMPLE_COLS = ['rol_tecnologico', 'seniority', 'edad', 'salario_mensual', 'antiguedad_meses', 'modalidad_trabajo', 'satisfaccion_laboral'];
 
 const ExampleTable = () => (
   <div className="overflow-x-auto rounded-lg border border-blue-100 bg-blue-50/40">
@@ -167,11 +175,12 @@ const ExampleTable = () => (
 
 const ImportModal = ({ onClose, onImported }) => {
   const fileRef = useRef(null);
-  const [step, setStep]       = useState('idle'); // idle | preview | importing | done | error
+  const [step, setStep]       = useState('idle'); // idle | preview | importing | done | error | guide
   const [parsed, setParsed]   = useState(null);
   const [errors, setErrors]   = useState([]);
   const [progress, setProgress] = useState('');
   const [showExample, setShowExample] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
 
   const handleFile = (e) => {
     const file = e.target.files[0];
@@ -218,12 +227,29 @@ const ImportModal = ({ onClose, onImported }) => {
 
         <div className="px-6 py-5 space-y-4">
 
+          {/* Guia paso a paso */}
+          {showGuide && (
+            <CsvImportGuide onClose={() => setShowGuide(false)} />
+          )}
+
           {/* Paso 1: seleccionar archivo */}
-          {(step === 'idle' || step === 'preview' || step === 'error') && (
+          {!showGuide && (step === 'idle' || step === 'preview' || step === 'error') && (
             <div>
-              <p className="mb-1 text-sm text-gray-600">
-                Seleccioná un archivo <code className="rounded bg-gray-100 px-1">.csv</code> con los datos de los empleados.
-              </p>
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-sm text-gray-600">
+                  Selecciona un archivo <code className="rounded bg-gray-100 px-1">.csv</code> con los datos de los empleados.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowGuide(true)}
+                  className="flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Guia paso a paso
+                </button>
+              </div>
               <div className="mb-3 flex items-center gap-3">
                 <a
                   href="/plantilla_empleados.csv"
@@ -279,7 +305,7 @@ const ImportModal = ({ onClose, onImported }) => {
                 <table className="w-full text-xs">
                   <thead className="bg-gray-50 text-gray-500">
                     <tr>
-                      {['department','job_role','age','gender','monthly_income','job_satisfaction','overtime'].map((h) => (
+                      {['rol_tecnologico','seniority','edad','salario_mensual','antiguedad_meses','modalidad_trabajo','satisfaccion_laboral'].map((h) => (
                         <th key={h} className="px-3 py-2 text-left font-medium">{h}</th>
                       ))}
                     </tr>
@@ -287,7 +313,7 @@ const ImportModal = ({ onClose, onImported }) => {
                   <tbody className="divide-y divide-gray-50">
                     {parsed.rows.slice(0, 5).map((row, i) => (
                       <tr key={i} className="hover:bg-gray-50">
-                        {['department','job_role','age','gender','monthly_income','job_satisfaction','overtime'].map((h) => (
+                        {['rol_tecnologico','seniority','edad','salario_mensual','antiguedad_meses','modalidad_trabajo','satisfaccion_laboral'].map((h) => (
                           <td key={h} className="px-3 py-1.5 text-gray-700">{row[h]}</td>
                         ))}
                       </tr>
@@ -296,7 +322,7 @@ const ImportModal = ({ onClose, onImported }) => {
                 </table>
               </div>
               {parsed.rows.length > 5 && (
-                <p className="mt-1 text-xs text-gray-400">... y {parsed.rows.length - 5} filas más</p>
+                <p className="mt-1 text-xs text-gray-400">... y {parsed.rows.length - 5} filas mas</p>
               )}
             </div>
           )}
@@ -392,7 +418,7 @@ export default function Employees() {
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-auto">
-        <Navbar title="Empleados — Dataset IBM HR" />
+        <Navbar title="Empleados — Prediccion de Desercion" />
         <main className="flex-1 p-6">
 
           {/* ── Barra de herramientas ── */}
@@ -401,7 +427,7 @@ export default function Employees() {
             {/* Filtros */}
             <input
               type="text"
-              placeholder="Buscar por rol o departamento…"
+              placeholder="Buscar por rol o seniority..."
               value={filters.search}
               onChange={(e) => setFilter('search', e.target.value)}
               className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 w-64"
@@ -411,10 +437,14 @@ export default function Employees() {
               onChange={(e) => setFilter('department', e.target.value)}
               className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
             >
-              <option value="">Todos los departamentos</option>
-              <option value="Sales">Ventas</option>
-              <option value="Research & Development">I+D</option>
-              <option value="Human Resources">Recursos Humanos</option>
+              <option value="">Todos los roles</option>
+              <option value="Frontend">Frontend</option>
+              <option value="Backend">Backend</option>
+              <option value="Fullstack">Fullstack</option>
+              <option value="Mobile">Mobile</option>
+              <option value="DevOps">DevOps</option>
+              <option value="QA">QA</option>
+              <option value="Data">Data</option>
             </select>
             <select
               value={filters.risk_level}
@@ -422,9 +452,10 @@ export default function Employees() {
               className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
             >
               <option value="">Todos los riesgos</option>
-              <option value="ALTO">Riesgo Alto</option>
-              <option value="MEDIO">Riesgo Medio</option>
-              <option value="BAJO">Riesgo Bajo</option>
+              <option value="CRITICO">Critico</option>
+              <option value="ALTO">Alto</option>
+              <option value="MEDIO">Medio</option>
+              <option value="BAJO">Bajo</option>
             </select>
             <select
               value={filters.attrition}
@@ -432,8 +463,8 @@ export default function Employees() {
               className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
             >
               <option value="">Todos</option>
-              <option value="true">Renunciaron</option>
-              <option value="false">Permanecieron</option>
+              <option value="true">Desertaron</option>
+              <option value="false">Permanecen</option>
             </select>
 
             <div className="ml-auto flex items-center gap-2">
@@ -481,35 +512,22 @@ export default function Employees() {
                   <thead className="bg-gray-50 text-xs uppercase text-gray-500">
                     <tr>
                       <th className="px-4 py-3 text-left">#</th>
-                      <th className="px-4 py-3 text-left">Rol / Cargo</th>
-                      <th className="px-4 py-3 text-left">Departamento</th>
-                      {/* Datos personales */}
+                      <th className="px-4 py-3 text-left">Rol</th>
+                      <th className="px-4 py-3 text-left">Seniority</th>
                       <th className="px-4 py-3 text-left">Edad</th>
-                      <th className="px-4 py-3 text-left">Género</th>
-                      <th className="px-4 py-3 text-left">Estado civil</th>
-                      <th className="px-4 py-3 text-left">Educación</th>
-                      {/* Datos laborales */}
-                      <th className="px-4 py-3 text-left">Antigüedad</th>
-                      <th
-                        className="px-4 py-3 text-left cursor-pointer select-none"
-                        title="Ingreso mensual. Usa el toggle USD/GS para cambiar moneda."
-                      >
-                        Ingreso ({currency === 'GS' ? 'Gs.' : 'USD'})
-                      </th>
-                      {/*
-                        Satisfacción: escala 1-4 del dataset IBM HR.
-                        1=Muy baja, 2=Baja, 3=Alta, 4=Muy alta.
-                        Pasá el mouse por el badge para ver la descripción completa.
-                      */}
+                      <th className="px-4 py-3 text-left">Modalidad</th>
+                      <th className="px-4 py-3 text-left">Contrato</th>
+                      <th className="px-4 py-3 text-left">Antiguedad</th>
+                      <th className="px-4 py-3 text-left">Salario (Gs.)</th>
+                      <th className="px-4 py-3 text-left">Hs. Extra/mes</th>
                       <th
                         className="px-4 py-3 text-left cursor-help"
-                        title="Satisfacción laboral (escala 1-4): 1=Muy baja, 2=Baja, 3=Alta, 4=Muy alta"
+                        title="Satisfaccion laboral (escala 1-5): 1=Muy baja, 5=Muy alta"
                       >
-                        Satisfacción ⓘ
+                        Satisfaccion
                       </th>
-                      <th className="px-4 py-3 text-left">Horas extra</th>
-                      <th className="px-4 py-3 text-left">Attrition</th>
-                      <th className="px-4 py-3 text-left">Riesgo fuga</th>
+                      <th className="px-4 py-3 text-left">Desercion</th>
+                      <th className="px-4 py-3 text-left">Riesgo</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -520,36 +538,33 @@ export default function Employees() {
                         className="cursor-pointer hover:bg-blue-50 transition-colors"
                       >
                         <td className="px-4 py-3 text-gray-400 text-xs">{emp.id}</td>
-                        <td className="px-4 py-3 font-medium text-gray-900">{emp.job_role}</td>
-                        <td className="px-4 py-3 text-gray-600">{emp.department}</td>
-                        {/* Datos personales */}
-                        <td className="px-4 py-3 text-gray-600">{emp.age}</td>
-                        <td className="px-4 py-3 text-gray-600">{emp.gender}</td>
-                        <td className="px-4 py-3 text-gray-600">{emp.marital_status}</td>
-                        <td className="px-4 py-3 text-gray-600 text-xs">{emp.education_field}</td>
-                        {/* Datos laborales */}
-                        <td className="px-4 py-3 text-gray-600">{emp.years_at_company} años</td>
+                        <td className="px-4 py-3 font-medium text-gray-900">{emp.rol_tecnologico}</td>
+                        <td className="px-4 py-3 text-gray-600">{emp.seniority}</td>
+                        <td className="px-4 py-3 text-gray-600">{emp.edad}</td>
+                        <td className="px-4 py-3 text-gray-600 text-xs">{emp.modalidad_trabajo}</td>
+                        <td className="px-4 py-3 text-gray-600 text-xs">{emp.tipo_contrato}</td>
+                        <td className="px-4 py-3 text-gray-600">{emp.antiguedad_meses} meses</td>
                         <td className="px-4 py-3 text-gray-700 font-medium tabular-nums">
-                          {formatIncome(emp.monthly_income, currency === 'GS')}
+                          {emp.salario_mensual?.toLocaleString('es-PY')}
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">
+                          {emp.cantidad_horas_extra_mes > 15
+                            ? <span className="text-amber-600 font-medium">{emp.cantidad_horas_extra_mes}h</span>
+                            : <span className="text-gray-500">{emp.cantidad_horas_extra_mes}h</span>}
                         </td>
                         <td className="px-4 py-3">
-                          <SatisfactionCell value={emp.job_satisfaction} />
+                          <SatisfactionCell value={emp.satisfaccion_laboral} />
                         </td>
                         <td className="px-4 py-3">
-                          {emp.overtime
-                            ? <span className="text-amber-600 font-medium">Sí</span>
-                            : <span className="text-gray-400">No</span>}
-                        </td>
-                        <td className="px-4 py-3">
-                          {emp.attrition
-                            ? <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs text-red-600 font-medium">Renunció</span>
-                            : <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">Permanece</span>}
+                          {emp.desercion_real
+                            ? <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs text-red-600 font-medium">Si</span>
+                            : <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">No</span>}
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
-                            <RiskBadge level={emp.risk_level} />
+                            <RiskBadge level={emp.nivel_riesgo} />
                             <span className="text-xs text-gray-400">
-                              {(emp.flight_risk * 100).toFixed(0)}%
+                              {(emp.riesgo_desercion * 100).toFixed(0)}%
                             </span>
                           </div>
                         </td>

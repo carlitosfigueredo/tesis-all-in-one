@@ -41,3 +41,5 @@ prisma/migrations/dev.db
 
 # Modelo entrenado (se genera con el notebook)
 ml-service/model/model.pkl
+ml-service/model/encoders.pkl
+ml-service/venv/

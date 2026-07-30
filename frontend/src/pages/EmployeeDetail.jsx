@@ -5,26 +5,29 @@ import Navbar from '../components/layout/Navbar';
 import api from '../services/api';
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
-const USD_TO_GS = 7500;
 
 const SATISFACTION_LABELS = {
-  1: { text: 'Muy insatisfecho', color: 'text-red-700',   bg: 'bg-red-50',    bar: 'bg-red-500'    },
-  2: { text: 'Insatisfecho',     color: 'text-orange-700', bg: 'bg-orange-50', bar: 'bg-orange-400' },
-  3: { text: 'Satisfecho',       color: 'text-blue-700',   bg: 'bg-blue-50',   bar: 'bg-blue-500'   },
-  4: { text: 'Muy satisfecho',   color: 'text-green-700',  bg: 'bg-green-50',  bar: 'bg-green-500'  },
+  1: { text: 'Muy baja',  color: 'text-red-700',    bg: 'bg-red-50',     bar: 'bg-red-500'     },
+  2: { text: 'Baja',      color: 'text-orange-700',  bg: 'bg-orange-50',  bar: 'bg-orange-400'  },
+  3: { text: 'Media',     color: 'text-blue-700',    bg: 'bg-blue-50',    bar: 'bg-blue-500'    },
+  4: { text: 'Alta',      color: 'text-green-700',   bg: 'bg-green-50',   bar: 'bg-green-500'   },
+  5: { text: 'Muy alta',  color: 'text-emerald-700', bg: 'bg-emerald-50', bar: 'bg-emerald-500' },
 };
 
 const RiskGauge = ({ score }) => {
   const pct = Math.round(score * 100);
   const color =
-    score >= 0.7 ? '#ef4444' :
-    score >= 0.4 ? '#f59e0b' : '#22c55e';
+    score >= 0.75 ? '#dc2626' :
+    score >= 0.5 ? '#ef4444' :
+    score >= 0.3 ? '#f59e0b' : '#22c55e';
+  const label =
+    score >= 0.75 ? 'RIESGO CRITICO' :
+    score >= 0.5 ? 'RIESGO ALTO' :
+    score >= 0.3 ? 'RIESGO MEDIO' : 'RIESGO BAJO';
   return (
     <div className="flex flex-col items-center">
       <svg viewBox="0 0 120 70" className="w-44">
-        {/* Fondo arco */}
         <path d="M10,60 A50,50 0 0,1 110,60" fill="none" stroke="#e5e7eb" strokeWidth="12" strokeLinecap="round" />
-        {/* Arco de progreso */}
         <path
           d="M10,60 A50,50 0 0,1 110,60"
           fill="none"
@@ -41,7 +44,7 @@ const RiskGauge = ({ score }) => {
         className="mt-1 rounded-full px-3 py-0.5 text-xs font-bold"
         style={{ background: color + '20', color }}
       >
-        {score >= 0.7 ? 'RIESGO ALTO' : score >= 0.4 ? 'RIESGO MEDIO' : 'RIESGO BAJO'}
+        {label}
       </span>
     </div>
   );
@@ -54,7 +57,7 @@ const Field = ({ label, value, highlight }) => (
   </div>
 );
 
-const SatisfactionBar = ({ label, value, max = 4, hint }) => {
+const SatisfactionBar = ({ label, value, max = 5, hint }) => {
   const meta  = SATISFACTION_LABELS[value] ?? SATISFACTION_LABELS[1];
   const pct   = (value / max) * 100;
   return (
@@ -72,9 +75,9 @@ const SatisfactionBar = ({ label, value, max = 4, hint }) => {
         <div className={`h-2 rounded-full transition-all ${meta.bar}`} style={{ width: `${pct}%` }} />
       </div>
       <div className="mt-0.5 flex justify-between text-xs text-gray-300">
-        <span>Muy insatisfecho</span>
+        <span>Muy baja</span>
         <span>{value}/{max}</span>
-        <span>Muy satisfecho</span>
+        <span>Muy alta</span>
       </div>
     </div>
   );
@@ -86,12 +89,6 @@ export default function EmployeeDetail() {
   const [emp, setEmp]         = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState('');
-  const [currency, setCurrency] = useState('USD');
-
-  const formatIncome = (val) => {
-    if (currency === 'GS') return `Gs. ${Math.round(val * USD_TO_GS).toLocaleString('es-PY')}`;
-    return `$${val.toLocaleString('en-US')}`;
-  };
 
   useEffect(() => {
     api.get(`/employees/${id}`)
@@ -101,12 +98,14 @@ export default function EmployeeDetail() {
   }, [id]);
 
   const riskFactors = emp ? [
-    { label: 'Horas extra',           risk: emp.overtime,                           text: emp.overtime ? 'Sí — factor de riesgo' : 'No' },
-    { label: 'Años sin ascenso',       risk: emp.years_since_last_promotion >= 3,   text: `${emp.years_since_last_promotion} años` },
-    { label: 'Satisfacción laboral',   risk: emp.job_satisfaction <= 2,             text: ['', 'Muy baja', 'Baja', 'Alta', 'Muy alta'][emp.job_satisfaction] },
-    { label: 'Balance vida-trabajo',   risk: emp.work_life_balance <= 2,            text: ['', 'Muy malo', 'Malo', 'Bueno', 'Muy bueno'][emp.work_life_balance] },
-    { label: 'Empresas anteriores',    risk: emp.num_companies_worked >= 4,         text: `${emp.num_companies_worked} empresas` },
-    { label: 'Distancia al trabajo',   risk: emp.distance_from_home >= 20,         text: `${emp.distance_from_home} km` },
+    { label: 'Horas extra/mes',         risk: emp.cantidad_horas_extra_mes > 15,     text: `${emp.cantidad_horas_extra_mes}h/mes` },
+    { label: 'Estancamiento carrera',    risk: emp.estancamiento_carrera >= 4,        text: `${emp.estancamiento_carrera}/5` },
+    { label: 'Satisfaccion laboral',     risk: emp.satisfaccion_laboral <= 2,         text: `${emp.satisfaccion_laboral}/5` },
+    { label: 'Equilibrio vida-trabajo',  risk: emp.equilibrio_vida_trabajo <= 2,      text: `${emp.equilibrio_vida_trabajo}/5` },
+    { label: 'Capacitacion',             risk: !emp.capacitacion_ultimo_anio,         text: emp.capacitacion_ultimo_anio ? 'Si' : 'No' },
+    { label: 'Antiguedad',               risk: emp.antiguedad_meses < 12,            text: `${emp.antiguedad_meses} meses` },
+    { label: 'Tipo contrato',            risk: emp.tipo_contrato === 'Eventual',     text: emp.tipo_contrato },
+    { label: 'Empresas anteriores',      risk: emp.cantidad_empresas_anteriores >= 4, text: `${emp.cantidad_empresas_anteriores} empresas` },
   ] : [];
 
   return (
@@ -128,7 +127,7 @@ export default function EmployeeDetail() {
 
           {emp && !loading && (
             <>
-              {/* Breadcrumb + toggle moneda */}
+              {/* Breadcrumb */}
               <div className="mb-4 flex items-center justify-between flex-wrap gap-2">
                 <button
                   onClick={() => navigate('/employees')}
@@ -136,23 +135,6 @@ export default function EmployeeDetail() {
                 >
                   ← Volver a empleados
                 </button>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-400">Ingreso en:</span>
-                  <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs font-medium">
-                    <button
-                      onClick={() => setCurrency('USD')}
-                      className={`px-3 py-1.5 transition-colors ${currency === 'USD' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
-                    >
-                      USD
-                    </button>
-                    <button
-                      onClick={() => setCurrency('GS')}
-                      className={`px-3 py-1.5 transition-colors ${currency === 'GS' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
-                    >
-                      Gs.
-                    </button>
-                  </div>
-                </div>
               </div>
 
               <div className="grid gap-6 lg:grid-cols-3">
@@ -163,31 +145,30 @@ export default function EmployeeDetail() {
                   <div className="rounded-xl bg-white p-5 shadow-sm">
                     <div className="flex items-center gap-4">
                       <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-100 text-2xl font-bold text-blue-600">
-                        {emp.job_role.charAt(0)}
+                        {emp.rol_tecnologico.charAt(0)}
                       </div>
                       <div>
-                        <p className="font-semibold text-gray-900">{emp.job_role}</p>
-                        <p className="text-sm text-gray-500">{emp.department} · Nivel {emp.job_level}</p>
+                        <p className="font-semibold text-gray-900">{emp.rol_tecnologico}</p>
+                        <p className="text-sm text-gray-500">{emp.seniority} · {emp.modalidad_trabajo}</p>
                         <p className="text-xs text-gray-400">ID #{emp.id}</p>
                       </div>
                     </div>
                     <div className="mt-4 flex flex-wrap gap-2 text-xs">
-                      <span className="rounded-full bg-gray-100 px-2 py-1 text-gray-600">{emp.gender}</span>
-                      <span className="rounded-full bg-gray-100 px-2 py-1 text-gray-600">{emp.marital_status}</span>
-                      <span className="rounded-full bg-gray-100 px-2 py-1 text-gray-600">{emp.education_field}</span>
-                      <span className="rounded-full bg-gray-100 px-2 py-1 text-gray-600">{emp.business_travel}</span>
-                      {emp.attrition && (
-                        <span className="rounded-full bg-red-100 px-2 py-1 text-red-700 font-semibold">Renunció</span>
+                      <span className="rounded-full bg-gray-100 px-2 py-1 text-gray-600">{emp.edad} anios</span>
+                      <span className="rounded-full bg-gray-100 px-2 py-1 text-gray-600">{emp.nivel_formacion}</span>
+                      <span className="rounded-full bg-gray-100 px-2 py-1 text-gray-600">{emp.tipo_contrato}</span>
+                      {emp.desercion_real && (
+                        <span className="rounded-full bg-red-100 px-2 py-1 text-red-700 font-semibold">Deserto</span>
                       )}
                     </div>
                   </div>
 
                   {/* Gauge de riesgo */}
                   <div className="rounded-xl bg-white p-5 shadow-sm text-center">
-                    <p className="mb-3 text-sm font-semibold text-gray-700">Probabilidad de Fuga</p>
-                    <RiskGauge score={emp.flight_risk} />
-                    {emp.is_dummy && (
-                      <p className="mt-2 text-xs text-amber-500">⚠️ Calculado con modelo dummy</p>
+                    <p className="mb-3 text-sm font-semibold text-gray-700">Probabilidad de Desercion</p>
+                    <RiskGauge score={emp.riesgo_desercion} />
+                    {emp.es_modelo_base && (
+                      <p className="mt-2 text-xs text-amber-500">Calculado con modelo heuristico base</p>
                     )}
                   </div>
 
@@ -214,50 +195,17 @@ export default function EmployeeDetail() {
                   <div className="rounded-xl bg-white p-5 shadow-sm">
                     <p className="mb-3 text-sm font-semibold text-gray-700">Datos Laborales</p>
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                      <Field label="Edad" value={`${emp.age} años`} />
-                      <Field label="Ingreso Mensual" value={formatIncome(emp.monthly_income)} />
-                      <Field label="Años en la empresa" value={`${emp.years_at_company} años`} />
-                      <Field label="Años en el cargo" value={`${emp.years_in_current_role} años`} />
-                      <Field label="Años sin ascenso" value={`${emp.years_since_last_promotion} años`} highlight={emp.years_since_last_promotion >= 3} />
-                      <Field label="Años de experiencia" value={`${emp.total_working_years} años`} />
-                      <Field label="Empresas anteriores" value={emp.num_companies_worked} highlight={emp.num_companies_worked >= 4} />
-                      <Field label="Distancia al trabajo" value={`${emp.distance_from_home} km`} highlight={emp.distance_from_home >= 20} />
-                      <Field label="Horas extra" value={emp.overtime ? 'Sí' : 'No'} highlight={emp.overtime} />
+                      <Field label="Edad" value={`${emp.edad} anios`} />
+                      <Field label="Salario Mensual" value={`Gs. ${emp.salario_mensual?.toLocaleString('es-PY')}`} />
+                      <Field label="Antiguedad" value={`${emp.antiguedad_meses} meses`} />
+                      <Field label="Horas extra/mes" value={`${emp.cantidad_horas_extra_mes}h`} highlight={emp.cantidad_horas_extra_mes > 15} />
+                      <Field label="Empresas anteriores" value={emp.cantidad_empresas_anteriores} highlight={emp.cantidad_empresas_anteriores >= 4} />
+                      <Field label="Evaluacion desempeno" value={`${emp.evaluacion_desempeno}/5`} />
+                      <Field label="Capacitacion" value={emp.capacitacion_ultimo_anio ? 'Si' : 'No'} highlight={!emp.capacitacion_ultimo_anio} />
+                      <Field label="Modalidad" value={emp.modalidad_trabajo} />
+                      <Field label="Tipo contrato" value={emp.tipo_contrato} highlight={emp.tipo_contrato === 'Eventual'} />
                     </div>
                   </div>
-
-                  {/* Satisfacción — escala 1-4, con descripción verbal y extremos */}
-                  <div className="rounded-xl bg-white p-5 shadow-sm">
-                    <div className="mb-4 flex items-start justify-between gap-2">
-                      <p className="text-sm font-semibold text-gray-700">Indicadores de Satisfacción</p>
-                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500 flex-shrink-0">
-                        Escala 1–4
-                      </span>
-                    </div>
-                    <div className="space-y-5">
-                      <SatisfactionBar
-                        label="Satisfacción Laboral"
-                        value={emp.job_satisfaction}
-                        hint="¿Qué tan satisfecho está con su trabajo?"
-                      />
-                      <SatisfactionBar
-                        label="Satisfacción con el Ambiente"
-                        value={emp.environment_satisfaction}
-                        hint="¿Cómo percibe el entorno físico y social?"
-                      />
-                      <SatisfactionBar
-                        label="Balance Vida-Trabajo"
-                        value={emp.work_life_balance}
-                        hint="¿Puede equilibrar vida personal y laboral?"
-                      />
-                      <SatisfactionBar
-                        label="Calificación de Desempeño"
-                        value={emp.performance_rating}
-                        hint="Evaluación de desempeño del período"
-                      />
-                    </div>
-                  </div>
-
                 </div>
               </div>
             </>

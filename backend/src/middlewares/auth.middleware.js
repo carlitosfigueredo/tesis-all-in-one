@@ -25,7 +25,7 @@ const protect = async (req, res, next) => {
         email: true,
         active: true,
         companyId: true,
-        company: { select: { name: true, status: true } },
+        company: { select: { name: true, status: true, plan: true } },
       },
     });
 
@@ -44,6 +44,7 @@ const protect = async (req, res, next) => {
       companyId: user.companyId,
       companyName: user.company?.name ?? null,
       companyStatus: user.company?.status ?? null,
+      companyPlan: user.company?.plan ?? null,
       portal: decoded.portal,
       permissions,
       roleNames,

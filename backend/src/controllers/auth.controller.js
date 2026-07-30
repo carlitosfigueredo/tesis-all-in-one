@@ -66,7 +66,7 @@ const login = async (req, res, next) => {
     }
 
     // Cargar roles/permisos del usuario
-    const { permissions, roleNames } = await getUserPermissions(user.id);
+    const { permissions = [], roleNames = [] } = await getUserPermissions(user.id);
 
     // SUPER_ADMIN no puede loguear por el portal de empresas
     if (roleNames.includes('SUPER_ADMIN')) {
@@ -119,6 +119,7 @@ const login = async (req, res, next) => {
       ...sanitize(user),
       companyName: user.company?.name ?? null,
       companyStatus: user.company?.status ?? null,
+      companyPlan: user.company?.plan ?? null,
       roles: roleNames,
       permissions,
     };
@@ -153,7 +154,7 @@ const adminLogin = async (req, res, next) => {
     }
 
     // Verificar que tenga rol SUPER_ADMIN
-    const { roleNames } = await getUserPermissions(user.id);
+    const { roleNames = [] } = await getUserPermissions(user.id);
     if (!roleNames.includes('SUPER_ADMIN')) {
       await logAction({ action: 'LOGIN_FAILED', resource: 'users', ipAddress: ip, userAgent: ua,
         status: 'FAILURE', errorMsg: `Admin login: usuario sin rol SUPER_ADMIN: ${email}` });
@@ -196,6 +197,7 @@ const me = async (req, res, next) => {
       ...sanitize(user),
       companyName: user.company?.name ?? null,
       companyStatus: user.company?.status ?? null,
+      companyPlan: user.company?.plan ?? null,
       roles: req.user.roleNames,
       permissions: req.user.permissions,
     };
@@ -437,8 +439,8 @@ const register = async (req, res, next) => {
     });
 
     // Cargar permisos del nuevo usuario
-    const { permissions, roleNames } = await getUserPermissions(result.user.id);
-    const token = generateToken(result.user, roleNames);
+    const { permissions: regPermissions = [], roleNames: regRoleNames = [] } = await getUserPermissions(result.user.id);
+    const token = generateToken(result.user, regRoleNames);
 
     const userData = {
       id: result.user.id,
@@ -447,8 +449,9 @@ const register = async (req, res, next) => {
       companyId: result.company.id,
       companyName: result.company.name,
       companyStatus: result.company.status,
-      roles: roleNames,
-      permissions,
+      companyPlan: result.company.plan,
+      roles: regRoleNames,
+      permissions: regPermissions,
     };
 
     return res.status(201).json({
