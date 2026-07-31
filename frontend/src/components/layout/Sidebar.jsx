@@ -71,11 +71,21 @@ export default function Sidebar() {
             </p>
           )}
         </div>
+        <NavLink
+          to="/profile"
+          className={({ isActive }) =>
+            `mb-2 block w-full rounded-lg px-4 py-2 text-left text-sm transition ${
+              isActive ? 'bg-primary-600 text-white font-semibold' : 'text-primary-300 hover:bg-primary-800 hover:text-white'
+            }`
+          }
+        >
+          👤 Mi perfil
+        </NavLink>
         <button
           onClick={logout}
           className="w-full rounded-lg px-4 py-2 text-left text-sm text-primary-300 transition hover:bg-primary-800 hover:text-white"
         >
-          🚪 Cerrar sesión
+          🚪 Cerrar sesion
         </button>
       </div>
     </aside>

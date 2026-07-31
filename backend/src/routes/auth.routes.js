@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const { login, me, forgotPassword, resetPassword, changePassword, register } = require('../controllers/auth.controller');
+const { login, me, forgotPassword, resetPassword, changePassword, forceChangePassword, register } = require('../controllers/auth.controller');
 const { protect, requirePortal }                    = require('../middlewares/auth.middleware');
 const { verifyRecaptcha }                           = require('../middlewares/recaptcha.middleware');
 const { validate, forgotPasswordSchema,
@@ -25,5 +25,8 @@ router.post('/reset-password', validate(resetPasswordSchema), resetPassword);
 
 // POST /api/auth/change-password (requiere estar autenticado)
 router.post('/change-password', protect, requirePortal('company'), changePassword);
+
+// POST /api/auth/force-change-password (primer login, no requiere pass actual)
+router.post('/force-change-password', protect, forceChangePassword);
 
 module.exports = router;

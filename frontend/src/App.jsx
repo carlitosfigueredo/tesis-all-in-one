@@ -33,6 +33,8 @@ import Users         from './pages/Users';
 import ModelML       from './pages/ModelML';
 import Company       from './pages/Company';
 import Checkout      from './pages/Checkout';
+import ForceChangePassword from './pages/ForceChangePassword';
+import Profile       from './pages/Profile';
 
 export default function App() {
   return (
@@ -71,6 +73,7 @@ export default function App() {
               <Route path="/users"          element={<Users />} />
               <Route path="/model"          element={<ModelML />} />
               <Route path="/company"        element={<Company />} />
+              <Route path="/profile"        element={<Profile />} />
             </Route>
 
             {/* Fallback */}

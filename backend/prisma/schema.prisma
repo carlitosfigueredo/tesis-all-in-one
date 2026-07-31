@@ -35,15 +35,16 @@ model Company {
 // Usuarios del sistema
 // ─────────────────────────────────────────
 model User {
-  id             String   @id @default(uuid())
-  name           String
-  email          String   @unique
-  password       String
-  active         Boolean  @default(true)
-  failedAttempts Int      @default(0)
-  lockedUntil    DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                 String   @id @default(uuid())
+  name               String
+  email              String   @unique
+  password           String
+  active             Boolean  @default(true)
+  mustChangePassword Boolean  @default(false)
+  failedAttempts     Int      @default(0)
+  lockedUntil        DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   // Tenant (SUPER_ADMIN no pertenece a ninguna empresa)
   companyId String?
