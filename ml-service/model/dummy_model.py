@@ -1,23 +1,27 @@
 """
-Modelo dummy para desarrollo.
+Modelo heuristico base para desarrollo.
 
-Simula la lógica que el modelo real de Random Forest aprenderá del dataset IBM.
-Usa reglas heurísticas basadas en los factores de riesgo conocidos en la literatura
-de retención de talento, para que las predicciones sean plausibles mientras
-se entrena el modelo real.
+Simula la logica que el modelo Random Forest real aprendera del dataset
+de desercion de empresas de software de Paraguay.
 
-Reemplazar este archivo por model.pkl una vez completado el notebook de entrenamiento.
+Usa reglas basadas en factores de riesgo conocidos en la literatura
+de retencion de talento IT, adaptadas al contexto paraguayo.
+
+Se usa cuando el modelo real (model.pkl) aun no fue entrenado.
 """
 
 import numpy as np
 
 
-def predict_flight_risk(features: dict) -> tuple[float, float]:
+def predict_desercion_dummy(features: dict) -> tuple[float, float]:
     """
-    Calcula el riesgo de fuga de forma heurística.
+    Calcula el riesgo de desercion de forma heuristica.
+
+    Args:
+        features: dict con las 17 variables del empleado
 
     Returns:
-        (flight_risk, confidence) — ambos entre 0.0 y 1.0
+        (riesgo_desercion, confianza) -- ambos entre 0.0 y 1.0
     """
     score = 0.0
     weight_total = 0.0
@@ -27,44 +31,70 @@ def predict_flight_risk(features: dict) -> tuple[float, float]:
         score += value * weight
         weight_total += weight
 
-    # ── Factores de riesgo con sus pesos ──────────────────────────────────────
+    # ── Factores de riesgo (variables psicometricas) ──────────────────────────
 
-    # Baja satisfacción laboral (escala 1-4, invertida)
-    add((4 - features["job_satisfaction"]) / 3, weight=0.20)
+    # Baja satisfaccion laboral (escala 1-5, invertida)
+    satisf = features.get("satisfaccion_laboral", 3)
+    add((5 - satisf) / 4, weight=0.18)
 
-    # Baja satisfacción con el ambiente (escala 1-4, invertida)
-    add((4 - features["environment_satisfaction"]) / 3, weight=0.15)
+    # Baja satisfaccion con el ambiente
+    amb = features.get("satisfaccion_ambiente", 3)
+    add((5 - amb) / 4, weight=0.10)
 
-    # Mal balance vida-trabajo (escala 1-4, invertida)
-    add((4 - features["work_life_balance"]) / 3, weight=0.15)
+    # Mal equilibrio vida-trabajo
+    equil = features.get("equilibrio_vida_trabajo", 3)
+    add((5 - equil) / 4, weight=0.15)
 
-    # Horas extra → fuerte predictor de fuga
-    add(1.0 if features["overtime"] else 0.0, weight=0.20)
+    # Estancamiento de carrera (directo, mas = peor)
+    estanc = features.get("estancamiento_carrera", 3)
+    add((estanc - 1) / 4, weight=0.15)
 
-    # Muchas empresas anteriores → perfil más móvil
-    companies = min(features["num_companies_worked"] / 9, 1.0)
-    add(companies, weight=0.10)
+    # Bajo feedback del lider (invertido)
+    feed = features.get("feedback_lider", 3)
+    add((5 - feed) / 4, weight=0.08)
 
-    # Poco tiempo en la empresa → más propenso a irse
-    years_norm = max(0.0, 1.0 - features["years_at_company"] / 20)
-    add(years_norm, weight=0.10)
+    # ── Factores de riesgo (datos de RRHH) ────────────────────────────────────
 
-    # Sin ascenso reciente → desmotivación
-    promotion_norm = min(features["years_since_last_promotion"] / 10, 1.0)
-    add(promotion_norm, weight=0.05)
+    # Muchas horas extra
+    horas = features.get("cantidad_horas_extra_mes", 0)
+    horas_norm = min(horas / 40, 1.0)
+    add(horas_norm, weight=0.12)
 
-    # Distancia al trabajo lejana
-    distance_norm = min(features["distance_from_home"] / 30, 1.0)
-    add(distance_norm, weight=0.05)
+    # Sin capacitacion
+    cap = features.get("capacitacion_ultimo_anio", "Si")
+    add(1.0 if cap == "No" else 0.0, weight=0.05)
+
+    # Poca antiguedad (< 12 meses = mas riesgo)
+    antig = features.get("antiguedad_meses", 12)
+    antig_norm = max(0.0, 1.0 - antig / 36)
+    add(antig_norm, weight=0.07)
+
+    # Muchas empresas anteriores
+    empresas = features.get("cantidad_empresas_anteriores", 2)
+    empresas_norm = min(empresas / 8, 1.0)
+    add(empresas_norm, weight=0.05)
+
+    # Contrato precario
+    contrato = features.get("tipo_contrato", "Indefinido")
+    if contrato == "Eventual":
+        add(0.8, weight=0.05)
+    elif contrato == "Plazo fijo":
+        add(0.4, weight=0.05)
+    else:
+        add(0.0, weight=0.05)
 
     # ── Score final ───────────────────────────────────────────────────────────
     raw_score = score / weight_total if weight_total > 0 else 0.5
 
-    # Añadir ruido pequeño para que no se vea demasiado determinístico
+    # Ruido pequeno para que no sea determinístico
     noise = np.random.normal(0, 0.02)
-    flight_risk = float(np.clip(raw_score + noise, 0.0, 1.0))
+    riesgo = float(np.clip(raw_score + noise, 0.0, 1.0))
 
-    # Confianza del dummy siempre baja (honesto con el estado del modelo)
-    confidence = 0.55
+    # Confianza del dummy siempre moderada-baja
+    confianza = 0.55
 
-    return flight_risk, confidence
+    return riesgo, confianza
+
+
+# Mantener compatibilidad con imports anteriores
+predict_flight_risk = predict_desercion_dummy

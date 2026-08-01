@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Cell,
@@ -6,6 +7,7 @@ import {
 import Sidebar from '../components/layout/Sidebar';
 import Navbar from '../components/layout/Navbar';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 // ─── Componentes auxiliares ──────────────────────────────────────────────────
 
@@ -75,121 +77,227 @@ const ConfusionMatrix = ({ cm }) => {
   );
 };
 
-// ─── Datos estáticos de las variables de entrenamiento ───────────────────────
+// ─── Datos de las variables de entrenamiento ─────────────────────────────────
+// Dataset custom: empresas de desarrollo de software - Asuncion, Paraguay
+// 17 variables (12 datos RRHH + 5 encuesta clima) + 1 target (desercion)
 
 const TRAINING_FEATURES = [
+  // ── Variables CRITICAS (alto impacto en prediccion) ──
   {
-    feature: 'Age',
-    label: 'Edad',
-    type: 'Numérica',
-    scale: '18 — 60 años',
-    description: 'Edad actual del empleado. Empleados más jóvenes tienden a tener mayor movilidad laboral.',
-    risk: 'Edades entre 25-35 asociadas a mayor rotación.',
-  },
-  {
-    feature: 'MonthlyIncome',
-    label: 'Ingreso Mensual',
-    type: 'Numérica',
-    scale: '$1,009 — $19,999',
-    description: 'Salario mensual en dólares. Es uno de los predictores más fuertes de retención.',
-    risk: 'Ingresos bajos correlacionan fuertemente con fuga.',
-  },
-  {
-    feature: 'YearsAtCompany',
-    label: 'Años en la Empresa',
-    type: 'Numérica',
-    scale: '0 — 40 años',
-    description: 'Tiempo total trabajando en la empresa. Refleja el nivel de arraigo organizacional.',
-    risk: 'Los primeros 2 años son los de mayor riesgo.',
-  },
-  {
-    feature: 'YearsInCurrentRole',
-    label: 'Años en el Cargo Actual',
-    type: 'Numérica',
-    scale: '0 — 18 años',
-    description: 'Tiempo en el puesto actual. Mucho tiempo sin cambio puede indicar estancamiento.',
-    risk: 'Muy poco tiempo en el rol aumenta la probabilidad de salida.',
-  },
-  {
-    feature: 'YearsSinceLastPromotion',
-    label: 'Años sin Ascenso',
-    type: 'Numérica',
-    scale: '0 — 15 años',
-    description: 'Años transcurridos desde la última promoción. Indica percepción de desarrollo profesional.',
-    risk: '≥ 3 años sin ascenso es un factor de alerta.',
-  },
-  {
-    feature: 'JobSatisfaction',
-    label: 'Satisfacción Laboral',
+    feature: 'satisfaccion_laboral',
+    label: 'Satisfaccion Laboral',
     type: 'Ordinal',
-    scale: '1 (Baja) — 4 (Muy alta)',
-    description: 'Nivel de satisfacción con las tareas y responsabilidades del puesto.',
-    risk: 'Valores 1-2 son predictores directos de fuga.',
+    scale: '1 (Muy baja) — 5 (Muy alta)',
+    source: 'Encuesta clima',
+    tier: 'critica',
+    description: 'Nivel de satisfaccion del empleado con su trabajo y responsabilidades diarias.',
+    risk: 'Valores 1-2 son predictores directos de desercion. Variable de mayor impacto.',
   },
   {
-    feature: 'EnvironmentSatisfaction',
-    label: 'Satisfacción con el Ambiente',
+    feature: 'equilibrio_vida_trabajo',
+    label: 'Equilibrio Vida-Trabajo',
     type: 'Ordinal',
-    scale: '1 (Baja) — 4 (Muy alta)',
-    description: 'Nivel de satisfacción con el entorno físico y social de trabajo.',
-    risk: 'Ambiente negativo incrementa la intención de renuncia.',
+    scale: '1 (Muy malo) — 5 (Muy bueno)',
+    source: 'Encuesta clima',
+    tier: 'critica',
+    description: 'Percepcion del empleado sobre el balance entre vida personal y laboral.',
+    risk: 'Valores 1-2 correlacionan con burnout y fuga en equipos de desarrollo.',
   },
   {
-    feature: 'WorkLifeBalance',
-    label: 'Balance Vida-Trabajo',
+    feature: 'estancamiento_carrera',
+    label: 'Estancamiento de Carrera',
     type: 'Ordinal',
-    scale: '1 (Malo) — 4 (Muy bueno)',
-    description: 'Percepción del empleado sobre el equilibrio entre vida personal y laboral.',
-    risk: 'Valores 1-2 correlacionan con burnout y fuga.',
+    scale: '1 (Nada estancado) — 5 (Muy estancado)',
+    source: 'Encuesta clima',
+    tier: 'critica',
+    description: 'Percepcion de falta de crecimiento profesional. En IT, la falta de aprendizaje es critica.',
+    risk: 'Valores >= 4 indican alto riesgo. Desarrolladores necesitan crecer constantemente.',
   },
   {
-    feature: 'NumCompaniesWorked',
-    label: 'Empresas Anteriores',
-    type: 'Numérica',
-    scale: '0 — 9 empresas',
-    description: 'Número de empresas en las que trabajó antes de la actual. Indica perfil de movilidad.',
-    risk: '≥ 4 empresas anteriores sugiere mayor propensión a cambiar.',
+    feature: 'salario_mensual',
+    label: 'Salario Mensual (Gs.)',
+    type: 'Numerica',
+    scale: '2.500.000 — 28.000.000 Gs.',
+    source: 'Datos RRHH',
+    tier: 'critica',
+    description: 'Remuneracion mensual en guaranies. Predictor fuerte en un mercado IT competitivo.',
+    risk: 'Salario por debajo de la mediana del seniority aumenta significativamente el riesgo.',
+  },
+  // ── Variables de ALTA importancia ──
+  {
+    feature: 'cantidad_horas_extra_mes',
+    label: 'Horas Extra por Mes',
+    type: 'Numerica',
+    scale: '0 — 40 horas',
+    source: 'Datos RRHH',
+    tier: 'alta',
+    description: 'Promedio de horas extra mensuales. Indicador de sobrecarga y desgaste.',
+    risk: '> 15 horas/mes incrementa el riesgo. > 25 horas es critico.',
   },
   {
-    feature: 'OverTime',
-    label: 'Horas Extra',
+    feature: 'feedback_lider',
+    label: 'Feedback del Lider',
+    type: 'Ordinal',
+    scale: '1 (Muy malo) — 5 (Muy bueno)',
+    source: 'Encuesta clima',
+    tier: 'alta',
+    description: 'Calidad de retroalimentacion tecnica del lider directo o pares.',
+    risk: 'Poco feedback genera desmotivacion, especialmente en perfiles junior y semi-senior.',
+  },
+  {
+    feature: 'capacitacion_ultimo_anio',
+    label: 'Capacitacion (ultimo anio)',
     type: 'Binaria',
-    scale: 'Sí / No',
-    description: 'Si el empleado trabaja habitualmente horas extra. Fuerte indicador de desgaste.',
-    risk: 'Horas extra frecuentes aumentan significativamente el riesgo.',
+    scale: 'Si / No',
+    source: 'Datos RRHH',
+    tier: 'alta',
+    description: 'Si el empleado recibio alguna capacitacion formal en los ultimos 12 meses.',
+    risk: 'Sin capacitacion indica falta de inversion en el empleado. Factor de retencion clave.',
   },
   {
-    feature: 'DistanceFromHome',
-    label: 'Distancia al Trabajo',
-    type: 'Numérica',
-    scale: '1 — 29 km',
-    description: 'Distancia entre el hogar y el lugar de trabajo. Impacta calidad de vida y retención.',
-    risk: '≥ 20 km de distancia es un factor de riesgo moderado.',
+    feature: 'antiguedad_meses',
+    label: 'Antiguedad en la Empresa (meses)',
+    type: 'Numerica',
+    scale: '1 — 120 meses',
+    source: 'Datos RRHH',
+    tier: 'alta',
+    description: 'Tiempo que lleva el empleado en la empresa. En meses para mayor precision.',
+    risk: 'Los primeros 12 meses son los de mayor riesgo de salida.',
+  },
+  // ── Variables de importancia MEDIA ──
+  {
+    feature: 'tipo_contrato',
+    label: 'Tipo de Contrato',
+    type: 'Categorica',
+    scale: 'Indefinido / Plazo fijo / Eventual',
+    source: 'Datos RRHH',
+    tier: 'media',
+    description: 'Tipo de contrato laboral vigente. En Paraguay hay mucho contrato temporal en IT.',
+    risk: 'Contratos eventuales y a plazo fijo tienen mayor rotacion natural.',
   },
   {
-    feature: 'PerformanceRating',
-    label: 'Calificación de Desempeño',
+    feature: 'cantidad_empresas_anteriores',
+    label: 'Empresas Anteriores',
+    type: 'Numerica',
+    scale: '0 — 8 empresas',
+    source: 'Datos RRHH',
+    tier: 'media',
+    description: 'Cantidad de empresas donde trabajo antes. Indica perfil de movilidad laboral.',
+    risk: '>= 4 empresas anteriores sugiere perfil con alta propension a cambiar.',
+  },
+  {
+    feature: 'evaluacion_desempeno',
+    label: 'Evaluacion de Desempeno',
     type: 'Ordinal',
-    scale: '1 (Bajo) — 4 (Excelente)',
-    description: 'Evaluación formal del desempeño del empleado en el último período.',
-    risk: 'Desempeño bajo puede anticipar una salida involuntaria o voluntaria.',
+    scale: '1 (Muy bajo) — 5 (Excelente)',
+    source: 'Datos RRHH',
+    tier: 'media',
+    description: 'Ultima calificacion formal de desempeno del empleado.',
+    risk: 'Desempeno bajo puede anticipar salida involuntaria o voluntaria.',
+  },
+  {
+    feature: 'satisfaccion_ambiente',
+    label: 'Satisfaccion con el Ambiente',
+    type: 'Ordinal',
+    scale: '1 (Muy baja) — 5 (Muy alta)',
+    source: 'Encuesta clima',
+    tier: 'media',
+    description: 'Satisfaccion con el entorno fisico y social del trabajo.',
+    risk: 'Ambiente negativo incrementa intencion de renuncia.',
+  },
+  // ── Variables de importancia BAJA (contextuales) ──
+  {
+    feature: 'modalidad_trabajo',
+    label: 'Modalidad de Trabajo',
+    type: 'Categorica',
+    scale: 'Presencial / Hibrido / Remoto',
+    source: 'Datos RRHH',
+    tier: 'baja',
+    description: 'Modalidad contractual de trabajo. Remoto tiende a retener mas en IT.',
+    risk: 'Presencial sin opcion de flexibilidad puede ser factor de salida.',
+  },
+  {
+    feature: 'edad',
+    label: 'Edad',
+    type: 'Numerica',
+    scale: '20 — 55 anios',
+    source: 'Datos RRHH',
+    tier: 'baja',
+    description: 'Edad del empleado. Empleados mas jovenes tienen mayor movilidad.',
+    risk: 'Rango 25-32 asociado a mayor rotacion en mercado IT.',
+  },
+  {
+    feature: 'nivel_formacion',
+    label: 'Nivel de Formacion',
+    type: 'Categorica',
+    scale: 'Secundaria / Tecnico / Universitario / Posgrado',
+    source: 'Datos RRHH',
+    tier: 'baja',
+    description: 'Nivel educativo mas alto alcanzado por el empleado.',
+    risk: 'Posgrado sin reconocimiento salarial puede generar frustracion.',
+  },
+  {
+    feature: 'rol_tecnologico',
+    label: 'Rol Tecnologico',
+    type: 'Categorica',
+    scale: 'Frontend / Backend / Fullstack / Mobile / DevOps / QA / Data',
+    source: 'Datos RRHH',
+    tier: 'baja',
+    description: 'Rol principal del empleado en el equipo de desarrollo.',
+    risk: 'Roles con alta demanda en el mercado (DevOps, Data) tienen mas ofertas externas.',
+  },
+  {
+    feature: 'seniority',
+    label: 'Seniority',
+    type: 'Categorica',
+    scale: 'Trainee / Junior / Semi-Senior / Senior / Lead',
+    source: 'Datos RRHH',
+    tier: 'baja',
+    description: 'Nivel de experiencia y responsabilidad dentro del equipo.',
+    risk: 'Semi-Senior es el punto de mayor rotacion (ya tiene experiencia, busca mas).',
   },
 ];
 
 const TYPE_COLORS = {
-  'Numérica': 'bg-blue-100 text-blue-700',
-  'Ordinal':  'bg-purple-100 text-purple-700',
-  'Binaria':  'bg-amber-100 text-amber-700',
+  'Numerica':   'bg-blue-100 text-blue-700',
+  'Ordinal':    'bg-purple-100 text-purple-700',
+  'Binaria':    'bg-amber-100 text-amber-700',
+  'Categorica': 'bg-teal-100 text-teal-700',
+};
+
+const TIER_COLORS = {
+  critica: 'bg-red-100 text-red-700 border-red-200',
+  alta:    'bg-orange-100 text-orange-700 border-orange-200',
+  media:   'bg-yellow-100 text-yellow-700 border-yellow-200',
+  baja:    'bg-gray-100 text-gray-600 border-gray-200',
+};
+
+const TIER_LABELS = {
+  critica: 'Critica',
+  alta:    'Alta',
+  media:   'Media',
+  baja:    'Baja',
+};
+
+const SOURCE_COLORS = {
+  'Datos RRHH':     'bg-sky-50 text-sky-700',
+  'Encuesta clima': 'bg-violet-50 text-violet-700',
 };
 
 
 
 export default function ModelML() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [status, setStatus]   = useState(null);
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [training, setTraining] = useState(false);
   const [error, setError]     = useState('');
+
+  // Solo CORPORATIVO puede entrenar bajo demanda
+  const companyPlan = user?.companyPlan ?? 'BASICO';
+  const canTrainNow = companyPlan === 'CORPORATIVO' || user?.roles?.includes('SUPER_ADMIN');
 
   const fetchStatus = async () => {
     try {
@@ -226,9 +334,11 @@ export default function ModelML() {
   })) ?? [];
 
   const BAR_COLORS = [
-    '#3b82f6','#6366f1','#8b5cf6','#a78bfa',
-    '#c4b5fd','#ddd6fe','#e0e7ff','#c7d2fe',
-    '#a5b4fc','#818cf8','#6366f1','#4f46e5',
+    '#ef4444','#f97316','#f59e0b','#eab308',
+    '#84cc16','#22c55e','#14b8a6','#06b6d4',
+    '#0ea5e9','#3b82f6','#6366f1','#8b5cf6',
+    '#a855f7','#d946ef','#ec4899','#f43f5e',
+    '#64748b',
   ];
 
   return (
@@ -241,31 +351,55 @@ export default function ModelML() {
           {/* ── Header ── */}
           <div className="mb-6 flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-gray-800">Random Forest — Predicción de Fuga de Talento</h2>
-              <p className="text-sm text-gray-500">Dataset IBM HR Analytics · 1.470 empleados · 12 variables</p>
+              <h2 className="text-lg font-semibold text-gray-800">Random Forest — Prediccion de Desercion Laboral</h2>
+              <p className="text-sm text-gray-500">Dataset custom: Software PY · 1.000 empleados · 17 variables</p>
             </div>
             <div className="flex items-center gap-3">
               {status && <StatusBadge ready={status.model_ready} />}
-              <button
-                onClick={handleTrain}
-                disabled={training || !status?.dataset_available}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {training ? (
-                  <span className="flex items-center gap-2">
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    Entrenando...
-                  </span>
-                ) : '⚡ Entrenar modelo'}
-              </button>
+
+              {canTrainNow ? (
+                /* Plan CORPORATIVO o Super Admin: puede entrenar ahora */
+                <button
+                  onClick={handleTrain}
+                  disabled={training || !status?.dataset_available}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {training ? (
+                    <span className="flex items-center gap-2">
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      Entrenando...
+                    </span>
+                  ) : 'Entrenar ahora'}
+                </button>
+              ) : (
+                /* Plan ESTANDAR o PROFESIONAL: no puede entrenar bajo demanda */
+                <div className="text-right">
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 max-w-xs">
+                    <p className="text-xs font-semibold text-amber-700">
+                      {companyPlan === 'PROFESIONAL'
+                        ? 'Las predicciones se actualizan semanalmente'
+                        : 'Las predicciones se actualizan mensualmente'}
+                    </p>
+                    <p className="mt-1 text-xs text-amber-600">
+                      Aguarda unos dias para tener tus resultados actualizados.
+                    </p>
+                    <button
+                      onClick={() => navigate('/checkout')}
+                      className="mt-2 text-xs font-semibold text-blue-600 hover:text-blue-800 underline"
+                    >
+                      Actualiza tu plan y obtenelo ahora
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
           {/* ── Estado del dataset ── */}
           {status && !status.dataset_available && (
             <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              ⚠️ El dataset no está disponible en el servidor. Colocá el archivo
-              <code className="mx-1 rounded bg-amber-100 px-1">WA_Fn-UseC_-HR-Employee-Attrition.csv</code>
+              El dataset no esta disponible en el servidor. Coloca el archivo
+              <code className="mx-1 rounded bg-amber-100 px-1">dataset_desercion_software_py.csv</code>
               en <code className="rounded bg-amber-100 px-1">ml-service/notebooks/data/</code>
             </div>
           )}
@@ -363,11 +497,11 @@ export default function ModelML() {
                 <p className="mb-4 text-xs text-gray-400">
                   Qué tanto influye cada variable en la decisión del modelo
                 </p>
-                <ResponsiveContainer width="100%" height={320}>
+                <ResponsiveContainer width="100%" height={450}>
                   <BarChart
                     data={chartData}
                     layout="vertical"
-                    margin={{ left: 160, right: 30, top: 5, bottom: 5 }}
+                    margin={{ left: 180, right: 30, top: 5, bottom: 5 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
                     <XAxis
@@ -398,29 +532,63 @@ export default function ModelML() {
           {!metrics && !loading && status?.model_ready === false && (
             <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-white py-20 text-center">
               <p className="text-4xl">🤖</p>
-              <p className="mt-3 text-base font-semibold text-gray-700">El modelo aún no fue entrenado</p>
+              <p className="mt-3 text-base font-semibold text-gray-700">El modelo aun no fue entrenado</p>
               <p className="mt-1 text-sm text-gray-400">
-                Hacé click en "Entrenar modelo" para iniciar el proceso con el dataset IBM HR Analytics
+                Hace click en "Entrenar modelo" para iniciar el proceso con el dataset de desercion
               </p>
+              {status?.dataset_records && (
+                <p className="mt-2 text-xs text-gray-400">
+                  Dataset disponible: {status.dataset_records} registros
+                </p>
+              )}
             </div>
           )}
 
           {/* ── Variables de entrenamiento ── */}
           <div className="mt-6 rounded-xl bg-white p-5 shadow-sm">
-            <h3 className="text-sm font-semibold text-gray-700">Variables Usadas para el Entrenamiento</h3>
-            <p className="mt-0.5 mb-4 text-xs text-gray-400">
-              12 variables del dataset IBM HR Analytics · Random Forest Classifier
+            <h3 className="text-sm font-semibold text-gray-700">Variables del Modelo de Prediccion</h3>
+            <p className="mt-0.5 mb-2 text-xs text-gray-400">
+              17 variables · Dataset custom para empresas de software de Asuncion, Paraguay
             </p>
+
+            {/* Leyenda */}
+            <div className="mb-4 flex flex-wrap gap-3 text-xs">
+              <span className="font-medium text-gray-500">Importancia:</span>
+              {Object.entries(TIER_COLORS).map(([tier, cls]) => (
+                <span key={tier} className={`rounded-full border px-2 py-0.5 font-medium ${cls}`}>
+                  {TIER_LABELS[tier]}
+                </span>
+              ))}
+              <span className="ml-4 font-medium text-gray-500">Fuente:</span>
+              {Object.entries(SOURCE_COLORS).map(([src, cls]) => (
+                <span key={src} className={`rounded-full px-2 py-0.5 font-medium ${cls}`}>
+                  {src}
+                </span>
+              ))}
+            </div>
+
+            {/* Grid de variables */}
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {TRAINING_FEATURES.map((f) => (
                 <div
                   key={f.feature}
-                  className="rounded-lg border border-gray-100 p-3 hover:border-blue-200 hover:bg-blue-50/30 transition-colors"
+                  className={`rounded-lg border p-3 transition-colors hover:shadow-sm ${TIER_COLORS[f.tier]?.split(' ').slice(0, 1).join(' ')} bg-opacity-30 border-opacity-50`}
+                  style={{ borderColor: undefined }}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <p className="font-semibold text-gray-800 text-sm">{f.label}</p>
-                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${TYPE_COLORS[f.type]}`}>
-                      {f.type}
+                    <div className="flex shrink-0 gap-1">
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${TYPE_COLORS[f.type]}`}>
+                        {f.type}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-1 flex items-center gap-2">
+                    <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${TIER_COLORS[f.tier]}`}>
+                      {TIER_LABELS[f.tier]}
+                    </span>
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${SOURCE_COLORS[f.source]}`}>
+                      {f.source}
                     </span>
                   </div>
                   <p className="mt-0.5 text-xs text-gray-400 font-mono">{f.feature}</p>
@@ -429,10 +597,21 @@ export default function ModelML() {
                     <span className="text-xs text-gray-400">Escala: <span className="font-medium text-gray-600">{f.scale}</span></span>
                   </div>
                   <div className="mt-1.5 rounded bg-red-50 px-2 py-1 text-xs text-red-600">
-                    ⚠ {f.risk}
+                    {f.risk}
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* Nota sobre variables opcionales */}
+            <div className="mt-4 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-700">
+              <p className="font-semibold">Sobre las variables de "Encuesta clima":</p>
+              <p className="mt-1">
+                Estas 5 variables son opcionales al cargar empleados, pero son las de mayor impacto
+                en la prediccion. Si la empresa no las proporciona, el modelo usa valores neutros (3)
+                y la confianza de la prediccion se reduce. Se recomienda que la empresa realice una
+                encuesta de clima interna para obtener estos datos.
+              </p>
             </div>
           </div>
 

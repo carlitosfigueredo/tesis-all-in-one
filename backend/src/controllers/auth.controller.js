@@ -66,7 +66,15 @@ const login = async (req, res, next) => {
     }
 
     // Cargar roles/permisos del usuario
-    const { permissions, roleNames } = await getUserPermissions(user.id);
+    let permissions = [];
+    let roleNames = [];
+    try {
+      const result = await getUserPermissions(user.id);
+      permissions = result?.permissions ?? [];
+      roleNames = result?.roleNames ?? [];
+    } catch (permErr) {
+      console.error('[Login] Error al cargar permisos:', permErr.message);
+    }
 
     // SUPER_ADMIN no puede loguear por el portal de empresas
     if (roleNames.includes('SUPER_ADMIN')) {
@@ -119,6 +127,8 @@ const login = async (req, res, next) => {
       ...sanitize(user),
       companyName: user.company?.name ?? null,
       companyStatus: user.company?.status ?? null,
+      companyPlan: user.company?.plan ?? null,
+      mustChangePassword: user.mustChangePassword ?? false,
       roles: roleNames,
       permissions,
     };
@@ -153,7 +163,7 @@ const adminLogin = async (req, res, next) => {
     }
 
     // Verificar que tenga rol SUPER_ADMIN
-    const { roleNames } = await getUserPermissions(user.id);
+    const { roleNames = [] } = await getUserPermissions(user.id);
     if (!roleNames.includes('SUPER_ADMIN')) {
       await logAction({ action: 'LOGIN_FAILED', resource: 'users', ipAddress: ip, userAgent: ua,
         status: 'FAILURE', errorMsg: `Admin login: usuario sin rol SUPER_ADMIN: ${email}` });
@@ -196,6 +206,8 @@ const me = async (req, res, next) => {
       ...sanitize(user),
       companyName: user.company?.name ?? null,
       companyStatus: user.company?.status ?? null,
+      companyPlan: user.company?.plan ?? null,
+      mustChangePassword: user.mustChangePassword ?? false,
       roles: req.user.roleNames,
       permissions: req.user.permissions,
     };
@@ -360,7 +372,7 @@ const changePassword = async (req, res, next) => {
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 12);
-    await prisma.user.update({ where: { id: user.id }, data: { password: hashedPassword } });
+    await prisma.user.update({ where: { id: user.id }, data: { password: hashedPassword, mustChangePassword: false } });
 
     await sendPasswordChangedEmail({ to: user.email, name: user.name, ip, timestamp: new Date().toISOString() });
     await logAction({ userId: user.id, tenantId: user.companyId ?? null,
@@ -368,6 +380,60 @@ const changePassword = async (req, res, next) => {
       ipAddress: ip, userAgent: ua, status: 'SUCCESS' });
 
     return res.json({ success: true, message: 'Contrasena cambiada correctamente' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/auth/force-change-password
+ * Cambio obligatorio de contrasena en primer login.
+ * No requiere la contrasena actual (el usuario acaba de loguearse con la temporal).
+ * Solo funciona si mustChangePassword === true.
+ */
+const forceChangePassword = async (req, res, next) => {
+  const ip = getIp(req);
+  const ua = getUserAgent(req);
+  try {
+    const { newPassword, confirmPassword } = req.body;
+
+    if (!newPassword || !confirmPassword) {
+      return res.status(400).json({ success: false, message: 'Todos los campos son obligatorios' });
+    }
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ success: false, message: 'Las contrasenas no coinciden' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Usuario no encontrado' });
+    }
+
+    // Solo permitir si el usuario realmente tiene que cambiar la pass
+    if (!user.mustChangePassword) {
+      return res.status(400).json({ success: false, message: 'No se requiere cambio de contrasena' });
+    }
+
+    const policyResult = validatePasswordPolicy(newPassword, user);
+    if (!policyResult.valid) {
+      return res.status(400).json({
+        success: false,
+        message: 'La contrasena no cumple los requisitos de seguridad',
+        errors: policyResult.errors.map((e) => ({ message: e })),
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashedPassword, mustChangePassword: false },
+    });
+
+    await logAction({ userId: user.id, tenantId: user.companyId ?? null,
+      action: 'PASSWORD_CHANGED_FIRST_LOGIN', resource: 'users', resourceId: user.id,
+      ipAddress: ip, userAgent: ua, status: 'SUCCESS' });
+
+    return res.json({ success: true, message: 'Contrasena establecida correctamente' });
   } catch (error) {
     next(error);
   }
@@ -437,8 +503,8 @@ const register = async (req, res, next) => {
     });
 
     // Cargar permisos del nuevo usuario
-    const { permissions, roleNames } = await getUserPermissions(result.user.id);
-    const token = generateToken(result.user, roleNames);
+    const { permissions: regPermissions = [], roleNames: regRoleNames = [] } = await getUserPermissions(result.user.id);
+    const token = generateToken(result.user, regRoleNames);
 
     const userData = {
       id: result.user.id,
@@ -447,8 +513,9 @@ const register = async (req, res, next) => {
       companyId: result.company.id,
       companyName: result.company.name,
       companyStatus: result.company.status,
-      roles: roleNames,
-      permissions,
+      companyPlan: result.company.plan,
+      roles: regRoleNames,
+      permissions: regPermissions,
     };
 
     return res.status(201).json({
@@ -461,4 +528,4 @@ const register = async (req, res, next) => {
   }
 };
 
-module.exports = { login, adminLogin, me, forgotPassword, resetPassword, changePassword, register };
+module.exports = { login, adminLogin, me, forgotPassword, resetPassword, changePassword, forceChangePassword, register };

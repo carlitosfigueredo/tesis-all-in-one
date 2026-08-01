@@ -74,7 +74,7 @@ const validateCard = ({ cardNumber, expiryMonth, expiryYear, cvv, cardholderName
 const PLAN_ID_TO_ENUM = {
   ESTANDAR: 'BASICO',
   PROFESIONAL: 'PROFESIONAL',
-  CORPORATIVO: 'EMPRESARIAL',
+  CORPORATIVO: 'CORPORATIVO',
 };
 
 /**

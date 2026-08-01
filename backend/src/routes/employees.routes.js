@@ -2,6 +2,7 @@ const { Router } = require('express');
 const {
   getAllEmployees, getEmployeeById, getEmployeesStats,
   createEmployee, updateEmployee, deleteEmployee, importEmployees,
+  recalculateRisk,
 } = require('../controllers/employees.controller');
 const { protect } = require('../middlewares/auth.middleware');
 const { requireActiveCompany } = require('../middlewares/companyStatus.middleware');
@@ -17,6 +18,9 @@ router.get('/stats', requirePermission('dashboard.view', 'employees.read'), getE
 
 // POST /api/employees/import
 router.post('/import', requirePermission('employees.import'), importEmployees);
+
+// POST /api/employees/recalculate — recalcula predicciones ML para todos los empleados
+router.post('/recalculate', requirePermission('predictions.run'), recalculateRisk);
 
 // GET /api/employees
 router.get('/', requirePermission('employees.read'), getAllEmployees);

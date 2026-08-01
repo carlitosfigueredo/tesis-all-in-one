@@ -90,11 +90,27 @@ if (!result.valid) {
 ### Bloqueo de cuenta por intentos fallidos
 
 - Registrar cada intento fallido de login en `audit_logs` con IP y user-agent.
-- Después de **5 intentos fallidos** en 15 minutos para el mismo email: bloquear la cuenta por 30 minutos.
+- Despues de **5 intentos fallidos** en 15 minutos para el mismo email: bloquear la cuenta por 30 minutos.
 - El campo `lockedUntil` en la tabla `users` maneja el bloqueo temporal.
 - Notificar al usuario por correo cuando su cuenta sea bloqueada.
 
-### Expiración de sesión
+### Cambio obligatorio de contrasena (primer login)
+
+- Cuando el admin crea un usuario, se setea `mustChangePassword: true`
+- Al loguearse, el frontend detecta `user.mustChangePassword === true`
+- PrivateRoute redirige a ForceChangePassword (no puede navegar a otro lado)
+- Endpoint `POST /auth/force-change-password` (no requiere pass actual, solo funciona si mustChangePassword=true)
+- Al cambiar, se pone `mustChangePassword: false`
+- El usuario creado por register (el admin de empresa) NO tiene mustChangePassword (el crea su propia pass)
+
+### Cambio de contrasena voluntario
+
+- Pagina `/profile` con formulario de cambio (requiere pass actual)
+- Endpoint `POST /auth/change-password` (requiere estar autenticado + pass actual)
+- Usa `validatePasswordPolicy()` para validar la nueva pass
+- Envia correo de confirmacion al cambiar
+
+### Expiración de sesion
 
 - JWT con expiración de **8 horas** en uso normal.
 - Refresh token opcional con expiración de 7 días, almacenado en `refresh_tokens`.

@@ -129,6 +129,7 @@ const createUser = async (req, res, next) => {
           name,
           email: email.toLowerCase(),
           password: hashedPassword,
+          mustChangePassword: true,
           companyId,
         },
       });

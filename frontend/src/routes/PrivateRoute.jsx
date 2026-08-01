@@ -1,6 +1,7 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import PendingActivation from '../pages/PendingActivation';
+import ForceChangePassword from '../pages/ForceChangePassword';
 
 export default function PrivateRoute() {
   const { user, isAuthenticated, loading } = useAuth();
@@ -15,6 +16,11 @@ export default function PrivateRoute() {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Si el usuario debe cambiar su contrasena (primer login), forzar cambio
+  if (user?.mustChangePassword) {
+    return <ForceChangePassword />;
   }
 
   // Si la empresa esta pendiente de pago o suspendida, mostrar pantalla especial

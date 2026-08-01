@@ -1,0 +1,121 @@
+edad,nivel_formacion,rol_tecnologico,seniority,antiguedad_meses,modalidad_trabajo,tipo_contrato,salario_mensual,cantidad_horas_extra_mes,capacitacion_ultimo_anio,evaluacion_desempeno,cantidad_empresas_anteriores,satisfaccion_laboral,satisfaccion_ambiente,equilibrio_vida_trabajo,estancamiento_carrera,feedback_lider,desercion
+40,Secundaria,DevOps,Semi-Senior,12,Hibrido,Eventual,11693999,22,No,5,0,3,3,1,3,3,Si
+30,Posgrado,Mobile,Junior,4,Remoto,Plazo fijo,7224289,1,Si,3,3,3,2,4,2,2,No
+31,Universitario,Fullstack,Semi-Senior,8,Hibrido,Indefinido,9860519,9,No,3,1,2,3,4,3,4,No
+29,Universitario,Mobile,Senior,13,Remoto,Eventual,16189937,1,No,5,1,5,4,4,2,3,No
+30,Posgrado,Frontend,Semi-Senior,16,Presencial,Eventual,11295336,18,No,3,4,4,4,3,3,2,No
+25,Posgrado,Mobile,Semi-Senior,1,Hibrido,Indefinido,11289925,6,No,4,2,3,3,3,3,4,Si
+22,Tecnico,Frontend,Semi-Senior,20,Hibrido,Indefinido,8223339,12,No,4,1,3,3,4,2,3,No
+30,Posgrado,Frontend,Junior,7,Hibrido,Plazo fijo,7552391,20,No,4,5,5,4,3,4,3,No
+20,Universitario,Mobile,Junior,17,Hibrido,Indefinido,6105295,14,Si,3,1,4,2,2,5,2,Si
+30,Posgrado,Backend,Trainee,17,Remoto,Eventual,3699495,15,No,4,2,4,5,2,4,2,No
+29,Universitario,Fullstack,Trainee,12,Remoto,Plazo fijo,4345410,16,Si,5,1,3,4,2,4,3,No
+24,Universitario,Frontend,Junior,20,Hibrido,Indefinido,4514267,12,No,3,2,5,4,1,4,3,No
+27,Universitario,Frontend,Semi-Senior,17,Hibrido,Plazo fijo,7763525,4,No,3,3,3,4,4,4,3,Si
+23,Universitario,Frontend,Junior,32,Hibrido,Indefinido,6237015,13,No,3,5,5,5,3,3,2,No
+22,Universitario,Backend,Semi-Senior,8,Hibrido,Eventual,11198222,7,No,5,2,1,3,3,3,1,No
+31,Universitario,Fullstack,Semi-Senior,6,Hibrido,Eventual,9892545,19,No,3,2,2,4,2,4,2,Si
+27,Universitario,Frontend,Trainee,7,Remoto,Plazo fijo,3369377,42,No,4,1,4,4,2,1,1,No
+36,Universitario,QA,Semi-Senior,11,Remoto,Indefinido,9439847,8,No,2,3,4,3,4,3,3,No
+40,Universitario,Backend,Senior,43,Hibrido,Indefinido,10609267,23,No,4,0,4,3,2,4,3,No
+30,Posgrado,Fullstack,Semi-Senior,5,Hibrido,Indefinido,8682746,0,No,3,5,3,5,3,3,3,Si
+28,Universitario,Mobile,Trainee,64,Hibrido,Eventual,3309788,2,No,3,1,2,3,4,3,3,No
+35,Universitario,Data,Junior,3,Hibrido,Indefinido,7303527,13,Si,4,1,4,3,3,3,3,Si
+20,Tecnico,Mobile,Junior,13,Hibrido,Plazo fijo,5331246,32,No,3,2,3,5,4,4,2,No
+21,Universitario,Backend,Junior,15,Remoto,Plazo fijo,4824412,22,No,4,2,2,3,3,4,3,No
+26,Posgrado,Backend,Junior,3,Remoto,Indefinido,5814559,13,No,4,2,4,3,3,4,3,Si
+28,Posgrado,Mobile,Senior,3,Hibrido,Indefinido,11660839,10,No,3,2,5,3,4,4,3,Si
+27,Posgrado,Backend,Senior,17,Hibrido,Plazo fijo,12679302,3,Si,4,4,3,4,3,2,4,No
+27,Universitario,Backend,Trainee,27,Hibrido,Plazo fijo,4367127,2,Si,3,1,1,5,5,4,3,Si
+31,Posgrado,Fullstack,Junior,6,Hibrido,Indefinido,7082129,15,No,4,2,3,5,3,3,3,No
+27,Universitario,Backend,Trainee,1,Hibrido,Indefinido,3181288,6,No,3,2,2,4,2,3,3,No
+30,Tecnico,Frontend,Semi-Senior,5,Remoto,Plazo fijo,11346900,5,Si,3,0,4,3,4,2,2,No
+28,Tecnico,Fullstack,Senior,7,Remoto,Plazo fijo,17006630,5,Si,3,3,4,2,3,4,5,Si
+24,Universitario,Frontend,Junior,6,Remoto,Indefinido,5433671,5,No,3,3,2,4,2,4,3,No
+23,Secundaria,Backend,Junior,3,Hibrido,Eventual,6703056,5,No,3,1,3,4,4,2,2,No
+22,Universitario,QA,Junior,36,Hibrido,Plazo fijo,5173506,0,Si,3,1,4,3,4,2,2,No
+29,Posgrado,Backend,Junior,1,Remoto,Indefinido,6773762,0,No,4,1,3,3,4,3,3,Si
+26,Universitario,Fullstack,Lead,21,Hibrido,Indefinido,22320249,0,No,2,4,3,4,3,3,3,No
+36,Posgrado,Backend,Trainee,20,Hibrido,Indefinido,4042311,11,No,3,3,4,4,5,5,3,No
+28,Universitario,Fullstack,Junior,6,Hibrido,Indefinido,6469190,11,Si,5,1,4,4,2,1,4,Si
+36,Universitario,Fullstack,Trainee,2,Remoto,Indefinido,4170478,10,Si,3,2,3,3,2,2,3,No
+22,Universitario,Mobile,Semi-Senior,10,Remoto,Indefinido,11163716,1,No,3,2,3,4,3,4,1,Si
+27,Universitario,Backend,Semi-Senior,2,Presencial,Indefinido,6998127,17,No,4,2,3,3,3,3,3,Si
+21,Universitario,Backend,Senior,1,Hibrido,Eventual,18379889,7,Si,2,0,4,4,3,2,3,No
+27,Posgrado,Backend,Senior,60,Remoto,Eventual,16978053,10,Si,4,4,5,5,2,5,4,Si
+32,Tecnico,Backend,Junior,1,Hibrido,Indefinido,4690805,2,No,3,1,4,3,3,4,3,No
+26,Universitario,Fullstack,Semi-Senior,1,Hibrido,Indefinido,12326231,8,No,4,0,5,4,4,2,5,No
+26,Secundaria,DevOps,Senior,2,Hibrido,Indefinido,11140051,13,No,3,0,4,3,4,3,3,Si
+30,Universitario,Data,Semi-Senior,22,Hibrido,Plazo fijo,7794193,3,No,4,3,3,3,4,3,1,No
+37,Universitario,Backend,Junior,36,Presencial,Plazo fijo,6973949,31,No,4,1,3,4,1,3,4,No
+23,Universitario,Frontend,Semi-Senior,37,Hibrido,Indefinido,7662403,4,Si,4,4,4,3,3,2,3,No
+23,Universitario,Mobile,Senior,2,Hibrido,Indefinido,12862687,3,No,5,0,4,4,5,2,4,No
+25,Secundaria,Fullstack,Trainee,17,Remoto,Indefinido,4142245,26,No,3,2,2,4,3,3,3,Si
+27,Posgrado,Mobile,Semi-Senior,15,Hibrido,Indefinido,11549509,1,Si,4,2,5,3,3,1,1,No
+24,Universitario,Fullstack,Junior,30,Presencial,Eventual,7100156,2,Si,3,2,4,4,5,1,4,Si
+29,Universitario,Fullstack,Junior,26,Hibrido,Indefinido,6136320,6,Si,4,2,5,5,4,3,5,No
+32,Universitario,DevOps,Senior,10,Remoto,Indefinido,17016206,3,Si,3,3,3,2,3,4,4,No
+22,Universitario,Fullstack,Junior,12,Hibrido,Indefinido,5730176,8,No,3,4,3,3,4,2,4,No
+36,Universitario,Frontend,Lead,6,Hibrido,Eventual,25459489,2,Si,3,2,3,3,2,3,3,No
+21,Posgrado,Frontend,Semi-Senior,18,Hibrido,Eventual,9326267,33,Si,5,0,4,5,4,2,4,No
+30,Universitario,Data,Semi-Senior,19,Hibrido,Indefinido,6760016,12,Si,3,0,4,5,2,3,3,No
+28,Universitario,Frontend,Lead,12,Hibrido,Indefinido,15194303,5,Si,5,0,3,3,3,4,1,No
+37,Universitario,Frontend,Junior,47,Hibrido,Plazo fijo,4878004,16,Si,2,2,3,3,3,3,5,No
+25,Tecnico,Fullstack,Trainee,22,Presencial,Indefinido,3052071,0,No,4,0,4,2,4,3,3,No
+28,Universitario,Backend,Trainee,27,Presencial,Indefinido,4360042,4,Si,4,2,4,3,3,2,2,No
+30,Universitario,Mobile,Senior,7,Presencial,Plazo fijo,15353675,18,Si,3,1,3,4,3,2,3,No
+32,Universitario,Mobile,Semi-Senior,23,Hibrido,Indefinido,12138791,8,No,4,1,3,3,3,4,2,Si
+26,Universitario,Backend,Semi-Senior,6,Hibrido,Indefinido,10257199,8,Si,5,2,2,4,2,4,4,No
+36,Universitario,Frontend,Semi-Senior,70,Hibrido,Indefinido,8734766,5,Si,4,1,4,4,2,4,2,No
+21,Tecnico,DevOps,Semi-Senior,7,Remoto,Plazo fijo,10899056,9,No,2,5,3,4,4,4,4,No
+23,Universitario,Frontend,Trainee,24,Remoto,Indefinido,3689643,11,Si,2,3,4,3,3,2,4,No
+27,Posgrado,Backend,Junior,1,Remoto,Indefinido,5894853,16,No,4,2,3,5,3,3,4,No
+23,Secundaria,QA,Junior,4,Hibrido,Indefinido,5263885,10,No,3,2,3,2,2,2,2,Si
+20,Universitario,QA,Junior,1,Presencial,Eventual,6710790,3,Si,3,2,4,3,3,5,2,No
+34,Posgrado,Fullstack,Semi-Senior,7,Hibrido,Indefinido,11933560,0,Si,3,1,3,3,3,3,2,No
+31,Tecnico,DevOps,Trainee,6,Hibrido,Plazo fijo,4593714,3,Si,5,1,2,4,3,1,3,No
+20,Universitario,Fullstack,Senior,2,Presencial,Eventual,12180098,6,Si,4,2,4,3,2,1,4,No
+31,Universitario,Backend,Semi-Senior,13,Hibrido,Eventual,8962605,13,Si,4,3,4,4,4,2,3,No
+32,Universitario,Backend,Junior,4,Presencial,Indefinido,5467639,1,No,3,1,2,4,3,3,3,Si
+21,Universitario,Frontend,Lead,42,Hibrido,Indefinido,26147077,4,Si,4,3,4,5,3,3,2,No
+33,Universitario,Backend,Junior,34,Presencial,Eventual,7066009,18,Si,4,2,2,3,3,2,4,No
+20,Universitario,Backend,Junior,32,Hibrido,Plazo fijo,5232565,1,No,2,0,4,3,3,5,2,Si
+24,Universitario,Backend,Lead,12,Presencial,Indefinido,17088642,3,Si,2,4,4,4,4,3,5,Si
+26,Tecnico,Backend,Junior,42,Presencial,Indefinido,4974197,9,No,3,1,3,2,3,4,3,Si
+29,Posgrado,DevOps,Semi-Senior,5,Hibrido,Indefinido,6900841,6,Si,4,4,5,4,2,3,3,No
+28,Posgrado,Frontend,Trainee,7,Hibrido,Indefinido,4094507,4,Si,4,1,4,4,3,2,4,No
+28,Tecnico,Frontend,Semi-Senior,8,Hibrido,Eventual,9107601,1,Si,3,2,5,4,3,1,4,Si
+22,Universitario,Fullstack,Trainee,38,Presencial,Indefinido,3879773,9,No,2,2,4,5,2,3,3,No
+34,Posgrado,Backend,Junior,6,Hibrido,Indefinido,4994054,1,Si,5,3,4,5,3,3,2,No
+30,Universitario,Mobile,Junior,12,Remoto,Eventual,5148434,0,Si,4,3,3,4,3,3,3,No
+24,Universitario,Backend,Junior,15,Hibrido,Indefinido,6637056,0,No,3,0,4,4,5,2,2,No
+24,Universitario,DevOps,Junior,12,Hibrido,Indefinido,4496491,13,Si,4,4,3,4,4,1,5,No
+34,Tecnico,Frontend,Senior,23,Hibrido,Indefinido,18517729,20,No,3,2,5,5,1,5,4,Si
+30,Universitario,Data,Semi-Senior,9,Hibrido,Plazo fijo,7018636,1,No,4,2,4,3,3,5,4,No
+22,Universitario,Data,Senior,18,Remoto,Eventual,15208461,3,No,3,4,4,4,3,3,2,Si
+25,Universitario,Data,Trainee,26,Remoto,Eventual,2942963,17,Si,3,3,3,4,1,3,3,Si
+32,Universitario,Frontend,Junior,45,Presencial,Indefinido,4719707,8,No,4,0,3,4,3,4,4,No
+20,Posgrado,QA,Junior,6,Remoto,Eventual,5239528,6,Si,3,1,5,2,3,2,2,No
+22,Universitario,Fullstack,Trainee,2,Hibrido,Indefinido,3212426,15,Si,4,0,4,3,3,1,4,Si
+30,Secundaria,Backend,Senior,111,Hibrido,Indefinido,18024074,2,Si,5,1,5,2,2,2,2,No
+20,Universitario,Backend,Trainee,13,Remoto,Plazo fijo,3883752,5,No,3,1,4,3,4,3,3,No
+35,Universitario,QA,Junior,68,Hibrido,Plazo fijo,7236770,8,Si,3,2,3,5,1,1,3,No
+21,Universitario,Frontend,Junior,51,Remoto,Eventual,7545387,2,No,4,3,3,4,2,4,2,No
+20,Secundaria,DevOps,Lead,10,Hibrido,Eventual,23640059,5,No,4,0,4,4,2,4,2,No
+20,Universitario,Backend,Trainee,9,Presencial,Plazo fijo,2858056,16,Si,4,3,5,4,2,4,1,No
+27,Posgrado,Fullstack,Semi-Senior,11,Hibrido,Plazo fijo,6867751,7,No,5,1,5,4,3,4,4,No
+24,Universitario,Fullstack,Junior,12,Presencial,Plazo fijo,7083654,11,No,4,3,3,4,5,2,2,No
+23,Universitario,DevOps,Semi-Senior,18,Hibrido,Indefinido,10746950,28,No,4,0,2,4,1,4,1,No
+27,Universitario,Frontend,Trainee,6,Hibrido,Indefinido,3494379,2,Si,3,4,5,4,4,3,4,No
+22,Posgrado,DevOps,Semi-Senior,77,Hibrido,Indefinido,11191804,0,No,2,4,4,3,4,3,4,No
+28,Posgrado,Frontend,Junior,1,Hibrido,Eventual,4889939,0,No,4,1,4,2,3,4,3,No
+30,Universitario,DevOps,Semi-Senior,3,Hibrido,Indefinido,11637634,2,No,3,0,4,4,3,5,3,Si
+28,Universitario,QA,Senior,18,Hibrido,Indefinido,13992379,9,Si,3,0,1,3,3,3,3,No
+21,Universitario,Mobile,Lead,38,Hibrido,Eventual,20258382,5,Si,3,1,4,2,2,3,2,No
+31,Posgrado,Frontend,Semi-Senior,89,Hibrido,Indefinido,8657338,2,No,3,8,4,3,4,4,4,No
+27,Universitario,Backend,Trainee,13,Hibrido,Indefinido,3531091,37,No,3,1,3,4,1,2,3,Si
+31,Universitario,Fullstack,Junior,42,Remoto,Indefinido,4913620,0,No,4,3,2,5,2,4,2,Si
+31,Secundaria,Frontend,Junior,22,Remoto,Indefinido,4832516,42,No,3,1,2,2,2,3,3,No
+25,Universitario,Mobile,Semi-Senior,4,Hibrido,Plazo fijo,12329376,34,Si,5,1,3,3,1,3,4,Si
+30,Universitario,Frontend,Senior,47,Hibrido,Indefinido,13133262,1,No,4,2,3,2,4,4,4,No
+23,Posgrado,Fullstack,Semi-Senior,2,Remoto,Eventual,10969671,2,No,4,1,2,2,3,4,5,Si

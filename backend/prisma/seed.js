@@ -264,15 +264,60 @@ async function main() {
   }
   console.log(`  ✓ ${demoUsers.length} usuarios demo creados con roles`);
 
-  // ─── Empleados de ejemplo ───────────────────────────────────────────────────
+  // ─── Empleados de ejemplo (nuevas variables) ─────────────────────────────────
   const existingEmployees = await prisma.employee.count({ where: { companyId: demoCompany.id } });
   if (existingEmployees === 0) {
     const sampleEmployees = [
-      { name: 'Juan Perez', job_role: 'Sales Executive', department: 'Sales', age: 32, gender: 'Male', monthly_income: 4500, job_satisfaction: 3, years_at_company: 5, flight_risk: 0.25, risk_level: 'BAJO', companyId: demoCompany.id },
-      { name: 'Laura Gomez', job_role: 'Research Scientist', department: 'Research & Development', age: 28, gender: 'Female', monthly_income: 3200, job_satisfaction: 2, years_at_company: 2, overtime: true, flight_risk: 0.78, risk_level: 'ALTO', companyId: demoCompany.id },
-      { name: 'Roberto Sanchez', job_role: 'Human Resources', department: 'Human Resources', age: 45, gender: 'Male', monthly_income: 5800, job_satisfaction: 4, years_at_company: 12, flight_risk: 0.12, risk_level: 'BAJO', companyId: demoCompany.id },
-      { name: 'Carolina Benitez', job_role: 'Sales Representative', department: 'Sales', age: 24, gender: 'Female', monthly_income: 2100, job_satisfaction: 1, years_at_company: 1, overtime: true, flight_risk: 0.91, risk_level: 'ALTO', companyId: demoCompany.id },
-      { name: 'Miguel Villalba', job_role: 'Laboratory Technician', department: 'Research & Development', age: 35, gender: 'Male', monthly_income: 3800, job_satisfaction: 3, years_at_company: 7, flight_risk: 0.45, risk_level: 'MEDIO', companyId: demoCompany.id },
+      {
+        edad: 28, nivel_formacion: 'Universitario', rol_tecnologico: 'Backend',
+        seniority: 'Semi-Senior', antiguedad_meses: 18, modalidad_trabajo: 'Hibrido',
+        tipo_contrato: 'Indefinido', salario_mensual: 8500000,
+        cantidad_horas_extra_mes: 8, capacitacion_ultimo_anio: true,
+        evaluacion_desempeno: 4, cantidad_empresas_anteriores: 2,
+        satisfaccion_laboral: 4, satisfaccion_ambiente: 4,
+        equilibrio_vida_trabajo: 3, estancamiento_carrera: 2, feedback_lider: 4,
+        riesgo_desercion: 0.22, nivel_riesgo: 'BAJO', companyId: demoCompany.id,
+      },
+      {
+        edad: 24, nivel_formacion: 'Tecnico', rol_tecnologico: 'Frontend',
+        seniority: 'Junior', antiguedad_meses: 4, modalidad_trabajo: 'Presencial',
+        tipo_contrato: 'Eventual', salario_mensual: 4500000,
+        cantidad_horas_extra_mes: 22, capacitacion_ultimo_anio: false,
+        evaluacion_desempeno: 3, cantidad_empresas_anteriores: 1,
+        satisfaccion_laboral: 2, satisfaccion_ambiente: 2,
+        equilibrio_vida_trabajo: 1, estancamiento_carrera: 4, feedback_lider: 2,
+        riesgo_desercion: 0.82, nivel_riesgo: 'CRITICO', companyId: demoCompany.id,
+      },
+      {
+        edad: 35, nivel_formacion: 'Posgrado', rol_tecnologico: 'DevOps',
+        seniority: 'Senior', antiguedad_meses: 48, modalidad_trabajo: 'Remoto',
+        tipo_contrato: 'Indefinido', salario_mensual: 18000000,
+        cantidad_horas_extra_mes: 5, capacitacion_ultimo_anio: true,
+        evaluacion_desempeno: 5, cantidad_empresas_anteriores: 3,
+        satisfaccion_laboral: 4, satisfaccion_ambiente: 5,
+        equilibrio_vida_trabajo: 4, estancamiento_carrera: 1, feedback_lider: 5,
+        riesgo_desercion: 0.08, nivel_riesgo: 'BAJO', companyId: demoCompany.id,
+      },
+      {
+        edad: 22, nivel_formacion: 'Universitario', rol_tecnologico: 'QA',
+        seniority: 'Trainee', antiguedad_meses: 3, modalidad_trabajo: 'Hibrido',
+        tipo_contrato: 'Plazo fijo', salario_mensual: 3500000,
+        cantidad_horas_extra_mes: 15, capacitacion_ultimo_anio: false,
+        evaluacion_desempeno: 3, cantidad_empresas_anteriores: 0,
+        satisfaccion_laboral: 3, satisfaccion_ambiente: 3,
+        equilibrio_vida_trabajo: 2, estancamiento_carrera: 3, feedback_lider: 2,
+        riesgo_desercion: 0.55, nivel_riesgo: 'ALTO', companyId: demoCompany.id,
+      },
+      {
+        edad: 30, nivel_formacion: 'Universitario', rol_tecnologico: 'Fullstack',
+        seniority: 'Semi-Senior', antiguedad_meses: 24, modalidad_trabajo: 'Remoto',
+        tipo_contrato: 'Indefinido', salario_mensual: 10000000,
+        cantidad_horas_extra_mes: 10, capacitacion_ultimo_anio: true,
+        evaluacion_desempeno: 4, cantidad_empresas_anteriores: 2,
+        satisfaccion_laboral: 3, satisfaccion_ambiente: 4,
+        equilibrio_vida_trabajo: 3, estancamiento_carrera: 3, feedback_lider: 3,
+        riesgo_desercion: 0.35, nivel_riesgo: 'MEDIO', companyId: demoCompany.id,
+      },
     ];
 
     for (const emp of sampleEmployees) {

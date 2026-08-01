@@ -16,7 +16,7 @@ const prisma = require('../lib/prisma');
 const requireActiveCompany = async (req, res, next) => {
   try {
     // SUPER_ADMIN no tiene empresa, siempre pasa
-    if (req.user.role === 'SUPER_ADMIN' || !req.user.companyId) {
+    if (req.user.roleNames?.includes('SUPER_ADMIN') || !req.user.companyId) {
       return next();
     }
 

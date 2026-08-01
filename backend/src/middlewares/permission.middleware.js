@@ -16,7 +16,7 @@ const CACHE_TTL_MS = 60 * 1000; // 1 minuto
 const getUserPermissions = async (userId) => {
   const cached = permissionCache.get(userId);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-    return cached.permissions;
+    return { permissions: cached.permissions, roleNames: cached.roleNames };
   }
 
   const userRoles = await prisma.userRole.findMany({
@@ -81,7 +81,7 @@ const requirePermission = (...requiredPermissions) => async (req, res, next) => 
     }
 
     // Verificar que tenga al menos uno de los permisos requeridos
-    const hasPermission = requiredPermissions.some((p) => req.user.permissions.includes(p));
+    const hasPermission = requiredPermissions.some((p) => req.user.permissions?.includes(p));
 
     if (!hasPermission) {
       return res.status(403).json({

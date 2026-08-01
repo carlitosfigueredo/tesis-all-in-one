@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const { predictFlightRisk, predictBatch } = require('../services/ml.service');
+const { predictDesercion, predictBatch } = require('../services/ml.service');
 const { protect } = require('../middlewares/auth.middleware');
 const { requireActiveCompany } = require('../middlewares/companyStatus.middleware');
 
@@ -14,7 +14,7 @@ router.use(protect, requireActiveCompany);
  */
 router.post('/', async (req, res, next) => {
   try {
-    const result = await predictFlightRisk(req.body);
+    const result = await predictDesercion(req.body);
     res.json({ success: true, data: result });
   } catch (error) {
     next(error);

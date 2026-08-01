@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import ReCAPTCHA from 'react-google-recaptcha';
 import { useAuth } from '../context/AuthContext';
 import PasswordInput from '../components/PasswordInput';
-import AlertMessage from '../components/AlertMessage';
+import Toast from '../components/Toast';
 
 const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
 
@@ -156,9 +156,11 @@ export default function Login() {
             )}
 
             {error && (
-              <AlertMessage
+              <Toast
                 type="error"
+                title="Error al iniciar sesion"
                 message={error}
+                duration={6000}
                 onClose={() => setError('')}
               />
             )}

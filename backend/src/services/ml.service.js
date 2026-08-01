@@ -1,6 +1,6 @@
 /**
  * Servicio que se comunica con el microservicio de ML (Python/FastAPI).
- * El backend Node actúa como proxy: el frontend nunca llama directamente al ML service.
+ * El backend Node actua como proxy: el frontend nunca llama directamente al ML service.
  */
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:8000';
@@ -17,13 +17,83 @@ const _fetch = async (path, options = {}) => {
   return response.json();
 };
 
-// ── Predicción ────────────────────────────────────────────────────────────────
+// ── Prediccion ────────────────────────────────────────────────────────────────
 
-const predictFlightRisk = (features) =>
+/**
+ * Predice riesgo de desercion para un empleado.
+ * Recibe un objeto con las variables del modelo.
+ * Retorna: { riesgo_desercion, nivel_riesgo, confianza, recomendacion, ... }
+ */
+const predictDesercion = (features) =>
   _fetch('/api/predict', { method: 'POST', body: JSON.stringify(features) });
 
+/**
+ * Prediccion en lote para multiples empleados.
+ * Recibe array de objetos con variables del modelo.
+ */
 const predictBatch = (employeeList) =>
   _fetch('/api/predict/batch', { method: 'POST', body: JSON.stringify(employeeList) });
+
+/**
+ * Convierte un registro de Employee (Prisma) a las features que espera el ML service.
+ * Mapea los campos de la DB al formato del schema EmployeeFeatures de Python.
+ */
+const employeeToFeatures = (emp) => ({
+  edad: emp.edad,
+  nivel_formacion: emp.nivel_formacion,
+  rol_tecnologico: emp.rol_tecnologico,
+  seniority: emp.seniority,
+  antiguedad_meses: emp.antiguedad_meses,
+  modalidad_trabajo: emp.modalidad_trabajo,
+  tipo_contrato: emp.tipo_contrato,
+  salario_mensual: emp.salario_mensual,
+  cantidad_horas_extra_mes: emp.cantidad_horas_extra_mes,
+  capacitacion_ultimo_anio: emp.capacitacion_ultimo_anio,
+  evaluacion_desempeno: emp.evaluacion_desempeno,
+  cantidad_empresas_anteriores: emp.cantidad_empresas_anteriores,
+  // Opcionales: enviar null si no estan (el ML service usa defaults)
+  satisfaccion_laboral: emp.satisfaccion_laboral ?? null,
+  satisfaccion_ambiente: emp.satisfaccion_ambiente ?? null,
+  equilibrio_vida_trabajo: emp.equilibrio_vida_trabajo ?? null,
+  estancamiento_carrera: emp.estancamiento_carrera ?? null,
+  feedback_lider: emp.feedback_lider ?? null,
+});
+
+/**
+ * Predice el riesgo para un empleado de la DB y retorna los campos a guardar.
+ * Retorna: { riesgo_desercion: float, nivel_riesgo: string }
+ */
+const calcularRiesgoEmpleado = async (emp) => {
+  try {
+    const features = employeeToFeatures(emp);
+    const result = await predictDesercion(features);
+    return {
+      riesgo_desercion: result.riesgo_desercion,
+      nivel_riesgo: result.nivel_riesgo,
+    };
+  } catch {
+    // Si el ML service no esta disponible, usar valores por defecto
+    return { riesgo_desercion: 0, nivel_riesgo: 'BAJO' };
+  }
+};
+
+/**
+ * Predice el riesgo para un lote de empleados.
+ * Retorna array de { riesgo_desercion, nivel_riesgo } en el mismo orden.
+ */
+const calcularRiesgoBatch = async (employees) => {
+  try {
+    const featuresList = employees.map(employeeToFeatures);
+    const results = await predictBatch(featuresList);
+    return results.map((r) => ({
+      riesgo_desercion: r.riesgo_desercion,
+      nivel_riesgo: r.nivel_riesgo,
+    }));
+  } catch {
+    // Fallback si ML service no responde
+    return employees.map(() => ({ riesgo_desercion: 0, nivel_riesgo: 'BAJO' }));
+  }
+};
 
 // ── Entrenamiento / Estado del modelo ─────────────────────────────────────────
 
@@ -31,41 +101,12 @@ const getModelStatus = () => _fetch('/api/model/status');
 
 const trainModel = () => _fetch('/api/train', { method: 'POST' });
 
-// ── Empleados del dataset ─────────────────────────────────────────────────────
-
-/**
- * Lista empleados del dataset con flightRisk calculado.
- * @param {object} params - { page, page_size, department, risk_level, search, attrition }
- */
-const getDatasetEmployees = (params = {}) => {
-  const qs = new URLSearchParams();
-  if (params.page)        qs.set('page', params.page);
-  if (params.page_size)   qs.set('page_size', params.page_size);
-  if (params.department)  qs.set('department', params.department);
-  if (params.risk_level)  qs.set('risk_level', params.risk_level);
-  if (params.search)      qs.set('search', params.search);
-  if (params.attrition !== undefined) qs.set('attrition', params.attrition);
-  const query = qs.toString() ? `?${qs.toString()}` : '';
-  return _fetch(`/api/employees${query}`);
-};
-
-/**
- * Estadísticas globales del dataset (sin paginación).
- * Usada por el Dashboard para mostrar KPIs reales.
- */
-const getDatasetStats = () => _fetch('/api/employees/stats');
-
-/**
- * Detalle de un empleado por ID del dataset.
- */
-const getDatasetEmployee = (id) => _fetch(`/api/employees/${id}`);
-
 module.exports = {
-  predictFlightRisk,
+  predictDesercion,
   predictBatch,
+  employeeToFeatures,
+  calcularRiesgoEmpleado,
+  calcularRiesgoBatch,
   getModelStatus,
   trainModel,
-  getDatasetEmployees,
-  getDatasetEmployee,
-  getDatasetStats,
 };
