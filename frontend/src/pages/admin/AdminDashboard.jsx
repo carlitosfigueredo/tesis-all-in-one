@@ -6,7 +6,7 @@ import api from '../../services/api';
 const PLAN_COLORS = {
   BASICO:      'bg-gray-100 text-gray-700',
   PROFESIONAL: 'bg-blue-100 text-blue-700',
-  EMPRESARIAL: 'bg-purple-100 text-purple-700',
+  CORPORATIVO: 'bg-purple-100 text-purple-700',
 };
 
 const KpiCard = ({ label, value, sub, color = 'blue' }) => {
