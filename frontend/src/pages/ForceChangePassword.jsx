@@ -5,10 +5,12 @@ import PasswordInput from '../components/PasswordInput';
 import PasswordStrengthIndicator from '../components/PasswordStrengthIndicator';
 import Toast from '../components/Toast';
 import api from '../services/api';
+import { usePasswordPolicy } from '../hooks/usePasswordPolicy';
 
 export default function ForceChangePassword() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { policy } = usePasswordPolicy();
 
   const [form, setForm] = useState({ newPassword: '', confirmPassword: '' });
   const [loading, setLoading] = useState(false);
@@ -24,8 +26,8 @@ export default function ForceChangePassword() {
       setToast({ type: 'error', title: 'Error', message: 'Las contrasenas no coinciden' });
       return;
     }
-    if (form.newPassword.length < 8) {
-      setToast({ type: 'error', title: 'Error', message: 'La contrasena debe tener al menos 8 caracteres' });
+    if (form.newPassword.length < policy.minLength) {
+      setToast({ type: 'error', title: 'Error', message: `La contrasena debe tener al menos ${policy.minLength} caracteres` });
       return;
     }
 
@@ -73,7 +75,7 @@ export default function ForceChangePassword() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              Minimo 8 caracteres
+              Minimo {policy.minLength} caracteres
             </div>
             <div className="flex items-center gap-3 text-sm text-primary-100">
               <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10">
@@ -141,7 +143,7 @@ export default function ForceChangePassword() {
 
             <button
               type="submit"
-              disabled={loading || form.newPassword.length < 8 || form.newPassword !== form.confirmPassword}
+              disabled={loading || form.newPassword.length < policy.minLength || form.newPassword !== form.confirmPassword}
               className="w-full rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-primary-700 hover:shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {loading ? (

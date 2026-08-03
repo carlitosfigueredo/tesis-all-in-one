@@ -26,6 +26,9 @@ Stack: React + Vite + Tailwind / Node.js + Express + Prisma / PostgreSQL / FastA
 | Cambio de contrasena | Primer login obligatorio (mustChangePassword), perfil personal |
 | Politica de contrasena | NIST/OWASP, PasswordStrengthIndicator, validatePasswordPolicy |
 | Panel SUPER_ADMIN | Dashboard, companies, plans, audit-logs |
+| Politica de contrasenas (configurable) | SUPER_ADMIN edita desde `/admin/settings/password-policy`, se persiste en BD `system_configs`, cache 1min en backend, hook `usePasswordPolicy` en frontend |
+| Token reset configurable | TTL y max solicitudes diarias desde `/admin/settings/reset-token`, BD `system_configs` |
+| SystemConfig service | Tabla `system_configs` (clave/valor JSONB), cache en memoria, fallback a defaults |
 | CRUD empleados | Nuevas variables (desercion PY), prediccion ML automatica al importar |
 | Importacion CSV | Validacion, guia paso a paso (CsvImportGuide), plantilla descargable |
 | Filtros empleados | rol_tecnologico, seniority, modalidad, nivel_riesgo, paginacion |
@@ -65,6 +68,8 @@ Stack: React + Vite + Tailwind / Node.js + Express + Prisma / PostgreSQL / FastA
 /admin/companies     → Empresas cliente
 /admin/plans         → Planes y precios
 /admin/audit         → Auditoria del sistema
+/admin/settings/password-policy  → Politica de contrasenas
+/admin/settings/reset-token      → Token de recuperacion de contrasena
 ```
 
 ---

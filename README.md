@@ -101,11 +101,13 @@ docker compose up --build -d
 #    pgAdmin:    http://localhost:5050
 ```
 
-El backend ejecuta automaticamente `prisma generate` + `prisma migrate deploy` al arrancar, y el seed se corre con:
+El backend ejecuta automaticamente `prisma generate` + `prisma migrate deploy` al arrancar.
+
+Para correr el seed (datos iniciales, superadmin, roles, planes):
 
 ```bash
-cd backend
-DATABASE_URL="postgresql://tesis_user:tesis_pass@localhost:5432/tesis_bi_db" npx prisma db seed
+# Con Docker (contenedores corriendo)
+docker exec tesis_backend node prisma/seed.js
 ```
 
 ### Sin Docker (desarrollo local)
@@ -137,7 +139,7 @@ uvicorn main:app --reload --port 8000
 
 | Portal | Email | Contrasena | Rol |
 |--------|-------|------------|-----|
-| `/admin/login` | *(configurado en seed)* | Admin2025! | SUPER_ADMIN |
+| `/admin/login` | carlosalberto.figueredoquevedo@gmail.com | Admin2025! | SUPER_ADMIN |
 | `/login` | admin@empresa.com | Demo2025! | COMPANY_ADMIN |
 | `/login` | analista@empresa.com | Demo2025! | ANALYST |
 | `/login` | viewer@empresa.com | Demo2025! | VIEWER |
@@ -204,16 +206,23 @@ uvicorn main:app --reload --port 8000
 
 ### Comandos utiles
 
+Con Docker (contenedores corriendo):
+
 ```bash
+# Ver estado de migraciones
+docker exec tesis_backend npx prisma migrate status
+
+# Aplicar migraciones pendientes
+docker exec tesis_backend npx prisma migrate deploy
+
+# Correr seed (superadmin, roles, planes, datos demo)
+docker exec tesis_backend node prisma/seed.js
+
+# Reset completo de BD (DESTRUCTIVO — borra todo y re-aplica)
+docker exec tesis_backend npx prisma migrate reset --force
+
+# Abrir GUI Prisma Studio (apuntando a localhost)
 cd backend
-
-# Nueva migracion
-DATABASE_URL="postgresql://tesis_user:tesis_pass@localhost:5432/tesis_bi_db" npx prisma migrate dev --name nombre
-
-# Reset completo (borra y re-seedea)
-DATABASE_URL="postgresql://tesis_user:tesis_pass@localhost:5432/tesis_bi_db" npx prisma migrate reset
-
-# GUI para explorar la BD
 DATABASE_URL="postgresql://tesis_user:tesis_pass@localhost:5432/tesis_bi_db" npx prisma studio
 ```
 

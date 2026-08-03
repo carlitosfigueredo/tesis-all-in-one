@@ -6,18 +6,20 @@ import PasswordInput from '../components/PasswordInput';
 import PasswordStrengthIndicator from '../components/PasswordStrengthIndicator';
 import AlertMessage from '../components/AlertMessage';
 import api from '../services/api';
+import { usePasswordPolicy } from '../hooks/usePasswordPolicy';
 
 const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
 
 const PLANS = [
   { id: 'BASICO', name: 'Estandar', price: 'Gs. 999.000/mes' },
   { id: 'PROFESIONAL', name: 'Profesional', price: 'Gs. 1.390.000/mes' },
-  { id: 'EMPRESARIAL', name: 'Corporativo', price: 'Gs. 2.590.000/mes' },
+  { id: 'CORPORATIVO', name: 'Corporativo', price: 'Gs. 2.590.000/mes' },
 ];
 
 export default function Register() {
   const navigate = useNavigate();
   const { setSession } = useAuth();
+  const { policy } = usePasswordPolicy();
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
     companyName: '',
@@ -56,8 +58,8 @@ export default function Register() {
       setErrors(['Las contrasenas no coinciden']);
       return;
     }
-    if (form.password.length < 8) {
-      setErrors(['La contrasena debe tener al menos 8 caracteres']);
+    if (form.password.length < policy.minLength) {
+      setErrors([`La contrasena debe tener al menos ${policy.minLength} caracteres`]);
       return;
     }
     if (!form.name.trim() || !form.email.trim()) {
@@ -236,7 +238,7 @@ export default function Register() {
                 name="password"
                 value={form.password}
                 onChange={handleChange}
-                placeholder="Minimo 8 caracteres"
+                placeholder={`Minimo ${policy.minLength} caracteres`}
                 required
               />
               <PasswordStrengthIndicator password={form.password} />

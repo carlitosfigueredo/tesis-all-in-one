@@ -350,7 +350,7 @@ export default function Landing() {
             <div>
               <h4 className={`mb-3 text-xs font-semibold uppercase tracking-wider ${dark ? 'text-gray-500' : 'text-gray-400'}`}>Contacto</h4>
               <ul className={`space-y-2 text-sm ${dark ? 'text-gray-400' : 'text-gray-600'}`}>
-                <li><a href="mailto:soporte@sistemabi.edu.py" className={`transition-colors ${dark ? 'hover:text-white' : 'hover:text-primary-600'}`}>soporte@sistemabi.edu.py</a></li>
+                <li><a href="mailto:carlosalberto.figueredoquevedo@gmail.com" className={`transition-colors ${dark ? 'hover:text-white' : 'hover:text-primary-600'}`}>carlosalberto.figueredoquevedo@gmail.com</a></li>
               </ul>
             </div>
           </div>

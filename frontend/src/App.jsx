@@ -24,6 +24,8 @@ import AdminDashboard  from './pages/admin/AdminDashboard';
 import AdminCompanies  from './pages/admin/AdminCompanies';
 import AdminPlans      from './pages/admin/AdminPlans';
 import AdminAuditLogs  from './pages/admin/AdminAuditLogs';
+import AdminPasswordPolicy from './pages/admin/AdminPasswordPolicy';
+import AdminResetTokenConfig from './pages/admin/AdminResetTokenConfig';
 
 // Portal empresa (COMPANY_ADMIN / ANALYST / VIEWER)
 import Dashboard     from './pages/Dashboard';
@@ -62,6 +64,8 @@ export default function App() {
               <Route path="/admin/companies" element={<AdminCompanies />} />
               <Route path="/admin/plans"     element={<AdminPlans />} />
               <Route path="/admin/audit"     element={<AdminAuditLogs />} />
+              <Route path="/admin/settings/password-policy" element={<AdminPasswordPolicy />} />
+              <Route path="/admin/settings/reset-token"     element={<AdminResetTokenConfig />} />
             </Route>
 
             {/* ── Portal Empresa ─────────────────────────────────────── */}

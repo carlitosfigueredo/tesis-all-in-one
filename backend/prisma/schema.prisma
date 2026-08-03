@@ -322,3 +322,16 @@ enum CompanyStatus {
   ACTIVE
   SUSPENDED
 }
+
+// ─────────────────────────────────────────
+// Configuracion global del sistema
+// Clave/valor para settings editables por SUPER_ADMIN
+// ─────────────────────────────────────────
+model SystemConfig {
+  key       String   @id         // Ej: "password_policy"
+  value     Json                 // Objeto JSON con la configuracion
+  updatedAt DateTime @updatedAt
+  updatedBy String?              // userId del admin que lo cambio
+
+  @@map("system_configs")
+}

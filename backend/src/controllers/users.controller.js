@@ -9,6 +9,8 @@ const bcrypt = require('bcryptjs');
 const { logAction } = require('../services/audit.service');
 const { getIp, getUserAgent } = require('../utils/request.utils');
 const { invalidatePermissionCache } = require('../middlewares/permission.middleware');
+const { getPasswordPolicy } = require('../services/systemConfig.service');
+const { validatePasswordPolicy } = require('../utils/password.utils');
 
 // ─── GET /api/users ───────────────────────────────────────────────────────────
 
@@ -92,8 +94,14 @@ const createUser = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Nombre, correo y contrasena son obligatorios' });
     }
 
-    if (password.length < 8) {
-      return res.status(400).json({ success: false, message: 'La contrasena debe tener al menos 8 caracteres' });
+    const policy = await getPasswordPolicy();
+    const policyResult = validatePasswordPolicy(password, policy);
+    if (!policyResult.valid) {
+      return res.status(400).json({
+        success: false,
+        message: `La contrasena debe tener al menos ${policy.minLength} caracteres`,
+        errors: policyResult.errors.map((e) => ({ message: e })),
+      });
     }
 
     // Determinar companyId

@@ -1,12 +1,23 @@
 const { Router } = require('express');
 const { login, me, forgotPassword, resetPassword, changePassword, forceChangePassword, register } = require('../controllers/auth.controller');
-const { protect, requirePortal }                    = require('../middlewares/auth.middleware');
-const { verifyRecaptcha }                           = require('../middlewares/recaptcha.middleware');
+const { protect, requirePortal }  = require('../middlewares/auth.middleware');
+const { verifyRecaptcha }         = require('../middlewares/recaptcha.middleware');
 const { validate, forgotPasswordSchema,
         resetPasswordSchema, loginSchema,
-        registerSchema }                            = require('../schemas/auth.schema');
+        registerSchema }          = require('../schemas/auth.schema');
+const { getPasswordPolicy }       = require('../services/systemConfig.service');
 
 const router = Router();
+
+// GET /api/auth/password-policy — expone la politica vigente al frontend (publico)
+router.get('/password-policy', async (_req, res, next) => {
+  try {
+    const policy = await getPasswordPolicy();
+    res.json({ success: true, data: policy });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // POST /api/auth/login
 router.post('/login', verifyRecaptcha, validate(loginSchema), login);

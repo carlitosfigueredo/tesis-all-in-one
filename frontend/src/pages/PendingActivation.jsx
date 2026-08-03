@@ -54,7 +54,7 @@ export default function PendingActivation() {
             Activar mi plan ahora
           </Link>
           <a
-            href="mailto:soporte@sistemabi.edu.py?subject=Activacion de cuenta"
+            href="mailto:carlosalberto.figueredoquevedo@gmail.com?subject=Activacion de cuenta"
             className="block w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-gray-600 text-center hover:bg-gray-50 transition"
           >
             Contactar soporte

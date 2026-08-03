@@ -6,6 +6,7 @@ import PasswordInput from '../components/PasswordInput';
 import PasswordStrengthIndicator from '../components/PasswordStrengthIndicator';
 import Toast from '../components/Toast';
 import api from '../services/api';
+import { usePasswordPolicy } from '../hooks/usePasswordPolicy';
 
 const ROLE_LABELS = {
   COMPANY_ADMIN: 'Administrador de empresa',
@@ -21,6 +22,7 @@ const PLAN_LABELS = {
 
 export default function Profile() {
   const { user } = useAuth();
+  const { policy } = usePasswordPolicy();
 
   const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [loading, setLoading] = useState(false);
@@ -36,8 +38,8 @@ export default function Profile() {
       setToast({ type: 'error', title: 'Error', message: 'Las contrasenas nuevas no coinciden' });
       return;
     }
-    if (form.newPassword.length < 8) {
-      setToast({ type: 'error', title: 'Error', message: 'La nueva contrasena debe tener al menos 8 caracteres' });
+    if (form.newPassword.length < policy.minLength) {
+      setToast({ type: 'error', title: 'Error', message: `La nueva contrasena debe tener al menos ${policy.minLength} caracteres` });
       return;
     }
 
@@ -144,7 +146,7 @@ export default function Profile() {
 
               <button
                 type="submit"
-                disabled={loading || form.newPassword.length < 8 || form.newPassword !== form.confirmPassword}
+                disabled={loading || form.newPassword.length < policy.minLength || form.newPassword !== form.confirmPassword}
                 className="rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
               >
                 {loading ? 'Guardando...' : 'Cambiar contrasena'}

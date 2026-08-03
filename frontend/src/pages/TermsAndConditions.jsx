@@ -42,7 +42,7 @@ export default function TermsAndConditions() {
 
         <div className="mb-12">
           <h1 className="text-4xl font-extrabold text-gray-900">Términos y condiciones</h1>
-          <p className="mt-3 text-sm text-gray-400">Última actualización: julio de 2026</p>
+          <p className="mt-3 text-sm text-gray-400">Última actualización: agosto de 2026</p>
           <p className="mt-4 text-sm text-gray-600">
             Al acceder o utilizar este sistema aceptás los presentes términos en su totalidad.
             Si no estás de acuerdo con alguna parte, no debés utilizar el servicio.
@@ -112,8 +112,7 @@ export default function TermsAndConditions() {
 
         <Section title="6. Planes y facturación">
           <p>
-            El plan <strong>Básico</strong> es gratuito y puede estar sujeto a limitaciones funcionales.
-            Los planes <strong>Profesional</strong> y <strong>Empresarial</strong> son de pago y se
+            Todos los planes <strong>Básico</strong>, <strong>Profesional</strong> y <strong>Empresarial</strong> son de pago y se
             facturan mensualmente según el precio vigente al momento de la contratación.
           </p>
           <p>
@@ -197,8 +196,8 @@ export default function TermsAndConditions() {
         <Section title="12. Contacto">
           <p>
             Para consultas sobre estos términos escribí a{' '}
-            <a href="mailto:soporte@sistemabi.edu.py" className="text-blue-600 underline hover:text-blue-800">
-              soporte@sistemabi.edu.py
+            <a href="mailto:carlosalberto.figueredoquevedo@gmail.com" className="text-blue-600 underline hover:text-blue-800">
+              carlosalberto.figueredoquevedo@gmail.com
             </a>.
           </p>
         </Section>

@@ -4,6 +4,7 @@ const crypto = require('crypto');
 
 const prisma = require('../lib/prisma');
 const { validatePasswordPolicy }            = require('../utils/password.utils');
+const { getPasswordPolicy, getResetTokenConfig } = require('../services/systemConfig.service');
 const { sendPasswordResetEmail,
         sendPasswordChangedEmail,
         sendAccountLockedEmail }            = require('../services/email.service');
@@ -15,7 +16,7 @@ const { getUserPermissions, invalidatePermissionCache } = require('../middleware
 
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCK_DURATION_MS    = 15 * 60 * 1000; // 15 minutos
-const RESET_TOKEN_TTL_MS  = 5 * 60 * 1000;  // 5 minutos
+// RESET_TOKEN_TTL_MS se lee de BD via getResetTokenConfig() — ver forgotPassword()
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -244,7 +245,8 @@ const forgotPassword = async (req, res, next) => {
 
     const plainToken = crypto.randomUUID();
     const tokenHash  = hashToken(plainToken);
-    const expiresAt  = new Date(Date.now() + RESET_TOKEN_TTL_MS);
+    const resetConfig = await getResetTokenConfig();
+    const expiresAt  = new Date(Date.now() + resetConfig.ttlMinutes * 60 * 1000);
 
     await prisma.passwordResetToken.create({
       data: { tokenHash, expiresAt, userId: user.id },
@@ -302,7 +304,8 @@ const resetPassword = async (req, res, next) => {
     }
 
     const user = resetEntry.user;
-    const policyResult = validatePasswordPolicy(newPassword, user);
+    const policy = await getPasswordPolicy();
+    const policyResult = validatePasswordPolicy(newPassword, policy, user);
     if (!policyResult.valid) {
       return res.status(400).json({
         success: false,
@@ -362,7 +365,8 @@ const changePassword = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'La contrasena actual no es correcta' });
     }
 
-    const policyResult = validatePasswordPolicy(newPassword, user);
+    const policy = await getPasswordPolicy();
+    const policyResult = validatePasswordPolicy(newPassword, policy, user);
     if (!policyResult.valid) {
       return res.status(400).json({
         success: false,
@@ -414,7 +418,8 @@ const forceChangePassword = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'No se requiere cambio de contrasena' });
     }
 
-    const policyResult = validatePasswordPolicy(newPassword, user);
+    const policy = await getPasswordPolicy();
+    const policyResult = validatePasswordPolicy(newPassword, policy, user);
     if (!policyResult.valid) {
       return res.status(400).json({
         success: false,

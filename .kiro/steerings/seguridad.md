@@ -63,25 +63,27 @@ const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5 });
 
 ### Política de contraseñas (NIST SP 800-63B + OWASP)
 
-Las contraseñas deben cumplir **todas** estas reglas:
+Las contraseñas deben cumplir los requisitos configurados en BD (`system_configs` clave `password_policy`). Los valores por defecto son:
 
-| Regla | Valor |
-|---|---|
-| Longitud mínima | 8 caracteres |
-| Longitud máxima | 128 caracteres |
-| Requiere mayúscula | Sí |
-| Requiere minúscula | Sí |
-| Requiere número | Sí |
-| Requiere carácter especial | Sí (`!@#$%^&*`) |
-| No puede ser igual a las últimas N contraseñas | 5 anteriores |
-| No puede contener el email del usuario | Sí |
-| No puede ser una contraseña común | Verificar contra lista básica |
+| Regla | Valor por defecto | Configurable |
+|---|---|---|
+| Longitud mínima | 8 caracteres | Sí (4–32) |
+| Longitud máxima | 128 caracteres | Sí (32–256) |
+| Requiere mayúscula | Sí | Sí |
+| Requiere minúscula | Sí | Sí |
+| Requiere número | Sí | Sí |
+| Requiere carácter especial | Sí (`!@#$%^&*`) | Sí |
+| No puede contener el email del usuario | Sí | No |
+| No puede ser una contraseña común | Sí (lista interna) | No |
 
-Implementar la validación como función reutilizable `validatePasswordPolicy(password, user)` que retorna `{ valid: boolean, errors: string[] }`.
+El SUPER_ADMIN puede editar la política desde `/admin/settings/password-policy`.
+
+La validación reutilizable `validatePasswordPolicy(password, policy, user)` recibe la política como parámetro (viene de `getPasswordPolicy()` que lee de BD con cache de 1 min). Ver `backend/src/utils/password.utils.js`.
 
 ```js
 // Ejemplo de uso en el controller
-const result = validatePasswordPolicy(newPassword, req.user);
+const policy = await getPasswordPolicy();
+const result = validatePasswordPolicy(newPassword, policy, req.user);
 if (!result.valid) {
   return res.status(400).json({ success: false, errors: result.errors });
 }
@@ -126,12 +128,13 @@ Este flujo debe implementarse exactamente así:
 1. Usuario solicita reset → POST /api/auth/forgot-password { email }
 2. Backend: busca usuario por email
    - Si no existe: responder igual que si existiera (no revelar si el email está registrado)
-   - Si existe: generar token = crypto.randomUUID(), guardar hash del token en BD con expiresAt = now + 5 minutos
+   - Si existe: leer TTL desde BD (getResetTokenConfig().ttlMinutes)
+               generar token = crypto.randomUUID(), guardar hash del token en BD con expiresAt = now + ttlMinutes
 3. Enviar correo con enlace: https://<frontend>/reset-password?token=<token>
 4. Usuario llega al formulario → POST /api/auth/reset-password { token, newPassword, confirmPassword }
 5. Backend:
    a. Buscar token en BD (por hash), verificar que no esté expirado y no esté usado
-   b. Validar política de contraseña
+   b. Validar política de contraseña (getPasswordPolicy() + validatePasswordPolicy)
    c. Hashear nueva contraseña con bcrypt
    d. Actualizar contraseña del usuario
    e. Marcar token como usado (usedAt = now)
@@ -141,7 +144,7 @@ Este flujo debe implementarse exactamente así:
 ```
 
 - El token se guarda como hash SHA-256 en BD, nunca el valor plano.
-- TTL de 5 minutos es estricto. Verificar con `expiresAt < new Date()`.
+- TTL configurable desde BD (`reset_token_config.ttlMinutes`, default 5 min). El SUPER_ADMIN puede cambiarlo desde `/admin/settings/reset-token`.
 - Un token solo puede usarse una vez (`usedAt` no nulo = inválido).
 
 ---
