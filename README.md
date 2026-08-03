@@ -249,4 +249,4 @@ Ver `backend/.env.example` para la lista completa. Las principales:
 
 ## Licencia
 
-Proyecto academico — Universidad Nacional de Asuncion, 2026.
+Proyecto academico — Universidad UNIDA de Asuncion, 2026.
