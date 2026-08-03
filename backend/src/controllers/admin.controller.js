@@ -158,7 +158,18 @@ const getCompany = async (req, res, next) => {
       where: { id: req.params.id },
       include: {
         users: {
-          select: { id: true, name: true, email: true, role: true, active: true, createdAt: true },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            active: true,
+            createdAt: true,
+            userRoles: {
+              select: {
+                role: { select: { name: true } },
+              },
+            },
+          },
           orderBy: { createdAt: 'asc' },
         },
         _count: { select: { employees: true } },
@@ -193,7 +204,18 @@ const getAdminStats = async (_req, res, next) => {
       prisma.company.count(),
       prisma.company.count({ where: { active: true } }),
       prisma.employee.count(),
-      prisma.user.count({ where: { role: { not: 'SUPER_ADMIN' } } }),
+      // Usuarios que NO tienen el rol SUPER_ADMIN (rol vive en UserRole → Role)
+      prisma.user.count({
+        where: {
+          NOT: {
+            userRoles: {
+              some: {
+                role: { name: 'SUPER_ADMIN', companyId: null },
+              },
+            },
+          },
+        },
+      }),
       prisma.company.groupBy({
         by: ['plan'],
         _count: { plan: true },
