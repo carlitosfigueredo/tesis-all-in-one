@@ -1,5 +1,4 @@
-// Prisma Schema - Sistema BI de Retención de Talento
-// Docs: https://pris.ly/d/prisma-schema
+// Prisma Schema - Sistema BI de Retencion de Talento
 
 generator client {
   provider = "prisma-client-js"
@@ -17,12 +16,17 @@ model Company {
   id        String        @id @default(uuid())
   name      String
   plan      Plan          @default(BASICO)
+  status    CompanyStatus @default(PENDING_PAYMENT)
   active    Boolean       @default(true)
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 
-  users     User[]
-  employees Employee[]
+  users        User[]
+  employees    Employee[]
+  auditLogs    AuditLog[]
+  payments     Payment[]
+  subscription Subscription?
+  roles        Role[]
 
   @@map("companies")
 }
@@ -31,61 +35,155 @@ model Company {
 // Usuarios del sistema
 // ─────────────────────────────────────────
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  password  String
-  role      Role     @default(VIEWER)
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                 String   @id @default(uuid())
+  name               String
+  email              String   @unique
+  password           String
+  active             Boolean  @default(true)
+  mustChangePassword Boolean  @default(false)
+  failedAttempts     Int      @default(0)
+  lockedUntil        DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
-  // SUPER_ADMIN no pertenece a ninguna empresa (null)
+  // Tenant (SUPER_ADMIN no pertenece a ninguna empresa)
   companyId String?
   company   Company? @relation(fields: [companyId], references: [id])
+
+  // RBAC: relacion muchos-a-muchos con roles
+  userRoles   UserRole[]
+  auditLogs   AuditLog[]
+  resetTokens PasswordResetToken[]
 
   @@map("users")
 }
 
 // ─────────────────────────────────────────
-// Empleados (sujetos del análisis BI)
+// RBAC — Roles
+// ─────────────────────────────────────────
+model Role {
+  id          String   @id @default(uuid())
+  name        String   // SUPER_ADMIN, COMPANY_ADMIN, ANALYST, VIEWER, custom...
+  description String?
+  isSystem    Boolean  @default(false) // true = no se puede eliminar ni renombrar
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Un rol puede ser global (companyId=null) o especifico de una empresa
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+
+  // Relaciones muchos-a-muchos
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+
+  @@unique([name, companyId]) // nombre unico por empresa (o global)
+  @@map("roles")
+}
+
+// ─────────────────────────────────────────
+// RBAC — Permisos
+// ─────────────────────────────────────────
+model Permission {
+  id          String   @id @default(uuid())
+  code        String   @unique // employees.read, predictions.run, etc.
+  name        String           // Nombre legible: "Ver empleados"
+  module      String           // Agrupacion: employees, predictions, users, etc.
+  description String?
+  createdAt   DateTime @default(now())
+
+  rolePermissions RolePermission[]
+
+  @@index([module])
+  @@map("permissions")
+}
+
+// ─────────────────────────────────────────
+// RBAC — Tabla intermedia Role <-> Permission
+// ─────────────────────────────────────────
+model RolePermission {
+  id           String   @id @default(uuid())
+  roleId       String
+  permissionId String
+  createdAt    DateTime @default(now())
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// ─────────────────────────────────────────
+// RBAC — Tabla intermedia User <-> Role
+// ─────────────────────────────────────────
+model UserRole {
+  id        String   @id @default(uuid())
+  userId    String
+  roleId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
+
+// ─────────────────────────────────────────
+// Tokens de reset de contrasena
+// ─────────────────────────────────────────
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+}
+
+// ─────────────────────────────────────────
+// Empleados (sujetos del analisis BI)
+// Campos alineados al dataset custom de desercion
+// para empresas de desarrollo de software de Paraguay
 // ─────────────────────────────────────────
 model Employee {
-  id                      String         @id @default(uuid())
-  // Datos básicos
-  name                    String?
-  job_role                String
-  department              String
-  // Datos personales
-  age                     Int
-  gender                  String
-  marital_status          String?
-  education               Int?
-  education_field         String?
-  // Datos laborales
-  monthly_income          Float
-  job_satisfaction        Int
-  environment_satisfaction Int?
-  work_life_balance       Int?
-  performance_rating      Int?
-  years_at_company        Int
-  years_in_current_role   Int?
-  years_since_last_promotion Int?
-  total_working_years     Int?
-  num_companies_worked    Int?
-  distance_from_home      Int?
-  overtime                Boolean        @default(false)
-  business_travel         String?
-  // Resultado de attrition histórico
-  attrition               Boolean        @default(false)
-  // Score ML
-  flight_risk             Float          @default(0)
-  risk_level              String         @default("BAJO")
-  status                  EmployeeStatus @default(ACTIVE)
-  createdAt               DateTime       @default(now())
-  updatedAt               DateTime       @updatedAt
+  id        String         @id @default(uuid())
+  status    EmployeeStatus @default(ACTIVE)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
 
-  // Tenant
+  // ── Datos de RRHH (obligatorios) ──────────────────────────────────────
+  edad                        Int
+  nivel_formacion             String        // Secundaria, Tecnico, Universitario, Posgrado
+  rol_tecnologico             String        // Frontend, Backend, Fullstack, Mobile, DevOps, QA, Data
+  seniority                   String        // Trainee, Junior, Semi-Senior, Senior, Lead
+  antiguedad_meses            Int
+  modalidad_trabajo           String        // Presencial, Hibrido, Remoto
+  tipo_contrato               String        // Indefinido, Plazo fijo, Eventual
+  salario_mensual             Int           // En guaranies (Gs.)
+  cantidad_horas_extra_mes    Int           @default(0)
+  capacitacion_ultimo_anio    Boolean       @default(false)
+  evaluacion_desempeno        Int           @default(3) // 1-5
+  cantidad_empresas_anteriores Int          @default(0)
+
+  // ── Encuesta clima (opcionales pero recomendadas) ─────────────────────
+  satisfaccion_laboral        Int?          // 1-5, null = no proporcionado
+  satisfaccion_ambiente       Int?          // 1-5
+  equilibrio_vida_trabajo     Int?          // 1-5
+  estancamiento_carrera       Int?          // 1-5
+  feedback_lider              Int?          // 1-5
+
+  // ── Resultado de prediccion (calculado por ML service) ────────────────
+  riesgo_desercion            Float         @default(0) // 0.0 a 1.0
+  nivel_riesgo                String        @default("BAJO") // CRITICO, ALTO, MEDIO, BAJO
+  desercion_real              Boolean       @default(false) // Solo para validacion
+
+  // ── Relacion con empresa (tenant) ─────────────────────────────────────
   companyId String?
   company   Company? @relation(fields: [companyId], references: [id])
 
@@ -93,24 +191,147 @@ model Employee {
 }
 
 // ─────────────────────────────────────────
+// Configuracion de planes
+// ─────────────────────────────────────────
+model PlanConfig {
+  id                  String   @id
+  name                String
+  priceGs             Int
+  highlight           Boolean  @default(false)
+  employeeLimit       Int
+  predictionFrequency String
+  dashboardType       String
+  features            String[]
+  cta                 String   @default("Contratar")
+  active              Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("plan_configs")
+}
+
+// ─────────────────────────────────────────
+// Logs de auditoria
+// ─────────────────────────────────────────
+model AuditLog {
+  id         String   @id @default(uuid())
+  action     String
+  resource   String?
+  resourceId String?
+  oldValue   Json?
+  newValue   Json?
+  ipAddress  String?
+  userAgent  String?
+  status     String   @default("SUCCESS")
+  errorMsg   String?
+  createdAt  DateTime @default(now())
+
+  tenantId String?
+  company  Company? @relation(fields: [tenantId], references: [id])
+
+  userId String?
+  user   User?  @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ─────────────────────────────────────────
+// Pagos y suscripciones
+// ─────────────────────────────────────────
+model Payment {
+  id              String        @id @default(uuid())
+  amount          Int
+  currency        String        @default("PYG")
+  status          PaymentStatus @default(PENDING)
+  paymentMethod   String        @default("card")
+  cardLast4       String?
+  cardBrand       String?
+  description     String?
+  failureReason   String?
+  processedAt     DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id])
+
+  subscriptionId String?
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id])
+
+  @@index([companyId])
+  @@index([status])
+  @@map("payments")
+}
+
+model Subscription {
+  id                 String             @id @default(uuid())
+  planId             String
+  status             SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart DateTime           @default(now())
+  currentPeriodEnd   DateTime
+  canceledAt         DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  companyId String   @unique
+  company   Company  @relation(fields: [companyId], references: [id])
+
+  payments Payment[]
+
+  @@index([status])
+  @@map("subscriptions")
+}
+
+// ─────────────────────────────────────────
 // Enums
 // ─────────────────────────────────────────
 
-enum Role {
-  SUPER_ADMIN     // Admin global de la plataforma (vos)
-  COMPANY_ADMIN   // Admin de una empresa cliente
-  ANALYST         // Puede analizar y ver predicciones
-  VIEWER          // Solo lectura
+enum PaymentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REFUNDED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  EXPIRED
 }
 
 enum Plan {
   BASICO
   PROFESIONAL
-  EMPRESARIAL
+  CORPORATIVO
 }
 
 enum EmployeeStatus {
   ACTIVE
   INACTIVE
   RESIGNED
+}
+
+enum CompanyStatus {
+  PENDING_PAYMENT
+  TRIAL
+  ACTIVE
+  SUSPENDED
+}
+
+// ─────────────────────────────────────────
+// Configuracion global del sistema
+// Clave/valor para settings editables por SUPER_ADMIN
+// ─────────────────────────────────────────
+model SystemConfig {
+  key       String   @id         // Ej: "password_policy"
+  value     Json                 // Objeto JSON con la configuracion
+  updatedAt DateTime @updatedAt
+  updatedBy String?              // userId del admin que lo cambio
+
+  @@map("system_configs")
 }

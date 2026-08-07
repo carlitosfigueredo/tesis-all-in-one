@@ -39,6 +39,8 @@ services:
       PORT: ${BACKEND_PORT}
       DATABASE_URL: ${DATABASE_URL}
       JWT_SECRET: ${JWT_SECRET}
+      RECAPTCHA_SECRET_KEY: ${RECAPTCHA_SECRET_KEY}
+      ML_SERVICE_URL: ${ML_SERVICE_URL}
     ports:
       - "${BACKEND_PORT}:4000"
     volumes:
@@ -93,6 +95,7 @@ services:
     restart: unless-stopped
     environment:
       VITE_API_URL: http://localhost:${BACKEND_PORT}/api
+      VITE_RECAPTCHA_SITE_KEY: ${RECAPTCHA_SITE_KEY}
     ports:
       - "${FRONTEND_PORT}:5173"
     volumes:

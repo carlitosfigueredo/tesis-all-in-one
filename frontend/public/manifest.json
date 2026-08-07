@@ -1,0 +1,10 @@
+{
+  "name": "Sistema BI - Retencion de Talento",
+  "short_name": "Sistema BI",
+  "description": "Sistema de inteligencia de negocios para prediccion de fuga de talento",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "icons": []
+}

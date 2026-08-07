@@ -65,8 +65,8 @@ export default function Legal() {
           </p>
           <p>
             Consultas legales:{' '}
-            <a href="mailto:soporte@sistemabi.edu.py" className="text-blue-600 underline hover:text-blue-800">
-              soporte@sistemabi.edu.py
+            <a href="mailto:carlosalberto.figueredoquevedo@gmail.com" className="text-blue-600 underline hover:text-blue-800">
+              carlosalberto.figueredoquevedo@gmail.com
             </a>.
           </p>
         </Section>
@@ -98,8 +98,8 @@ export default function Legal() {
           <p>
             Los titulares de los datos tienen derecho de acceso, rectificación, cancelación y
             oposición. Para ejercerlos escribí a{' '}
-            <a href="mailto:soporte@sistemabi.edu.py" className="text-blue-600 underline hover:text-blue-800">
-              soporte@sistemabi.edu.py
+            <a href="mailto:carlosalberto.figueredoquevedo@gmail.com" className="text-blue-600 underline hover:text-blue-800">
+              carlosalberto.figueredoquevedo@gmail.com
             </a>.
           </p>
         </Section>

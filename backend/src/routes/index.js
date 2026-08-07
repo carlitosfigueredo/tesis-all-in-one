@@ -3,6 +3,8 @@ const authRoutes      = require('./auth.routes');
 const adminAuthRoutes = require('./admin.auth.routes');
 const adminRoutes     = require('./admin.routes');
 const employeeRoutes  = require('./employees.routes');
+const usersRoutes     = require('./users.routes');
+const paymentsRoutes  = require('./payments.routes');
 const predictRoutes   = require('./predict.routes');
 const modelRoutes     = require('./model.routes');
 const { getPublicPlans } = require('../controllers/admin.controller');
@@ -25,6 +27,8 @@ router.get('/plans', getPublicPlans);
 // ── Portal de empresas ────────────────────────────────────────────────────────
 router.use('/auth',      authRoutes);
 router.use('/employees', employeeRoutes);
+router.use('/users',     usersRoutes);
+router.use('/payments',  paymentsRoutes);
 router.use('/predict',   predictRoutes);
 router.use('/model',     modelRoutes);
 

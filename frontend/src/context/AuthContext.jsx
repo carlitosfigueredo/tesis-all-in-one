@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 
 const AuthContext = createContext(null);
@@ -7,7 +7,7 @@ export function AuthProvider({ children }) {
   const [user, setUser]     = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Al montar, restaurar sesión de empresa si hay token guardado
+  // Al montar, restaurar sesion si hay token guardado
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -25,13 +25,20 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const login = async (email, password) => {
-    const { data } = await api.post('/auth/login', { email, password });
+  const login = async (email, password, recaptchaToken) => {
+    const { data } = await api.post('/auth/login', { email, password, recaptchaToken });
     const { token, user: userData } = data.data;
     localStorage.setItem('token', token);
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     setUser(userData);
     return userData;
+  };
+
+  // Permite setear sesion manualmente (usado por Register)
+  const setSession = (token, userData) => {
+    localStorage.setItem('token', token);
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    setUser(userData);
   };
 
   const logout = () => {
@@ -40,20 +47,42 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  // ─── Helpers de permisos ─────────────────────────────────────────────────────
+
+  const hasPermission = useCallback((permission) => {
+    if (!user?.permissions) return false;
+    return user.permissions.includes(permission);
+  }, [user]);
+
+  const hasAnyPermission = useCallback((...permissions) => {
+    if (!user?.permissions) return false;
+    return permissions.some((p) => user.permissions.includes(p));
+  }, [user]);
+
+  const hasRole = useCallback((roleName) => {
+    if (!user?.roles) return false;
+    return user.roles.includes(roleName);
+  }, [user]);
+
   return (
     <AuthContext.Provider
       value={{
         user,
         login,
         logout,
+        setSession,
         loading,
         isAuthenticated: !!user,
-        // Helpers de rol para usar en componentes
-        isSuperAdmin:    user?.role === 'SUPER_ADMIN',
-        isCompanyAdmin:  user?.role === 'COMPANY_ADMIN',
-        isAnalyst:       user?.role === 'ANALYST',
-        isViewer:        user?.role === 'VIEWER',
-        canEdit:         ['COMPANY_ADMIN', 'ANALYST'].includes(user?.role),
+        // Helpers de rol (basados en roles del RBAC)
+        isSuperAdmin:    hasRole('SUPER_ADMIN'),
+        isCompanyAdmin:  hasRole('COMPANY_ADMIN'),
+        isAnalyst:       hasRole('ANALYST'),
+        isViewer:        hasRole('VIEWER'),
+        // Helpers de permisos
+        hasPermission,
+        hasAnyPermission,
+        hasRole,
+        canEdit: hasAnyPermission('employees.write', 'users.write'),
       }}
     >
       {children}

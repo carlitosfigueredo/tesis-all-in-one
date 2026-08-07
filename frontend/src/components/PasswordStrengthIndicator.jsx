@@ -1,5 +1,8 @@
 // Indicador visual de fortaleza de contrasena
+// Los requisitos se leen dinamicamente desde el backend via usePasswordPolicy.
 // Uso: <PasswordStrengthIndicator password={value} />
+
+import { usePasswordPolicy } from '../hooks/usePasswordPolicy';
 
 const LEVELS = [
   { label: 'Muy débil',  color: 'bg-red-500',    text: 'text-red-600'    },
@@ -9,30 +12,30 @@ const LEVELS = [
   { label: 'Muy fuerte', color: 'bg-green-500',   text: 'text-green-600'  },
 ];
 
-const RULES = [
-  { label: 'Al menos 8 caracteres',          test: (p) => p.length >= 8 },
-  { label: 'Una letra mayúscula',             test: (p) => /[A-Z]/.test(p) },
-  { label: 'Una letra minúscula',             test: (p) => /[a-z]/.test(p) },
-  { label: 'Un número',                       test: (p) => /[0-9]/.test(p) },
-  { label: 'Un carácter especial (!@#$%^&*)', test: (p) => /[!@#$%^&*()\-_=+[\]{}|;:'",.<>?/\\`~]/.test(p) },
-];
-
-const getScore = (password) => {
-  if (!password || password.length < 1) return -1;
-  return RULES.filter((r) => r.test(password)).length - 1; // 0-4
-};
-
 export default function PasswordStrengthIndicator({ password }) {
-  const score = getScore(password);
+  const { rules } = usePasswordPolicy();
 
-  if (score < 0) return null; // no mostrar si el campo esta vacio
+  if (!password || password.length < 1) return null;
+
+  const passed = rules.filter((r) => r.test(password)).length;
+  // Normalizar al rango 0-4
+  const score = rules.length > 1
+    ? Math.min(Math.floor((passed / rules.length) * 4), 4)
+    : passed > 0 ? 4 : 0;
 
   const level = LEVELS[score];
 
   return (
     <div className="mt-2 space-y-2">
       {/* Barra de progreso */}
-      <div className="flex gap-1" role="progressbar" aria-valuenow={score + 1} aria-valuemin={0} aria-valuemax={5} aria-label="Fortaleza de la contraseña">
+      <div
+        className="flex gap-1"
+        role="progressbar"
+        aria-valuenow={score + 1}
+        aria-valuemin={0}
+        aria-valuemax={5}
+        aria-label="Fortaleza de la contraseña"
+      >
         {LEVELS.map((l, i) => (
           <div
             key={l.label}
@@ -50,10 +53,13 @@ export default function PasswordStrengthIndicator({ password }) {
 
       {/* Checklist de reglas */}
       <ul className="space-y-1">
-        {RULES.map((rule) => {
+        {rules.map((rule) => {
           const ok = rule.test(password);
           return (
-            <li key={rule.label} className={`flex items-center gap-1.5 text-xs ${ok ? 'text-green-600' : 'text-gray-400'}`}>
+            <li
+              key={rule.label}
+              className={`flex items-center gap-1.5 text-xs ${ok ? 'text-green-600' : 'text-gray-400'}`}
+            >
               {ok ? (
                 <svg className="h-3.5 w-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />

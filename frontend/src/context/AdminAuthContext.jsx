@@ -25,8 +25,8 @@ export function AdminAuthProvider({ children }) {
     }
   }, []);
 
-  const login = async (email, password) => {
-    const { data } = await api.post('/admin/auth/login', { email, password });
+  const login = async (email, password, recaptchaToken) => {
+    const { data } = await api.post('/admin/auth/login', { email, password, recaptchaToken });
     const { token, user } = data.data;
     localStorage.setItem('admin_token', token);
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`;

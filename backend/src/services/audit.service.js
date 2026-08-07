@@ -1,11 +1,8 @@
 // src/services/audit.service.js
-// Registro centralizado de acciones en audit_logs.
+// Registro centralizado de acciones en la tabla audit_logs (PostgreSQL).
 // No lanza excepciones: un fallo de auditoria no interrumpe el flujo principal.
 
-// En desarrollo usamos un store en memoria (mock).
-// Cuando Prisma este conectado, descomentar el bloque real y eliminar el mock.
-
-const auditStore = []; // mock en memoria para desarrollo
+const prisma = require('../lib/prisma');
 
 /**
  * Registra una accion en audit_logs.
@@ -37,44 +34,58 @@ const logAction = async ({
   errorMsg   = null,
 }) => {
   try {
-    const entry = {
-      id:         `audit-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      tenantId,
-      userId,
-      action,
-      resource,
-      resourceId,
-      oldValue,
-      newValue,
-      ipAddress,
-      userAgent,
-      status,
-      errorMsg,
-      createdAt:  new Date().toISOString(),
-    };
+    await prisma.auditLog.create({
+      data: {
+        tenantId,
+        userId,
+        action,
+        resource,
+        resourceId,
+        oldValue:  oldValue  ? JSON.parse(JSON.stringify(oldValue))  : null,
+        newValue:  newValue  ? JSON.parse(JSON.stringify(newValue))  : null,
+        ipAddress,
+        userAgent,
+        status,
+        errorMsg,
+      },
+    });
 
-    // ── Mock (desarrollo sin DB) ──────────────────────────────────────────────
-    auditStore.push(entry);
-    console.log(`[Audit] ${status} | ${action} | user=${userId ?? 'anon'} | ip=${ipAddress ?? '-'}`);
-
-    // ── Prisma (produccion) — descomentar cuando este la BD conectada ─────────
-    // const { PrismaClient } = require('@prisma/client');
-    // const prisma = new PrismaClient();
-    // await prisma.auditLog.create({ data: entry });
-
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[Audit] ${status} | ${action} | user=${userId ?? 'anon'} | ip=${ipAddress ?? '-'}`);
+    }
   } catch (err) {
     // Solo loguear en consola, nunca propagar
     console.error('[Audit] Error al registrar accion:', err.message);
   }
 };
 
-// Retorna todos los logs del mock (util para el endpoint admin en desarrollo)
-const getAuditLogs = ({ tenantId, action, status, limit = 100 } = {}) => {
-  let result = [...auditStore].reverse(); // mas recientes primero
-  if (tenantId) result = result.filter((l) => l.tenantId === tenantId);
-  if (action)   result = result.filter((l) => l.action === action);
-  if (status)   result = result.filter((l) => l.status === status);
-  return result.slice(0, limit);
+/**
+ * Obtiene audit logs con filtros y paginacion.
+ * Usado internamente por admin.controller (getAdminAuditLogs).
+ */
+const getAuditLogs = async ({ tenantId, action, status, userId, dateFrom, dateTo, page = 1, pageSize = 50 } = {}) => {
+  const where = {};
+  if (tenantId) where.tenantId = tenantId;
+  if (action)   where.action   = action;
+  if (status)   where.status   = status;
+  if (userId)   where.userId   = userId;
+  if (dateFrom || dateTo) {
+    where.createdAt = {};
+    if (dateFrom) where.createdAt.gte = new Date(dateFrom);
+    if (dateTo)   where.createdAt.lte = new Date(dateTo);
+  }
+
+  const [data, total] = await Promise.all([
+    prisma.auditLog.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    prisma.auditLog.count({ where }),
+  ]);
+
+  return { data, total };
 };
 
 module.exports = { logAction, getAuditLogs };

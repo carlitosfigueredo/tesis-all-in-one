@@ -2,14 +2,9 @@ import { useEffect, useState } from 'react';
 import Sidebar from '../components/layout/Sidebar';
 import Navbar  from '../components/layout/Navbar';
 import { useAuth } from '../context/AuthContext';
+import PasswordInput from '../components/PasswordInput';
+import PasswordStrengthIndicator from '../components/PasswordStrengthIndicator';
 import api from '../services/api';
-
-// Usuarios mock del portal de empresa (en producción vienen de /api/users)
-const MOCK_USERS = [
-  { id: 'cu-1', name: 'Ana García',   email: 'admin@empresa.com',    role: 'COMPANY_ADMIN', active: true,  createdAt: '2025-01-15T00:00:00Z' },
-  { id: 'cu-2', name: 'Carlos López', email: 'analista@empresa.com', role: 'ANALYST',       active: true,  createdAt: '2025-03-10T00:00:00Z' },
-  { id: 'cu-3', name: 'María Torres', email: 'viewer@empresa.com',   role: 'VIEWER',        active: true,  createdAt: '2025-06-01T00:00:00Z' },
-];
 
 const ROLE_LABELS = {
   COMPANY_ADMIN: 'Administrador',
@@ -26,8 +21,8 @@ const ROLE_COLORS = {
 const EMPTY_FORM = { name: '', email: '', role: 'ANALYST', password: '', confirmPassword: '' };
 
 export default function Users() {
-  const { user: currentUser } = useAuth();
-  const isAdmin = currentUser?.role === 'COMPANY_ADMIN';
+  const { user: currentUser, hasPermission } = useAuth();
+  const canManageUsers = hasPermission('users.write');
 
   const [users, setUsers]       = useState([]);
   const [loading, setLoading]   = useState(true);
@@ -37,13 +32,20 @@ export default function Users() {
   const [errors, setErrors]     = useState([]);
   const [success, setSuccess]   = useState('');
 
-  useEffect(() => {
-    // En producción: api.get('/users')
-    // Por ahora usamos el mock
-    setTimeout(() => {
-      setUsers(MOCK_USERS);
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const { data: res } = await api.get('/users');
+      setUsers(res.data);
+    } catch (err) {
+      console.error('Error al cargar usuarios:', err);
+    } finally {
       setLoading(false);
-    }, 300);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
   }, []);
 
   const handleChange = (e) =>
@@ -55,26 +57,23 @@ export default function Users() {
     setSuccess('');
 
     if (form.password !== form.confirmPassword) {
-      setErrors(['Las contraseñas no coinciden']);
+      setErrors(['Las contrasenas no coinciden']);
       return;
     }
     if (form.password.length < 8) {
-      setErrors(['La contraseña debe tener al menos 8 caracteres']);
+      setErrors(['La contrasena debe tener al menos 8 caracteres']);
       return;
     }
 
     setSaving(true);
     try {
-      // En producción: await api.post('/users', { name, email, role, password })
-      const newUser = {
-        id:        `u-${Date.now()}`,
-        name:      form.name,
-        email:     form.email,
-        role:      form.role,
-        active:    true,
-        createdAt: new Date().toISOString(),
-      };
-      setUsers((prev) => [newUser, ...prev]);
+      const { data: res } = await api.post('/users', {
+        name: form.name,
+        email: form.email,
+        roleName: form.role,
+        password: form.password,
+      });
+      setUsers((prev) => [res.data, ...prev]);
       setSuccess(`Usuario "${form.name}" creado correctamente`);
       setForm(EMPTY_FORM);
       setShowForm(false);
@@ -85,10 +84,15 @@ export default function Users() {
     }
   };
 
-  const toggleActive = (id) => {
-    setUsers((prev) =>
-      prev.map((u) => (u.id === id ? { ...u, active: !u.active } : u))
-    );
+  const toggleActive = async (id) => {
+    try {
+      const { data: res } = await api.patch(`/users/${id}/toggle-active`);
+      setUsers((prev) =>
+        prev.map((u) => (u.id === id ? { ...u, active: res.data.active } : u))
+      );
+    } catch (err) {
+      console.error('Error al cambiar estado:', err);
+    }
   };
 
   return (
@@ -105,7 +109,7 @@ export default function Users() {
                 {users.length} usuario(s) en <strong>{currentUser?.companyName}</strong>
               </p>
             </div>
-            {isAdmin && (
+            {canManageUsers && (
               <button
                 onClick={() => { setShowForm((v) => !v); setErrors([]); }}
                 className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700 transition-colors"
@@ -119,21 +123,21 @@ export default function Users() {
           </div>
 
           {/* Aviso de solo lectura para no-admin */}
-          {!isAdmin && (
+          {!canManageUsers && (
             <div className="mb-4 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-700">
               Solo el Administrador de empresa puede crear o modificar usuarios.
             </div>
           )}
 
-          {/* Mensaje de éxito */}
+          {/* Mensaje de exito */}
           {success && (
             <div className="mb-4 rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">
               {success}
             </div>
           )}
 
-          {/* Formulario de creación */}
-          {showForm && isAdmin && (
+          {/* Formulario de creacion */}
+          {showForm && canManageUsers && (
             <div className="mb-6 rounded-xl bg-white border border-gray-100 shadow-sm p-6">
               <h2 className="text-base font-semibold text-gray-900 mb-4">Crear nuevo usuario</h2>
               <form onSubmit={handleCreate} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -142,11 +146,11 @@ export default function Users() {
                   <input
                     name="name" value={form.name} onChange={handleChange} required
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-primary-500"
-                    placeholder="Ej: Laura Martínez"
+                    placeholder="Ej: Laura Martinez"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Correo electrónico</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Correo electronico</label>
                   <input
                     name="email" type="email" value={form.email} onChange={handleChange} required
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-primary-500"
@@ -159,30 +163,45 @@ export default function Users() {
                     name="role" value={form.role} onChange={handleChange}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-primary-500"
                   >
+                    <option value="COMPANY_ADMIN">Administrador — gestion completa de la empresa</option>
                     <option value="ANALYST">Analista — puede analizar y ver predicciones</option>
                     <option value="VIEWER">Solo lectura — solo puede ver datos</option>
                   </select>
                 </div>
                 <div />
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña temporal</label>
-                  <input
-                    name="password" type="password" value={form.password} onChange={handleChange} required
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-primary-500"
-                    placeholder="Mínimo 8 caracteres"
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Contrasena temporal</label>
+                  <PasswordInput
+                    name="password"
+                    value={form.password}
+                    onChange={handleChange}
+                    required
+                    placeholder="Minimo 8 caracteres"
                   />
+                  <PasswordStrengthIndicator password={form.password} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Confirmar contraseña</label>
-                  <input
-                    name="confirmPassword" type="password" value={form.confirmPassword} onChange={handleChange} required
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-primary-500"
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Confirmar contrasena</label>
+                  <PasswordInput
+                    name="confirmPassword"
+                    value={form.confirmPassword}
+                    onChange={handleChange}
+                    required
+                    placeholder="Repetir contrasena"
                   />
+                  {form.confirmPassword && form.password !== form.confirmPassword && (
+                    <p className="mt-1 text-xs text-red-500">Las contrasenas no coinciden</p>
+                  )}
+                </div>
+                <div className="sm:col-span-2">
+                  <p className="text-xs text-gray-400">
+                    El usuario debera cambiar esta contrasena al iniciar sesion por primera vez.
+                  </p>
                 </div>
 
                 {errors.length > 0 && (
                   <div className="sm:col-span-2 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600 space-y-1">
-                    {errors.map((e, i) => <p key={i}>• {e}</p>)}
+                    {errors.map((e, i) => <p key={i}>&#8226; {e}</p>)}
                   </div>
                 )}
 
@@ -219,7 +238,7 @@ export default function Users() {
                     <th className="px-5 py-3 text-left">Rol</th>
                     <th className="px-5 py-3 text-left">Estado</th>
                     <th className="px-5 py-3 text-left">Registrado</th>
-                    {isAdmin && <th className="px-5 py-3 text-left">Acciones</th>}
+                    {canManageUsers && <th className="px-5 py-3 text-left">Acciones</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
@@ -251,7 +270,7 @@ export default function Users() {
                       <td className="px-5 py-3 text-xs text-gray-400">
                         {new Date(u.createdAt).toLocaleDateString('es-PY')}
                       </td>
-                      {isAdmin && (
+                      {canManageUsers && (
                         <td className="px-5 py-3">
                           {u.id !== currentUser?.id && (
                             <button

@@ -1,12 +1,11 @@
 // src/schemas/auth.schema.js
-// Schemas de validacion con Zod para endpoints de autenticacion.
-// Zod se instala con npm install dentro del contenedor Docker.
-// Si no esta disponible (dev local sin npm install), el middleware
-// hace pass-through y la validacion basica queda en el controller.
+// Schemas Zod para endpoints de autenticacion.
+// La validacion real de politica de contrasenas se hace en el controller
+// via validatePasswordPolicy() + getPasswordPolicy() (lee de BD).
+// Aqui solo validamos tipos, formato y longitud maxima tecnica.
 
 let z;
 try {
-  // zod v3: el export default es el objeto z
   const zod = require('zod');
   z = zod.z ?? zod;
 } catch {
@@ -16,13 +15,7 @@ try {
 
 // ─── Middleware factory ───────────────────────────────────────────────────────
 
-/**
- * Valida req.body contra un schema Zod.
- * Si Zod no esta instalado, hace pass-through (no bloquea la ruta).
- * Uso: router.post('/login', validate(loginSchema), loginController)
- */
 const validate = (schema) => (req, res, next) => {
-  // Si Zod no esta disponible, saltar validacion
   if (!schema || !z) return next();
 
   const result = schema.safeParse(req.body);
@@ -37,13 +30,11 @@ const validate = (schema) => (req, res, next) => {
       errors,
     });
   }
-  // Reemplazar req.body con datos parseados/transformados (lowercase, trim, etc.)
   req.body = result.data;
   next();
 };
 
 // ─── Schemas ─────────────────────────────────────────────────────────────────
-// Se definen solo si Zod esta disponible, de lo contrario son null.
 
 const loginSchema = z
   ? z.object({
@@ -55,7 +46,7 @@ const loginSchema = z
       password: z
         .string({ required_error: 'La contrasena es obligatoria' })
         .min(1, 'La contrasena no puede estar vacia')
-        .max(128, 'La contrasena es demasiado larga'),
+        .max(256, 'La contrasena es demasiado larga'),
     })
   : null;
 
@@ -77,8 +68,8 @@ const resetPasswordSchema = z
           .min(1, 'El token no puede estar vacio'),
         newPassword: z
           .string({ required_error: 'La nueva contrasena es obligatoria' })
-          .min(8, 'La contrasena tiene que tener al menos 8 caracteres')
-          .max(128, 'La contrasena no puede tener mas de 128 caracteres'),
+          .min(1, 'La contrasena no puede estar vacia')
+          .max(256, 'La contrasena es demasiado larga'),
         confirmPassword: z.string({ required_error: 'Confirma tu contrasena' }),
       })
       .refine((data) => data.newPassword === data.confirmPassword, {
@@ -87,4 +78,38 @@ const resetPasswordSchema = z
       })
   : null;
 
-module.exports = { loginSchema, forgotPasswordSchema, resetPasswordSchema, validate };
+const registerSchema = z
+  ? z.object({
+      companyName: z
+        .string({ required_error: 'El nombre de la empresa es obligatorio' })
+        .min(2, 'El nombre debe tener al menos 2 caracteres')
+        .max(200, 'El nombre es demasiado largo')
+        .transform((v) => v.trim()),
+      plan: z
+        .enum(['BASICO', 'PROFESIONAL', 'CORPORATIVO'], {
+          errorMap: () => ({ message: 'Plan invalido' }),
+        })
+        .default('BASICO'),
+      name: z
+        .string({ required_error: 'Tu nombre es obligatorio' })
+        .min(2, 'El nombre debe tener al menos 2 caracteres')
+        .max(200, 'El nombre es demasiado largo')
+        .transform((v) => v.trim()),
+      email: z
+        .string({ required_error: 'El correo es obligatorio' })
+        .email('Ingresa un correo valido')
+        .max(254, 'El correo es demasiado largo')
+        .transform((v) => v.toLowerCase().trim()),
+      password: z
+        .string({ required_error: 'La contrasena es obligatoria' })
+        .min(1, 'La contrasena no puede estar vacia')
+        .max(256, 'La contrasena es demasiado larga'),
+      confirmPassword: z.string({ required_error: 'Confirma tu contrasena' }),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      message: 'Las contrasenas no coinciden',
+      path: ['confirmPassword'],
+    })
+  : null;
+
+module.exports = { loginSchema, forgotPasswordSchema, resetPasswordSchema, registerSchema, validate };
