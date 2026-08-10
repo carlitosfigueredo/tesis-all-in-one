@@ -16,10 +16,11 @@ const {
 
 const router = Router();
 
-router.use(protect, requirePortal('company'));
-
-// GET /api/payments/plans
+// GET /api/payments/plans — publico (se necesita antes de autenticarse en checkout)
 router.get('/plans', getCheckoutPlans);
+
+// Todas las demas rutas requieren autenticacion
+router.use(protect, requirePortal('company'));
 
 // GET /api/payments/test-cards (solo dev — mock)
 router.get('/test-cards', getTestCards);

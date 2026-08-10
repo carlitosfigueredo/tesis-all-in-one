@@ -243,7 +243,6 @@ export default function Checkout() {
         const loadedPlans = data.data ?? [];
         setPlans(loadedPlans);
         if (loadedPlans.length > 0) {
-          // Preseleccionar el plan del registro/landing si existe, sino el primero
           const match = preselectedPlanId
             ? loadedPlans.find((p) => p.id === preselectedPlanId)
             : null;
