@@ -133,12 +133,32 @@ function ReceiptScreen({ receipt, onGoToDashboard }) {
             <div>
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Forma de pago</p>
               <div className="flex items-center gap-3 text-sm">
-                <div className="flex h-8 w-14 items-center justify-center rounded border border-blue-200 bg-blue-50">
-                  <span className="text-xs font-bold text-blue-600">PayPal</span>
+                <div className={`flex h-8 w-14 items-center justify-center rounded border ${
+                  receipt.paymentMethod?.type === 'adamspay'
+                    ? 'border-blue-700 bg-blue-50'
+                    : 'border-blue-200 bg-blue-50'
+                }`}>
+                  <span className={`text-xs font-bold ${
+                    receipt.paymentMethod?.type === 'adamspay' ? 'text-blue-700' : 'text-blue-600'
+                  }`}>
+                    {receipt.paymentMethod?.type === 'adamspay' ? 'Adams' : 'PayPal'}
+                  </span>
                 </div>
                 <div>
-                  <p className="font-medium text-gray-800">Pago via PayPal</p>
-                  <p className="text-xs text-gray-400">Sandbox · {receipt.paymentMethod.type}</p>
+                  <p className="font-medium text-gray-800">
+                    {receipt.paymentMethod?.type === 'adamspay'
+                      ? 'Pago via AdamsPay'
+                      : receipt.paymentMethod?.type === 'paypal'
+                        ? 'Pago via PayPal'
+                        : `Pago con ${receipt.paymentMethod?.type || 'tarjeta'}`}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {receipt.paymentMethod?.type === 'adamspay'
+                      ? 'Tarjeta · Tigo Money · Zimple'
+                      : receipt.paymentMethod?.cardLast4
+                        ? `Terminada en ${receipt.paymentMethod.cardLast4}`
+                        : 'Sandbox'}
+                  </p>
                 </div>
               </div>
             </div>
