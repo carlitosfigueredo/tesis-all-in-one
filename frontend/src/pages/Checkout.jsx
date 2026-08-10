@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 import { useAuth } from '../context/AuthContext';
 import AlertMessage from '../components/AlertMessage';
@@ -201,24 +201,34 @@ function ReceiptScreen({ receipt, onGoToDashboard }) {
 
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function Checkout() {
-  const navigate = useNavigate();
+  const navigate  = useNavigate();
+  const location  = useLocation();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
-  const [plans, setPlans]             = useState([]);
+  const [plans, setPlans]               = useState([]);
   const [selectedPlan, setSelectedPlan] = useState(null);
-  const [loading, setLoading]         = useState(false);
+  const [loading, setLoading]           = useState(false);
   const [adamsLoading, setAdamsLoading] = useState(false);
-  const [error, setError]             = useState('');
-  const [receipt, setReceipt]         = useState(null);
-  const currentOrderRef               = useRef({ orderId: null, planId: null });
+  const [error, setError]               = useState('');
+  const [receipt, setReceipt]           = useState(null);
+  const currentOrderRef                 = useRef({ orderId: null, planId: null });
+  // Plan preseleccionado desde el registro o la landing
+  const preselectedPlanId = location.state?.preselectedPlan || null;
 
   useEffect(() => {
     api.get('/payments/plans')
       .then(({ data }) => {
-        setPlans(data.data);
-        if (data.data.length > 0) setSelectedPlan(data.data[0]);
+        const loadedPlans = data.data ?? [];
+        setPlans(loadedPlans);
+        if (loadedPlans.length > 0) {
+          // Preseleccionar el plan del registro/landing si existe, sino el primero
+          const match = preselectedPlanId
+            ? loadedPlans.find((p) => p.id === preselectedPlanId)
+            : null;
+          setSelectedPlan(match || loadedPlans[0]);
+        }
       })
       .catch(() => setError('No se pudieron cargar los planes. Intentá recargar la página.'));
-  }, []);
+  }, [preselectedPlanId]);
 
   // Verificar si el usuario volvió de AdamsPay con un pago pendiente
   // IMPORTANTE: esperar a que la auth esté lista (authLoading=false) antes de llamar la API

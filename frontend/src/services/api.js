@@ -22,7 +22,13 @@ api.interceptors.response.use(
       || url.includes('/auth/reset')
       || url.includes('/admin/auth');
 
-    if (is401 && !isAuthRoute) {
+    // No redirigir si el usuario acaba de volver de AdamsPay
+    // (los params en la URL indican que venimos de una pasarela externa)
+    const isReturningFromPayment = window.location.search.includes('payProvider=adams')
+      || window.location.search.includes('payEndReason')
+      || sessionStorage.getItem('adamspay_docId') !== null;
+
+    if (is401 && !isAuthRoute && !isReturningFromPayment) {
       // Token expirado en una ruta protegida: limpiar y redirigir
       if (localStorage.getItem('admin_token')) {
         localStorage.removeItem('admin_token');

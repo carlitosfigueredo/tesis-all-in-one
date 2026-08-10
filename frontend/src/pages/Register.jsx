@@ -117,8 +117,8 @@ export default function Register() {
       const { token, user } = res.data;
       setSession(token, user);
 
-      // Redirigir al checkout para activar el plan
-      navigate('/checkout', { replace: true });
+      // Redirigir al checkout pasando el plan seleccionado
+      navigate('/checkout', { replace: true, state: { preselectedPlan: form.plan } });
     } catch (err) {
       const msg = err.response?.data?.message ?? 'Error al registrar. Intenta de nuevo';
       const fieldErrors = err.response?.data?.errors?.map((e) => `${e.field}: ${e.message}`) ?? [];
