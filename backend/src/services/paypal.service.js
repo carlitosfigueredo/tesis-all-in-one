@@ -221,21 +221,16 @@ const captureOrder = async ({ orderId, companyId, planId, userId }) => {
       currency:       'PYG',
       status:         isApproved ? 'APPROVED' : isPending ? 'PENDING' : 'REJECTED',
       paymentMethod:  'paypal',
-      // Guardamos el captureId de PayPal como referencia de transaccion
       cardLast4:      null,
       cardBrand:      null,
       description:    `Suscripcion plan ${planId} via PayPal`,
       failureReason:  isApproved ? null : `PayPal status: ${captureStatus}`,
       processedAt:    isApproved ? new Date() : null,
-      // Datos del pagador de PayPal (para el comprobante)
-      metadata: JSON.stringify({
-        paypalOrderId:   orderId,
-        paypalCaptureId: captureId,
-        payerName,
-        payerEmail,
-        amountUsd,
-        captureStatus,
-      }),
+      // Trazabilidad PayPal
+      paypalOrderId:   orderId,
+      paypalCaptureId: captureId,
+      payerEmail,
+      payerName,
     },
   });
 
@@ -268,8 +263,7 @@ const captureOrder = async ({ orderId, companyId, planId, userId }) => {
     payerEmail,
     companyActivated: isApproved,
     failureReason:   payment.failureReason,
-  };
-};
+  };};
 
 /**
  * Obtiene los detalles de una orden de PayPal (para verificacion).

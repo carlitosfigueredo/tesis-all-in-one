@@ -258,6 +258,12 @@ model Payment {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
+  // PayPal — IDs de trazabilidad real
+  paypalOrderId   String?
+  paypalCaptureId String?
+  payerEmail      String?
+  payerName       String?
+
   companyId String
   company   Company @relation(fields: [companyId], references: [id])
 
@@ -266,6 +272,7 @@ model Payment {
 
   @@index([companyId])
   @@index([status])
+  @@index([paypalCaptureId])
   @@map("payments")
 }
 

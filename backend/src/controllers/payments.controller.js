@@ -459,6 +459,12 @@ const getReceipt = async (req, res, next) => {
         cardLast4: payment.cardLast4 ?? null,
       },
 
+      // Trazabilidad PayPal
+      paypalOrderId:   payment.paypalOrderId   ?? null,
+      paypalCaptureId: payment.paypalCaptureId ?? null,
+      payerName:       payment.payerName       ?? payer?.name ?? null,
+      payerEmail:      payment.payerEmail      ?? payer?.email ?? null,
+
       // Trazabilidad
       processedAt:   payment.processedAt,
       failureReason: payment.failureReason ?? null,
