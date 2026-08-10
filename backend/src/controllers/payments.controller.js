@@ -251,6 +251,7 @@ const verifyAdamsPayDebt = async (req, res, next) => {
     const debt     = debtData.debt || debtData;
 
     console.log(`[AdamsPay verify] docId=${docId} companyId=${req.user.companyId} debt.status=${debt.status}`);
+    console.log(`[AdamsPay verify] RAW response:`, JSON.stringify(debtData).slice(0, 500));
 
     // Verificar que la deuda pertenece a esta empresa usando el docId del param
     if (!docId.startsWith(req.user.companyId)) {
