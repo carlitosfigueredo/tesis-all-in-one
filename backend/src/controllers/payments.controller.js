@@ -5,6 +5,7 @@
 const prisma = require('../lib/prisma');
 const { validateCard, processPayment, getPaymentHistory, getSubscription, TEST_CARDS } = require('../services/payment.service');
 const { createOrder, captureOrder } = require('../services/paypal.service');
+const { createDebt, getDebt }       = require('../services/adamspay.service');
 const { logAction } = require('../services/audit.service');
 const { getIp, getUserAgent } = require('../utils/request.utils');
 
@@ -154,6 +155,204 @@ const capturePayPalOrder = async (req, res, next) => {
       status:    'FAILURE',
       errorMsg:  error.message,
     }).catch(() => {});
+    next(error);
+  }
+};
+
+/**
+ * POST /api/payments/adamspay/create
+ * Crea una "Deuda" en AdamsPay y devuelve el payUrl al frontend.
+ * El frontend redirige al usuario a ese link para pagar.
+ * Body: { planId }
+ */
+const createAdamsPayDebt = async (req, res, next) => {
+  const ip = getIp(req);
+  const ua = getUserAgent(req);
+
+  try {
+    const { planId } = req.body;
+    if (!planId) {
+      return res.status(400).json({ success: false, message: 'Selecciona un plan' });
+    }
+    if (!req.user.companyId) {
+      return res.status(400).json({ success: false, message: 'No tenes una empresa asociada' });
+    }
+
+    const plan = await prisma.planConfig.findUnique({ where: { id: planId } });
+    if (!plan) {
+      return res.status(404).json({ success: false, message: 'Plan no encontrado' });
+    }
+
+    // docId unico: companyId-planId-timestamp (evita duplicados — punto 14 Apuntes)
+    const docId = `${req.user.companyId}-${planId}-${Date.now()}`;
+    const label = `Suscripcion plan ${plan.name} — Sistema BI`;
+
+    const debt = await createDebt({
+      docId,
+      amountPyg: plan.priceGs,
+      label,
+      companyId: req.user.companyId,
+      planId,
+    });
+
+    await logAction({
+      tenantId:   req.user.companyId,
+      userId:     req.user.id,
+      action:     'ADAMSPAY_DEBT_CREATED',
+      resource:   'payments',
+      resourceId: debt.docId,
+      ipAddress:  ip,
+      userAgent:  ua,
+      status:     'SUCCESS',
+      newValue:   { docId: debt.docId, planId, amountPyg: plan.priceGs, payUrl: debt.payUrl },
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        docId:     debt.docId,
+        payUrl:    debt.payUrl,
+        amountPyg: plan.priceGs,
+        label,
+        expiresAt: debt.expiresAt,
+      },
+    });
+  } catch (error) {
+    await logAction({
+      tenantId:  req.user?.companyId,
+      userId:    req.user?.id,
+      action:    'ADAMSPAY_DEBT_FAILED',
+      resource:  'payments',
+      ipAddress: ip,
+      userAgent: ua,
+      status:    'FAILURE',
+      errorMsg:  error.message,
+    }).catch(() => {});
+    next(error);
+  }
+};
+
+/**
+ * POST /api/payments/adamspay/verify/:docId
+ * Verifica el estado de una deuda de AdamsPay.
+ * El frontend llama esto cuando el usuario regresa del link de pago.
+ */
+const verifyAdamsPayDebt = async (req, res, next) => {
+  const ip = getIp(req);
+  const ua = getUserAgent(req);
+
+  try {
+    const { docId } = req.params;
+    if (!docId) {
+      return res.status(400).json({ success: false, message: 'docId requerido' });
+    }
+
+    const debtData = await getDebt(docId);
+    const debt     = debtData.debt || debtData;
+
+    // Verificar que la deuda pertenece a esta empresa
+    if (!debt.docId?.includes(req.user.companyId)) {
+      return res.status(403).json({ success: false, message: 'No tenes permiso para ver esta deuda' });
+    }
+
+    const isPaid     = debt.status === 'PAID';
+    const isPending  = debt.status === 'PENDING' || debt.status === 'CREATED';
+    const isExpired  = debt.status === 'EXPIRED' || debt.status === 'CANCELLED';
+
+    if (isPaid) {
+      // Activar empresa si no lo estaba
+      const PLAN_ID_TO_ENUM = {
+        ESTANDAR: 'BASICO', PROFESIONAL: 'PROFESIONAL', CORPORATIVO: 'CORPORATIVO',
+      };
+
+      // Extraer planId del docId (formato: companyId-planId-timestamp)
+      const parts  = docId.split('-');
+      const planId = parts.length >= 2 ? parts[parts.length - 2] : null;
+
+      const company = await prisma.company.findUnique({ where: { id: req.user.companyId } });
+
+      let subscription = await prisma.subscription.findUnique({ where: { companyId: req.user.companyId } });
+
+      if (!subscription) {
+        const periodEnd = new Date();
+        periodEnd.setMonth(periodEnd.getMonth() + 1);
+        subscription = await prisma.subscription.create({
+          data: {
+            companyId:       req.user.companyId,
+            planId:          planId || company?.plan || 'BASICO',
+            status:          'ACTIVE',
+            currentPeriodEnd: periodEnd,
+          },
+        });
+      }
+
+      // Registrar pago con datos reales de AdamsPay
+      const amountPyg = debt.amount?.value || 0;
+      const payment = await prisma.payment.create({
+        data: {
+          companyId:      req.user.companyId,
+          subscriptionId: subscription.id,
+          amount:         amountPyg,
+          currency:       'PYG',
+          status:         'APPROVED',
+          paymentMethod:  'adamspay',
+          description:    debt.label || `Suscripcion via AdamsPay`,
+          processedAt:    new Date(),
+          // Guardamos el docId de AdamsPay para trazabilidad
+          paypalOrderId:  null,
+          paypalCaptureId: null,
+          payerEmail:     null,
+          payerName:      null,
+        },
+      });
+
+      // Activar empresa
+      if (planId) {
+        await prisma.company.update({
+          where: { id: req.user.companyId },
+          data:  { status: 'ACTIVE', plan: PLAN_ID_TO_ENUM[planId] || company?.plan || 'BASICO' },
+        });
+        await prisma.subscription.update({
+          where: { id: subscription.id },
+          data:  { status: 'ACTIVE', planId },
+        });
+      }
+
+      await logAction({
+        tenantId:   req.user.companyId,
+        userId:     req.user.id,
+        action:     'ADAMSPAY_PAYMENT_APPROVED',
+        resource:   'payments',
+        resourceId: payment.id,
+        ipAddress:  ip,
+        userAgent:  ua,
+        status:     'SUCCESS',
+        newValue:   { docId, amountPyg, planId },
+      });
+
+      // Obtener el comprobante
+      try {
+        const { data: receiptRes } = await require('axios').get(
+          `${process.env.BACKEND_URL || 'http://localhost:4000'}/api/payments/receipt/${payment.id}`,
+          { headers: { Authorization: req.headers.authorization } }
+        );
+        return res.json({ success: true, message: 'Pago confirmado via AdamsPay!', data: { ...debtData, paymentId: payment.id, receipt: receiptRes.data } });
+      } catch {
+        return res.json({ success: true, message: 'Pago confirmado via AdamsPay!', data: { ...debtData, paymentId: payment.id } });
+      }
+    }
+
+    if (isExpired) {
+      return res.status(402).json({ success: false, message: 'La deuda expiró o fue cancelada', data: debt });
+    }
+
+    // Pendiente
+    return res.status(202).json({
+      success: false,
+      message: isPending ? 'El pago todavía no fue procesado' : `Estado: ${debt.status}`,
+      data: debt,
+    });
+  } catch (error) {
     next(error);
   }
 };
@@ -551,6 +750,8 @@ const toggleCompanyStatus = async (req, res, next) => {
 module.exports = {
   createPayPalOrder,
   capturePayPalOrder,
+  createAdamsPayDebt,
+  verifyAdamsPayDebt,
   getCheckoutPlans,
   processCheckout,
   getHistory,

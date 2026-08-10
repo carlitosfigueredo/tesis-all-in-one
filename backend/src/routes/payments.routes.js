@@ -4,6 +4,8 @@ const { requirePermission } = require('../middlewares/permission.middleware');
 const {
   createPayPalOrder,
   capturePayPalOrder,
+  createAdamsPayDebt,
+  verifyAdamsPayDebt,
   getCheckoutPlans,
   processCheckout,
   getHistory,
@@ -23,23 +25,25 @@ router.get('/plans', getCheckoutPlans);
 router.get('/test-cards', getTestCards);
 
 // ── PayPal Orders API v2 (REAL) ───────────────────────────────────────────────
-// POST /api/payments/create-order — crea la orden, devuelve orderId al frontend
-router.post('/create-order', requirePermission('payments.process'), createPayPalOrder);
+router.post('/create-order',   requirePermission('payments.process'), createPayPalOrder);
+router.post('/capture-order',  requirePermission('payments.process'), capturePayPalOrder);
 
-// POST /api/payments/capture-order — captura el pago tras aprobacion del usuario
-router.post('/capture-order', requirePermission('payments.process'), capturePayPalOrder);
+// ── AdamsPay — Pasarela local Paraguay ───────────────────────────────────────
+// POST /api/payments/adamspay/create — crea deuda y devuelve payUrl
+router.post('/adamspay/create',          requirePermission('payments.process'), createAdamsPayDebt);
+// POST /api/payments/adamspay/verify/:docId — verifica si la deuda fue pagada
+router.post('/adamspay/verify/:docId',   requirePermission('payments.process'), verifyAdamsPayDebt);
 
 // ── Mock (solo desarrollo) ────────────────────────────────────────────────────
-// POST /api/payments/process
 router.post('/process', requirePermission('payments.process'), processCheckout);
 
 // GET /api/payments/history
-router.get('/history', requirePermission('payments.view'), getHistory);
+router.get('/history',      requirePermission('payments.view'), getHistory);
 
 // GET /api/payments/subscription
 router.get('/subscription', requirePermission('payments.view'), getActiveSubscription);
 
-// GET /api/payments/receipt/:paymentId — comprobante estructurado (punto 36 Apuntes UNIDA)
+// GET /api/payments/receipt/:paymentId
 router.get('/receipt/:paymentId', requirePermission('payments.view'), getReceipt);
 
 module.exports = router;

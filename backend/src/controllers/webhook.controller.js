@@ -269,3 +269,118 @@ const handlePayPalWebhook = async (req, res) => {
 };
 
 module.exports = { handlePayPalWebhook };
+
+// ─────────────────────────────────────────
+// Handler: AdamsPay Webhook
+// AdamsPay llama a POST /api/webhooks/adamspay cuando una deuda cambia de estado.
+// No usa firma — la seguridad es por secreto compartido en el header (si lo configuraron)
+// o por validar que el docId exista en nuestra BD.
+// ─────────────────────────────────────────
+
+const PLAN_ID_TO_ENUM = {
+  ESTANDAR: 'BASICO', PROFESIONAL: 'PROFESIONAL', CORPORATIVO: 'CORPORATIVO',
+};
+
+/**
+ * POST /api/webhooks/adamspay
+ */
+const handleAdamsPayWebhook = async (req, res) => {
+  // Responder 200 inmediatamente
+  res.status(200).json({ received: true });
+
+  try {
+    const payload = req.body;
+    const debt    = payload.debt || payload;
+    const docId   = debt.docId || debt.doc_id;
+    const status  = debt.status;
+
+    console.log(`[AdamsPay Webhook] docId=${docId} status=${status}`);
+
+    if (!docId) {
+      console.warn('[AdamsPay Webhook] Sin docId — ignorado');
+      return;
+    }
+
+    // Registrar en audit_logs
+    await prisma.auditLog.create({
+      data: {
+        action:     `ADAMSPAY_WEBHOOK_${status || 'UNKNOWN'}`,
+        resource:   'webhooks',
+        resourceId: docId,
+        status:     'SUCCESS',
+        newValue:   JSON.stringify({ docId, status, payload }),
+        ipAddress:  req.ip,
+        userAgent:  req.headers['user-agent'],
+      },
+    }).catch((e) => console.error('[AdamsPay Webhook] Error audit log:', e.message));
+
+    // Solo procesar si fue PAID
+    if (status !== 'PAID') {
+      console.log(`[AdamsPay Webhook] Estado ${status} — sin accion`);
+      return;
+    }
+
+    // Extraer companyId del docId (formato: companyId-planId-timestamp)
+    // El companyId es un UUID (5 partes con guiones), el planId está después
+    // Ejemplo: "ee95653b-4e6f-415c-9c5c-802e3407875a-ESTANDAR-1720000000000"
+    const uuidRegex = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})-(\w+)-\d+$/i;
+    const match     = docId.match(uuidRegex);
+
+    if (!match) {
+      console.warn(`[AdamsPay Webhook] docId con formato inesperado: ${docId}`);
+      return;
+    }
+
+    const companyId = match[1];
+    const planId    = match[2];
+
+    const company = await prisma.company.findUnique({ where: { id: companyId } });
+    if (!company) {
+      console.warn(`[AdamsPay Webhook] Empresa ${companyId} no encontrada`);
+      return;
+    }
+
+    // Solo activar si no estaba activa (idempotente)
+    if (company.status !== 'ACTIVE') {
+      const periodEnd = new Date();
+      periodEnd.setMonth(periodEnd.getMonth() + 1);
+
+      let subscription = await prisma.subscription.findUnique({ where: { companyId } });
+      if (!subscription) {
+        subscription = await prisma.subscription.create({
+          data: { companyId, planId, status: 'ACTIVE', currentPeriodEnd: periodEnd },
+        });
+      } else {
+        await prisma.subscription.update({
+          where: { id: subscription.id },
+          data:  { status: 'ACTIVE', planId, currentPeriodEnd: periodEnd },
+        });
+      }
+
+      await prisma.payment.create({
+        data: {
+          companyId,
+          subscriptionId: subscription.id,
+          amount:         debt.amount?.value || 0,
+          currency:       'PYG',
+          status:         'APPROVED',
+          paymentMethod:  'adamspay',
+          description:    debt.label || `Suscripcion plan ${planId} via AdamsPay`,
+          processedAt:    new Date(),
+        },
+      });
+
+      await prisma.company.update({
+        where: { id: companyId },
+        data:  { status: 'ACTIVE', plan: PLAN_ID_TO_ENUM[planId] || company.plan },
+      });
+
+      console.log(`[AdamsPay Webhook] Empresa ${companyId} activada (plan ${planId})`);
+    }
+
+  } catch (err) {
+    console.error('[AdamsPay Webhook] Error procesando evento:', err.message);
+  }
+};
+
+module.exports = { handlePayPalWebhook, handleAdamsPayWebhook };

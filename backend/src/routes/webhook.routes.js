@@ -9,15 +9,21 @@
 // ─────────────────────────────────────────
 
 const { Router } = require('express');
-const { handlePayPalWebhook } = require('../controllers/webhook.controller');
+const { handlePayPalWebhook, handleAdamsPayWebhook } = require('../controllers/webhook.controller');
 
 const router = Router();
 
 /**
  * POST /api/webhooks/paypal
  * Recibe eventos de PayPal (sin autenticacion JWT).
- * PayPal llama a esta URL cuando ocurre un evento relevante.
  */
 router.post('/paypal', handlePayPalWebhook);
+
+/**
+ * POST /api/webhooks/adamspay
+ * Recibe notificaciones de AdamsPay (sin autenticacion JWT).
+ * AdamsPay llama a esta URL cuando una deuda cambia de estado.
+ */
+router.post('/adamspay', handleAdamsPayWebhook);
 
 module.exports = router;

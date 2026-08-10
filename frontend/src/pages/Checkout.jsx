@@ -6,8 +6,7 @@ import AlertMessage from '../components/AlertMessage';
 import api from '../services/api';
 
 // ─────────────────────────────────────────
-// Checkout.jsx — Integración PayPal Orders API v2 (Sandbox)
-// Flujo: seleccionar plan → botón PayPal → popup aprobación → capturar → comprobante
+// Checkout.jsx — PayPal + AdamsPay (pasarela local Paraguay)
 // ─────────────────────────────────────────
 
 const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID;
@@ -207,9 +206,9 @@ export default function Checkout() {
   const [plans, setPlans]             = useState([]);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [loading, setLoading]         = useState(false);
+  const [adamsLoading, setAdamsLoading] = useState(false);
   const [error, setError]             = useState('');
   const [receipt, setReceipt]         = useState(null);
-  // orderId que devuelve /create-order, necesario para capturar
   const currentOrderRef               = useRef({ orderId: null, planId: null });
 
   useEffect(() => {
@@ -219,6 +218,28 @@ export default function Checkout() {
         if (data.data.length > 0) setSelectedPlan(data.data[0]);
       })
       .catch(() => setError('No se pudieron cargar los planes. Intentá recargar la página.'));
+  }, []);
+
+  // Verificar si el usuario volvió de AdamsPay con un pago pendiente
+  useEffect(() => {
+    const docId  = sessionStorage.getItem('adamspay_docId');
+    if (!docId) return;
+    sessionStorage.removeItem('adamspay_docId');
+    sessionStorage.removeItem('adamspay_planId');
+
+    setLoading(true);
+    api.post(`/payments/adamspay/verify/${docId}`)
+      .then(({ data }) => {
+        if (data.success && data.data?.paymentId) {
+          api.get(`/payments/receipt/${data.data.paymentId}`)
+            .then(({ data: r }) => setReceipt({ ...r.data, paypalCaptureId: null }))
+            .catch(() => setError('Pago confirmado pero no se pudo cargar el comprobante.'));
+        } else {
+          setError(data.message || 'El pago todavía no fue procesado. Si ya pagaste, esperá unos minutos.');
+        }
+      })
+      .catch((err) => setError(err.response?.data?.message ?? 'No se pudo verificar el pago de AdamsPay'))
+      .finally(() => setLoading(false));
   }, []);
 
   // ── Paso 1: el SDK de PayPal llama esto para crear la orden en nuestro backend
@@ -279,6 +300,31 @@ export default function Checkout() {
   const handleCancel = () => {
     setError('Cancelaste el pago. Podés intentarlo de nuevo cuando quieras.');
     setLoading(false);
+  };
+
+  // ── AdamsPay: redirigir al link de pago ──────────────────────────────────
+  const handleAdamsPay = async () => {
+    setError('');
+    if (!selectedPlan) { setError('Seleccioná un plan primero'); return; }
+    setAdamsLoading(true);
+    try {
+      const { data: res } = await api.post('/payments/adamspay/create', {
+        planId: selectedPlan.id,
+      });
+      if (res.data?.payUrl) {
+        // Guardamos el docId para verificar cuando vuelva
+        sessionStorage.setItem('adamspay_docId', res.data.docId);
+        sessionStorage.setItem('adamspay_planId', selectedPlan.id);
+        // Redirigir al portal de pago de AdamsPay
+        window.location.href = res.data.payUrl;
+      } else {
+        setError('AdamsPay no devolvió un link de pago. Intentá de nuevo.');
+      }
+    } catch (err) {
+      setError(err.response?.data?.message ?? 'Error al crear el cobro con AdamsPay');
+    } finally {
+      setAdamsLoading(false);
+    }
   };
 
   const handleGoToDashboard = () => {
@@ -448,6 +494,43 @@ export default function Checkout() {
                   <div className="rounded-lg bg-gray-100 border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
                     Seleccioná un plan para habilitar el botón de pago
                   </div>
+                )}
+
+                {/* Separador */}
+                <div className="relative my-2">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-100" />
+                  </div>
+                  <div className="relative flex justify-center text-xs">
+                    <span className="bg-white px-3 text-gray-400">o pagá con</span>
+                  </div>
+                </div>
+
+                {/* Botón AdamsPay — pasarela local Paraguay */}
+                {!loading && selectedPlan && (
+                  <button
+                    type="button"
+                    onClick={handleAdamsPay}
+                    disabled={adamsLoading || !selectedPlan}
+                    className="w-full flex items-center justify-center gap-3 rounded-lg border-2 border-blue-700 bg-white px-4 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {adamsLoading ? (
+                      <>
+                        <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        Generando link de pago...
+                      </>
+                    ) : (
+                      <>
+                        {/* Logo AdamsPay simple */}
+                        <span className="flex h-6 w-6 items-center justify-center rounded bg-blue-700 text-xs font-bold text-white">A</span>
+                        Pagar con AdamsPay
+                        <span className="ml-auto text-xs font-normal text-gray-400">Tarjeta · Tigo · Zimple</span>
+                      </>
+                    )}
+                  </button>
                 )}
 
                 {/* Seguridad */}
