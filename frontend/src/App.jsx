@@ -3,10 +3,14 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 // Contextos
 import { AuthProvider }      from './context/AuthContext';
 import { AdminAuthProvider } from './context/AdminAuthContext';
+import { ThemeProvider }     from './context/ThemeContext';
 
 // Guards
 import PrivateRoute from './routes/PrivateRoute';
 import AdminRoute   from './routes/AdminRoute';
+
+// Componentes globales
+import CookieConsent from './components/CookieConsent';
 
 // Páginas públicas
 import Landing            from './pages/Landing';
@@ -27,6 +31,8 @@ import AdminPlans      from './pages/admin/AdminPlans';
 import AdminAuditLogs  from './pages/admin/AdminAuditLogs';
 import AdminPasswordPolicy from './pages/admin/AdminPasswordPolicy';
 import AdminResetTokenConfig from './pages/admin/AdminResetTokenConfig';
+import AdminExchangeRates from './pages/admin/AdminExchangeRates';
+import AdminPayments from './pages/admin/AdminPayments';
 
 // Portal empresa (COMPANY_ADMIN / ANALYST / VIEWER)
 import Dashboard     from './pages/Dashboard';
@@ -41,6 +47,7 @@ import Profile       from './pages/Profile';
 
 export default function App() {
   return (
+    <ThemeProvider>
     <BrowserRouter>
       {/* AdminAuthProvider envuelve todo para que AdminRoute pueda leer el contexto */}
       <AdminAuthProvider>
@@ -66,8 +73,10 @@ export default function App() {
               <Route path="/admin/companies" element={<AdminCompanies />} />
               <Route path="/admin/plans"     element={<AdminPlans />} />
               <Route path="/admin/audit"     element={<AdminAuditLogs />} />
+              <Route path="/admin/payments"  element={<AdminPayments />} />
               <Route path="/admin/settings/password-policy" element={<AdminPasswordPolicy />} />
               <Route path="/admin/settings/reset-token"     element={<AdminResetTokenConfig />} />
+              <Route path="/admin/settings/exchange-rates"  element={<AdminExchangeRates />} />
             </Route>
 
             {/* ── Portal Empresa ─────────────────────────────────────── */}
@@ -86,8 +95,10 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
 
           </Routes>
+          <CookieConsent />
         </AuthProvider>
       </AdminAuthProvider>
     </BrowserRouter>
+    </ThemeProvider>
   );
 }
