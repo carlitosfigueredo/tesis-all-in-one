@@ -7,6 +7,7 @@ const usersRoutes     = require('./users.routes');
 const paymentsRoutes  = require('./payments.routes');
 const predictRoutes   = require('./predict.routes');
 const modelRoutes     = require('./model.routes');
+const webhookRoutes   = require('./webhook.routes');
 const { getPublicPlans } = require('../controllers/admin.controller');
 
 const router = Router();
@@ -23,6 +24,9 @@ router.get('/health', (_req, res) => {
 
 // ── Ruta pública de planes (para la landing) ──────────────────────────────────
 router.get('/plans', getPublicPlans);
+
+// ── Webhooks (SIN auth — PayPal llama directamente, seguridad via firma) ──────
+router.use('/webhooks', webhookRoutes);
 
 // ── Portal de empresas ────────────────────────────────────────────────────────
 router.use('/auth',      authRoutes);
