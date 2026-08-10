@@ -16,6 +16,7 @@ import ForgotPassword     from './pages/ForgotPassword';
 import ResetPassword      from './pages/ResetPassword';
 import TermsAndConditions from './pages/TermsAndConditions';
 import Legal              from './pages/Legal';
+import PrivacyPolicy      from './pages/PrivacyPolicy';
 
 // Portal admin (SUPER_ADMIN)
 import AdminLogin      from './pages/AdminLogin';
@@ -54,6 +55,7 @@ export default function App() {
             <Route path="/reset-password"   element={<ResetPassword />} />
             <Route path="/terms"            element={<TermsAndConditions />} />
             <Route path="/legal"            element={<Legal />} />
+            <Route path="/privacy"          element={<PrivacyPolicy />} />
 
             {/* ── Portal Super Admin ─────────────────────────────────── */}
             <Route path="/admin/login" element={<AdminLogin />} />

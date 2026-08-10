@@ -78,6 +78,14 @@ const resetPasswordSchema = z
       })
   : null;
 
+// Schema de consentimiento individual
+const consentItemSchema = z
+  ? z.object({
+      accepted: z.boolean(),
+      version:  z.string().default('1.0'),
+    })
+  : null;
+
 const registerSchema = z
   ? z.object({
       companyName: z
@@ -105,6 +113,15 @@ const registerSchema = z
         .min(1, 'La contrasena no puede estar vacia')
         .max(256, 'La contrasena es demasiado larga'),
       confirmPassword: z.string({ required_error: 'Confirma tu contrasena' }),
+      // Consentimientos — pasados por el frontend, validados en el controller
+      consents: z
+        .object({
+          privacyPolicy:      consentItemSchema,
+          termsAndConditions: consentItemSchema,
+        })
+        .optional(),
+      // reCAPTCHA token — opcional en schema (el middleware de recaptcha lo valida aparte)
+      recaptchaToken: z.string().optional(),
     })
     .refine((data) => data.password === data.confirmPassword, {
       message: 'Las contrasenas no coinciden',

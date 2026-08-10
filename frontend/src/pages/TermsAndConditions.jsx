@@ -208,6 +208,8 @@ export default function TermsAndConditions() {
         <p>
           © {new Date().getFullYear()} Sistema BI — Retención de Talento. Trabajo de tesis académica.{' '}
           <Link to="/legal" className="underline hover:text-gray-600">Aviso legal</Link>
+          {' · '}
+          <Link to="/privacy" className="underline hover:text-gray-600">Política de privacidad</Link>
         </p>
       </footer>
     </div>

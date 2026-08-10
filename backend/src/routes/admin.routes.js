@@ -6,7 +6,7 @@ const {
   getPlans, updatePlans, getAdminAuditLogs,
 } = require('../controllers/admin.controller');
 const { getAllPayments, toggleCompanyStatus } = require('../controllers/payments.controller');
-const { getPasswordPolicy, setConfig, getResetTokenConfig } = require('../services/systemConfig.service');
+const { getPasswordPolicy, setConfig, getResetTokenConfig, getPygToUsdRate } = require('../services/systemConfig.service');
 
 const router = Router();
 
@@ -99,6 +99,43 @@ router.put('/config/reset-token', async (req, res, next) => {
     await setConfig('reset_token_config', updated, req.user.id);
 
     res.json({ success: true, data: updated, message: 'Configuracion de token actualizada' });
+  } catch (err) { next(err); }
+});
+
+// ─── Tasa de cambio PYG/USD ────────────────────────────────────────────────────
+
+// GET  /api/admin/config/exchange-rates
+router.get('/config/exchange-rates', async (_req, res, next) => {
+  try {
+    const rate = await getPygToUsdRate();
+    res.json({ success: true, data: { PYG_TO_USD: rate } });
+  } catch (err) { next(err); }
+});
+
+// PUT  /api/admin/config/exchange-rates
+router.put('/config/exchange-rates', async (req, res, next) => {
+  try {
+    const { PYG_TO_USD } = req.body;
+
+    if (!PYG_TO_USD || isNaN(PYG_TO_USD) || PYG_TO_USD < 1000 || PYG_TO_USD > 50000) {
+      return res.status(400).json({
+        success: false,
+        message: 'PYG_TO_USD debe ser un numero entre 1000 y 50000',
+      });
+    }
+
+    const current = await getPygToUsdRate();
+    await setConfig('exchange_rates', {
+      PYG_TO_USD: parseFloat(PYG_TO_USD),
+      description: 'Tasa de conversion guaranies a USD para procesamiento de pagos via PayPal',
+      updatedNote: 'Ajustar segun cotizacion del BCP (Banco Central del Paraguay)',
+    }, req.user.id);
+
+    res.json({
+      success: true,
+      data: { PYG_TO_USD: parseFloat(PYG_TO_USD), previous: current },
+      message: `Tasa actualizada: 1 USD = Gs. ${Number(PYG_TO_USD).toLocaleString('es-PY')}`,
+    });
   } catch (err) { next(err); }
 });
 
