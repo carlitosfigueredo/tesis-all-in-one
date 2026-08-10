@@ -41,6 +41,10 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       RECAPTCHA_SECRET_KEY: ${RECAPTCHA_SECRET_KEY}
       ML_SERVICE_URL: ${ML_SERVICE_URL}
+      PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID}
+      PAYPAL_CLIENT_SECRET: ${PAYPAL_CLIENT_SECRET}
+      PAYPAL_ENVIRONMENT: ${PAYPAL_ENVIRONMENT}
+      PYG_TO_USD_RATE: ${PYG_TO_USD_RATE}
     ports:
       - "${BACKEND_PORT}:4000"
     volumes:
@@ -96,6 +100,7 @@ services:
     environment:
       VITE_API_URL: http://localhost:${BACKEND_PORT}/api
       VITE_RECAPTCHA_SITE_KEY: ${RECAPTCHA_SITE_KEY}
+      VITE_PAYPAL_CLIENT_ID: ${VITE_PAYPAL_CLIENT_ID}
     ports:
       - "${FRONTEND_PORT}:5173"
     volumes:

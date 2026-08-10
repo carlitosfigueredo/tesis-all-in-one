@@ -361,19 +361,21 @@ export default function Checkout() {
                 </button>
               ))}
 
-              {/* Nota sandbox */}
-              <div className="mt-2 rounded-lg bg-amber-50 border border-amber-100 p-3 text-xs text-amber-700">
-                <p className="font-semibold mb-1">Modo Sandbox (pruebas)</p>
-                <p>Usá una cuenta PayPal de sandbox para completar el pago. No se realizarán cargos reales.</p>
-                <a
-                  href="https://developer.paypal.com/tools/sandbox/accounts/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-1 inline-block underline hover:text-amber-900"
-                >
-                  Ver cuentas de prueba →
-                </a>
-              </div>
+              {/* Solo en desarrollo — recordatorio sandbox */}
+              {import.meta.env.DEV && (
+                <div className="mt-2 rounded-lg bg-amber-50 border border-amber-100 p-3 text-xs text-amber-700">
+                  <p className="font-semibold mb-1">🧪 Modo Sandbox (solo desarrollo)</p>
+                  <p>Usá una cuenta PayPal de sandbox para completar el pago.</p>
+                  <a
+                    href="https://developer.paypal.com/tools/sandbox/accounts/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 inline-block underline hover:text-amber-900"
+                  >
+                    Ver cuentas de prueba →
+                  </a>
+                </div>
+              )}
             </div>
 
             {/* Columna derecha: Botón PayPal */}
