@@ -61,7 +61,7 @@ const PlanCard = ({ plan, dark }) => (
     </ul>
 
     <Link
-      to="/register"
+      to={`/register?plan=${plan.id}`}
       className={`mt-8 block rounded-xl py-3 text-center text-sm font-semibold transition-colors
         ${plan.highlight
           ? 'bg-white text-primary-600 hover:bg-primary-50'

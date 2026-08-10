@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import ReCAPTCHA from 'react-google-recaptcha';
 import { useAuth } from '../context/AuthContext';
 import PasswordInput from '../components/PasswordInput';
@@ -22,12 +22,19 @@ const PLANS = [
 
 export default function Register() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { setSession } = useAuth();
   const { policy } = usePasswordPolicy();
   const [step, setStep] = useState(1);
+
+  // Leer el plan preseleccionado desde la URL (?plan=PROFESIONAL)
+  const VALID_PLANS = ['BASICO', 'PROFESIONAL', 'CORPORATIVO'];
+  const planFromUrl = searchParams.get('plan')?.toUpperCase();
+  const initialPlan = VALID_PLANS.includes(planFromUrl) ? planFromUrl : 'BASICO';
+
   const [form, setForm] = useState({
     companyName: '',
-    plan: 'BASICO',
+    plan: initialPlan,
     name: '',
     email: '',
     password: '',
