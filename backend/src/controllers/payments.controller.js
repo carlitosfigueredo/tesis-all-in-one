@@ -294,7 +294,7 @@ const verifyAdamsPayDebt = async (req, res, next) => {
       }
 
       // Registrar pago con datos reales de AdamsPay
-      const amountPyg = debt.amount?.value || 0;
+      const amountPyg = parseInt(debt.amount?.value, 10) || 0;
       const payment = await prisma.payment.create({
         data: {
           companyId:      req.user.companyId,
