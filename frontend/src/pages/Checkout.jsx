@@ -214,6 +214,29 @@ export default function Checkout() {
   // Plan preseleccionado desde el registro o la landing
   const preselectedPlanId = location.state?.preselectedPlan || null;
 
+  // Capturamos el docId UNA sola vez al montar (antes de que cualquier effect lo borre)
+  const adamsDocIdRef = useRef(sessionStorage.getItem('adamspay_docId'));
+  const adamsPayTxRef = useRef(new URLSearchParams(window.location.search).get('payTx'));
+  const isReturningFromAdams = useRef(
+    !!adamsDocIdRef.current ||
+    window.location.search.includes('payProvider=adams') ||
+    window.location.search.includes('payEndReason')
+  );
+
+  // Limpiar sessionStorage y params de URL inmediatamente al montar
+  // Usamos localStorage como flag temporal para el interceptor de axios
+  useEffect(() => {
+    if (isReturningFromAdams.current) {
+      // Marcar para el interceptor ANTES de limpiar
+      localStorage.setItem('_returning_from_payment', '1');
+      sessionStorage.removeItem('adamspay_docId');
+      sessionStorage.removeItem('adamspay_planId');
+      window.history.replaceState({}, '', window.location.pathname);
+      // Limpiar el flag después de que la auth se restaure (3 segundos)
+      setTimeout(() => localStorage.removeItem('_returning_from_payment'), 5000);
+    }
+  }, []);
+
   useEffect(() => {
     api.get('/payments/plans')
       .then(({ data }) => {
@@ -231,62 +254,60 @@ export default function Checkout() {
   }, [preselectedPlanId]);
 
   // Verificar si el usuario volvió de AdamsPay con un pago pendiente
-  // IMPORTANTE: esperar a que la auth esté lista (authLoading=false) antes de llamar la API
+  // Espera a que auth esté lista. Usa refs para no depender de cambios de URL/sessionStorage.
   useEffect(() => {
-    if (authLoading) return; // esperar que se restaure el token de localStorage
+    if (authLoading) return;
+    if (!isReturningFromAdams.current) return;
+
+    const docId = adamsDocIdRef.current;
+    const payTx = adamsPayTxRef.current;
 
     const urlParams    = new URLSearchParams(window.location.search);
-    const payEndReason = urlParams.get('payEndReason');
-    const payTx        = urlParams.get('payTx');
-    const payProvider  = urlParams.get('payProvider');
-    const docId        = sessionStorage.getItem('adamspay_docId');
-
-    if (!docId && payProvider !== 'adams') return;
-
-    // Limpiar params de la URL sin recargar
-    if (payProvider) {
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-    if (docId) {
-      sessionStorage.removeItem('adamspay_docId');
-      sessionStorage.removeItem('adamspay_planId');
-    }
+    const payEndReason = urlParams.get('payEndReason') || sessionStorage.getItem('adamspay_lastEndReason');
 
     if (payEndReason === 'cancel' || payEndReason === 'cancelled') {
       setError('Cancelaste el pago con AdamsPay. Podés intentarlo de nuevo.');
+      isReturningFromAdams.current = false;
       return;
     }
 
     if (!isAuthenticated) {
-      // El usuario no está autenticado — no podemos verificar
-      setError('Tu sesión expiró mientras procesabas el pago. Iniciá sesión y verificá el estado en tu perfil.');
+      setError('Tu sesión expiró mientras procesabas el pago. Iniciá sesión de nuevo.');
+      isReturningFromAdams.current = false;
       return;
     }
 
-    if (payEndReason === 'success' || payTx || docId) {
-      const idToVerify = docId;
-      if (!idToVerify) {
-        setError('No se pudo identificar el pago. Si ya pagaste, contactá soporte.');
-        return;
-      }
-      setLoading(true);
-      api.post(`/payments/adamspay/verify/${idToVerify}`)
-        .then(({ data }) => {
-          if (data.success && data.data?.paymentId) {
-            api.get(`/payments/receipt/${data.data.paymentId}`)
-              .then(({ data: r }) => setReceipt({ ...r.data, paypalCaptureId: payTx || null }))
-              .catch(() => {
-                setError('Pago confirmado! Tu empresa ya está activa. Redirigiendo...');
-                setTimeout(() => { navigate('/dashboard', { replace: true }); window.location.reload(); }, 2000);
-              });
-          } else {
-            setError(data.message || 'El pago todavía no fue procesado. Si ya pagaste, esperá unos minutos y recargá.');
-          }
-        })
-        .catch((err) => setError(err.response?.data?.message ?? 'No se pudo verificar el pago de AdamsPay'))
-        .finally(() => setLoading(false));
+    if (!docId) {
+      // Volvió de AdamsPay pero sin docId — puede ser que ya se procesó
+      setError('No se encontró el ID del pago. Si ya pagaste, verificá el estado en tu suscripción.');
+      isReturningFromAdams.current = false;
+      return;
     }
-  }, [authLoading, isAuthenticated]); // depende de authLoading para esperar la sesion
+
+    // Procesar una sola vez
+    isReturningFromAdams.current = false;
+    setLoading(true);
+
+    api.post(`/payments/adamspay/verify/${docId}`)
+      .then(({ data }) => {
+        if (data.success && data.data?.paymentId) {
+          api.get(`/payments/receipt/${data.data.paymentId}`)
+            .then(({ data: r }) => setReceipt({ ...r.data, paypalCaptureId: payTx || null }))
+            .catch(() => {
+              setError('Pago confirmado via AdamsPay! Redirigiendo al dashboard...');
+              setTimeout(() => { navigate('/dashboard', { replace: true }); window.location.reload(); }, 2500);
+            });
+        } else {
+          setError(data.message || 'El pago todavía no fue confirmado. Si ya pagaste, esperá unos minutos y recargá.');
+        }
+      })
+      .catch((err) => {
+        const msg = err.response?.data?.message ?? 'No se pudo verificar el pago de AdamsPay';
+        setError(msg);
+      })
+      .finally(() => setLoading(false));
+
+  }, [authLoading, isAuthenticated, navigate]);
 
   // ── Paso 1: el SDK de PayPal llama esto para crear la orden en nuestro backend
   const handleCreateOrder = async () => {

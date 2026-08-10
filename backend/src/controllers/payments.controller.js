@@ -250,10 +250,11 @@ const verifyAdamsPayDebt = async (req, res, next) => {
     const debtData = await getDebt(docId);
     const debt     = debtData.debt || debtData;
 
+    console.log(`[AdamsPay verify] docId=${docId} companyId=${req.user.companyId} debt.status=${debt.status}`);
+
     // Verificar que la deuda pertenece a esta empresa usando el docId del param
-    // (que fue creado por nosotros con formato UUID-PLANID-TIMESTAMP)
-    // No usamos debt.docId porque AdamsPay puede devolverlo con otro nombre
     if (!docId.startsWith(req.user.companyId)) {
+      console.warn(`[AdamsPay verify] Acceso denegado: docId="${docId}" no empieza con companyId="${req.user.companyId}"`);
       return res.status(403).json({ success: false, message: 'No tenes permiso para ver esta deuda' });
     }
 
