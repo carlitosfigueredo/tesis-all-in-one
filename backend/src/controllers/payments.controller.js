@@ -1,11 +1,162 @@
 // ─────────────────────────────────────────
-// Payments Controller — Pasarela de pagos mock
+// Payments Controller — PayPal Orders API v2 (Sandbox)
 // ─────────────────────────────────────────
 
 const prisma = require('../lib/prisma');
 const { validateCard, processPayment, getPaymentHistory, getSubscription, TEST_CARDS } = require('../services/payment.service');
+const { createOrder, captureOrder } = require('../services/paypal.service');
 const { logAction } = require('../services/audit.service');
 const { getIp, getUserAgent } = require('../utils/request.utils');
+
+/**
+ * POST /api/payments/create-order
+ * Crea una orden de pago en PayPal y devuelve el orderID al frontend.
+ * El frontend usa ese orderID para mostrar el botón PayPal.
+ * Body: { planId }
+ */
+const createPayPalOrder = async (req, res, next) => {
+  const ip = getIp(req);
+  const ua = getUserAgent(req);
+
+  try {
+    const { planId } = req.body;
+
+    if (!planId) {
+      return res.status(400).json({ success: false, message: 'Selecciona un plan' });
+    }
+    if (!req.user.companyId) {
+      return res.status(400).json({ success: false, message: 'No tenes una empresa asociada' });
+    }
+
+    const plan = await prisma.planConfig.findUnique({ where: { id: planId } });
+    if (!plan) {
+      return res.status(404).json({ success: false, message: 'Plan no encontrado' });
+    }
+
+    const result = await createOrder({
+      planId,
+      amountPyg: plan.priceGs,
+      companyId: req.user.companyId,
+      userId:    req.user.id,
+    });
+
+    await logAction({
+      tenantId:  req.user.companyId,
+      userId:    req.user.id,
+      action:    'PAYMENT_ORDER_CREATED',
+      resource:  'payments',
+      resourceId: result.orderId,
+      ipAddress: ip,
+      userAgent: ua,
+      status:    'SUCCESS',
+      newValue:  { planId, orderId: result.orderId, amountUsd: result.amountUsd, amountPyg: result.amountPyg },
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        orderId:    result.orderId,
+        amountUsd:  result.amountUsd,
+        amountPyg:  result.amountPyg,
+      },
+    });
+  } catch (error) {
+    await logAction({
+      tenantId:  req.user?.companyId,
+      userId:    req.user?.id,
+      action:    'PAYMENT_ORDER_FAILED',
+      resource:  'payments',
+      ipAddress: ip,
+      userAgent: ua,
+      status:    'FAILURE',
+      errorMsg:  error.message,
+    }).catch(() => {});
+    next(error);
+  }
+};
+
+/**
+ * POST /api/payments/capture-order
+ * Captura (cobra) la orden ya aprobada por el usuario en el popup de PayPal.
+ * Body: { orderId, planId }
+ */
+const capturePayPalOrder = async (req, res, next) => {
+  const ip = getIp(req);
+  const ua = getUserAgent(req);
+
+  try {
+    const { orderId, planId } = req.body;
+
+    if (!orderId || !planId) {
+      return res.status(400).json({ success: false, message: 'orderId y planId son requeridos' });
+    }
+    if (!req.user.companyId) {
+      return res.status(400).json({ success: false, message: 'No tenes una empresa asociada' });
+    }
+
+    const result = await captureOrder({
+      orderId,
+      companyId: req.user.companyId,
+      planId,
+      userId:    req.user.id,
+    });
+
+    const auditAction = result.status === 'APPROVED' ? 'PAYMENT_APPROVED'
+      : result.status === 'PENDING' ? 'PAYMENT_PENDING'
+      : 'PAYMENT_REJECTED';
+
+    await logAction({
+      tenantId:  req.user.companyId,
+      userId:    req.user.id,
+      action:    auditAction,
+      resource:  'payments',
+      resourceId: result.paymentId,
+      ipAddress: ip,
+      userAgent: ua,
+      status:    result.status === 'APPROVED' ? 'SUCCESS' : result.status === 'PENDING' ? 'WARNING' : 'FAILURE',
+      errorMsg:  result.failureReason,
+      newValue:  {
+        paypalOrderId:   result.paypalOrderId,
+        paypalCaptureId: result.paypalCaptureId,
+        amountPyg:       result.amountPyg,
+        amountUsd:       result.amountUsd,
+        planId,
+      },
+    });
+
+    if (result.status === 'APPROVED') {
+      return res.json({
+        success: true,
+        message: 'Pago procesado exitosamente via PayPal. Tu empresa ya esta activa!',
+        data: result,
+      });
+    } else if (result.status === 'PENDING') {
+      return res.status(202).json({
+        success: true,
+        message: 'Pago en proceso de verificacion por PayPal',
+        data: result,
+      });
+    } else {
+      return res.status(402).json({
+        success: false,
+        message: result.failureReason || 'El pago fue rechazado por PayPal',
+        data: result,
+      });
+    }
+  } catch (error) {
+    await logAction({
+      tenantId:  req.user?.companyId,
+      userId:    req.user?.id,
+      action:    'PAYMENT_CAPTURE_FAILED',
+      resource:  'payments',
+      ipAddress: ip,
+      userAgent: ua,
+      status:    'FAILURE',
+      errorMsg:  error.message,
+    }).catch(() => {});
+    next(error);
+  }
+};
 
 /**
  * GET /api/payments/plans
@@ -392,6 +543,8 @@ const toggleCompanyStatus = async (req, res, next) => {
 };
 
 module.exports = {
+  createPayPalOrder,
+  capturePayPalOrder,
   getCheckoutPlans,
   processCheckout,
   getHistory,
