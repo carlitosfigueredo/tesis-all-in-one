@@ -84,4 +84,18 @@ async function getResetTokenConfig() {
   return { ...DEFAULT_RESET_TOKEN_CONFIG, ...(stored ?? {}) };
 }
 
-module.exports = { getConfig, setConfig, getPasswordPolicy, getResetTokenConfig, DEFAULT_PASSWORD_POLICY, DEFAULT_RESET_TOKEN_CONFIG };
+/**
+ * Devuelve la tasa de conversion PYG → USD vigente.
+ * Primero busca en BD (SystemConfig key: exchange_rates).
+ * Fallback: variable de entorno PYG_TO_USD_RATE, luego 7500.
+ */
+async function getPygToUsdRate() {
+  const stored = await getConfig('exchange_rates');
+  if (stored?.PYG_TO_USD && stored.PYG_TO_USD > 0) {
+    return parseFloat(stored.PYG_TO_USD);
+  }
+  // Fallback a variable de entorno o valor por defecto
+  return parseFloat(process.env.PYG_TO_USD_RATE || '7500');
+}
+
+module.exports = { getConfig, setConfig, getPasswordPolicy, getResetTokenConfig, getPygToUsdRate, DEFAULT_PASSWORD_POLICY, DEFAULT_RESET_TOKEN_CONFIG };

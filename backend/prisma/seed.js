@@ -328,7 +328,38 @@ async function main() {
     console.log(`  ✓ Empleados ya existen (${existingEmployees}), no se recrean`);
   }
 
-  console.log('\nSeed completado exitosamente!');
+  // ─── Configuracion global del sistema ──────────────────────────────────────
+  const systemConfigs = [
+    {
+      key:   'password_policy',
+      value: {
+        minLength: 8, maxLength: 128,
+        requireUppercase: true, requireLowercase: true,
+        requireNumber: true, requireSpecial: true,
+      },
+    },
+    {
+      key:   'reset_token_config',
+      value: { ttlMinutes: 5, maxDailyRequests: 3 },
+    },
+    {
+      key:   'exchange_rates',
+      value: {
+        PYG_TO_USD: 7500,
+        description: 'Tasa de conversion guaranies a USD para procesamiento de pagos via PayPal',
+        updatedNote: 'Ajustar segun cotizacion del BCP (Banco Central del Paraguay)',
+      },
+    },
+  ];
+
+  for (const cfg of systemConfigs) {
+    await prisma.systemConfig.upsert({
+      where:  { key: cfg.key },
+      update: {},          // no sobreescribir si ya existe (preserva cambios del admin)
+      create: { key: cfg.key, value: cfg.value },
+    });
+  }
+  console.log(`  ✓ ${systemConfigs.length} configuraciones del sistema inicializadas`);
   console.log('\n── Credenciales de acceso ──');
   console.log('Super Admin:   carlosalberto.figueredoquevedo@gmail.com / Admin2025!');
   console.log('Admin Empresa: admin@empresa.com / Demo2025!');

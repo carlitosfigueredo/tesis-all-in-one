@@ -94,13 +94,14 @@ const PLAN_ID_TO_ENUM = {
   CORPORATIVO: 'CORPORATIVO',
 };
 
+const { getPygToUsdRate } = require('./systemConfig.service');
+
 /**
  * Convierte guaranies (PYG) a USD para PayPal.
- * PayPal Sandbox usa USD como moneda de prueba.
- * Tasa aproximada: 1 USD ≈ 7.500 PYG (ajustar segun necesidad)
+ * Lee la tasa desde SystemConfig (BD), con fallback a .env y luego 7500.
  */
-const pygToUsd = (amountPyg) => {
-  const rate = parseFloat(process.env.PYG_TO_USD_RATE || '7500');
+const pygToUsd = async (amountPyg) => {
+  const rate = await getPygToUsdRate();
   return (amountPyg / rate).toFixed(2);
 };
 
@@ -115,7 +116,7 @@ const pygToUsd = (amountPyg) => {
  * @param {string} params.userId    - ID del usuario
  */
 const createOrder = async ({ planId, amountPyg, companyId, userId }) => {
-  const amountUsd = pygToUsd(amountPyg);
+  const amountUsd = await pygToUsd(amountPyg);
 
   // Idempotency key unico por intento (evita doble procesamiento — punto 14 Apuntes UNIDA)
   const requestId = `order-${companyId}-${planId}-${Date.now()}`;
@@ -188,7 +189,8 @@ const captureOrder = async ({ orderId, companyId, planId, userId }) => {
   const captureStatus  = captureResult.status; // COMPLETED | DECLINED | PENDING
   const captureId      = captureResult.id;
   const amountUsd      = parseFloat(captureResult.amount?.value || '0');
-  const amountPyg      = Math.round(amountUsd * parseFloat(process.env.PYG_TO_USD_RATE || '7500'));
+  const rate           = await getPygToUsdRate();
+  const amountPyg      = Math.round(amountUsd * rate);
   const payerName      = capture.payer?.name?.given_name + ' ' + capture.payer?.name?.surname;
   const payerEmail     = capture.payer?.email_address;
 

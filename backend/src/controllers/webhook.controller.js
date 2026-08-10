@@ -12,6 +12,7 @@
 
 const prisma  = require('../lib/prisma');
 const { getAccessToken } = require('../services/paypal.service');
+const { getPygToUsdRate } = require('../services/systemConfig.service');
 
 // Eventos que nos interesan manejar
 const HANDLED_EVENTS = [
