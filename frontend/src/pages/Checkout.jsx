@@ -308,6 +308,7 @@ export default function Checkout() {
       currency:   'USD',
       intent:     'capture',
       components: 'buttons',
+      locale:     'es_ES',
     }}>
       <div className="min-h-screen bg-gray-50 py-8 px-4">
         <div className="mx-auto max-w-4xl">

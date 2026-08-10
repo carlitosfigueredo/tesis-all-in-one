@@ -142,7 +142,7 @@ const createOrder = async ({ planId, amountPyg, companyId, userId }) => {
           experience_context: {
             payment_method_preference: 'IMMEDIATE_PAYMENT_REQUIRED',
             brand_name: 'Sistema BI — Retencion de Talento',
-            locale: 'es-PY',
+            locale: 'es-ES',
             landing_page: 'LOGIN',
             user_action: 'PAY_NOW',
             // return_url y cancel_url requeridos por PayPal Sandbox
