@@ -27,6 +27,7 @@ model Company {
   payments     Payment[]
   subscription Subscription?
   roles        Role[]
+  consentRecords ConsentRecord[]
 
   @@map("companies")
 }
@@ -51,9 +52,10 @@ model User {
   company   Company? @relation(fields: [companyId], references: [id])
 
   // RBAC: relacion muchos-a-muchos con roles
-  userRoles   UserRole[]
-  auditLogs   AuditLog[]
-  resetTokens PasswordResetToken[]
+  userRoles      UserRole[]
+  auditLogs      AuditLog[]
+  resetTokens    PasswordResetToken[]
+  consentRecords ConsentRecord[]
 
   @@map("users")
 }
@@ -334,4 +336,47 @@ model SystemConfig {
   updatedBy String?              // userId del admin que lo cambio
 
   @@map("system_configs")
+}
+
+// ─────────────────────────────────────────
+// Registro de consentimientos informados
+// Cumple Ley N.º 7593/2025 de Proteccion de Datos Personales (Paraguay)
+// Punto 35 de los Apuntes de Tesis UNIDA
+// ─────────────────────────────────────────
+model ConsentRecord {
+  id              String    @id @default(uuid())
+
+  // Tipo: TERMS_AND_CONDITIONS | PRIVACY_POLICY | DATA_PROCESSING
+  consentType     String
+
+  // Version del documento aceptado (Ej: "1.0")
+  documentVersion String    @default("1.0")
+
+  // true = aceptado, false = rechazado/revocado
+  accepted        Boolean   @default(false)
+
+  // Contexto de la aceptacion
+  ipAddress       String?
+  userAgent       String?
+
+  // Fechas
+  acceptedAt      DateTime?
+  revokedAt       DateTime?
+
+  // Finalidad autorizada (Ej: "Gestion de cuenta y servicios BI")
+  purpose         String?
+
+  createdAt       DateTime  @default(now())
+
+  // Relaciones
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+
+  @@index([userId])
+  @@index([companyId])
+  @@index([consentType])
+  @@map("consent_records")
 }

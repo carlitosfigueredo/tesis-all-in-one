@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AlertMessage from '../components/AlertMessage';
@@ -35,6 +35,8 @@ export default function Checkout() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [receipt, setReceipt] = useState(null); // comprobante estructurado
+  const receiptRef = useRef(null);
   const [form, setForm] = useState({
     cardNumber: '',
     expiryMonth: '',
@@ -107,11 +109,15 @@ export default function Checkout() {
       });
 
       if (res.success && res.data.status === 'APPROVED') {
-        setSuccess('Pago aprobado! Tu empresa esta activa. Redirigiendo...');
-        setTimeout(() => {
-          navigate('/dashboard', { replace: true });
-          window.location.reload();
-        }, 2000);
+        // Obtener el comprobante estructurado (punto 36 Apuntes UNIDA)
+        try {
+          const { data: receiptRes } = await api.get(`/payments/receipt/${res.data.paymentId}`);
+          setReceipt(receiptRes.data);
+        } catch {
+          // Si falla el comprobante, igual mostrar exito y redirigir
+          setSuccess('Pago aprobado! Tu empresa esta activa. Redirigiendo...');
+          setTimeout(() => { navigate('/dashboard', { replace: true }); window.location.reload(); }, 2000);
+        }
       } else if (res.data?.status === 'PENDING') {
         setSuccess('Pago en proceso de verificacion. Te notificaremos cuando se confirme.');
       }
@@ -129,6 +135,199 @@ export default function Checkout() {
   };
 
   const formatGs = (n) => `Gs. ${Number(n).toLocaleString('es-PY')}`;
+
+  const formatDate = (d) => {
+    if (!d) return '—';
+    return new Date(d).toLocaleString('es-PY', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+  };
+
+  const formatDateShort = (d) => {
+    if (!d) return '—';
+    return new Date(d).toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+
+  // ── Pantalla de comprobante (se muestra cuando el pago fue aprobado) ────────
+  if (receipt) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8 px-4">
+        <div className="mx-auto max-w-2xl">
+
+          {/* Encabezado del comprobante */}
+          <div ref={receiptRef} className="rounded-2xl bg-white shadow-sm border border-gray-200 overflow-hidden">
+
+            {/* Banda superior verde */}
+            <div className="bg-green-500 px-8 py-5 flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2 text-white mb-1">
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="font-semibold text-sm">Pago aprobado</span>
+                </div>
+                <p className="text-green-100 text-xs">Tu empresa ya esta activa</p>
+              </div>
+              <div className="text-right text-white">
+                <p className="text-xs text-green-200">Comprobante N.°</p>
+                <p className="font-mono font-bold text-sm">{receipt.receiptNumber}</p>
+              </div>
+            </div>
+
+            <div className="px-8 py-6 space-y-6">
+
+              {/* Datos del emisor */}
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Emisor</p>
+                  <p className="font-bold text-gray-900">{receipt.emitter.name}</p>
+                  <p className="text-xs text-gray-500">{receipt.emitter.email}</p>
+                  <p className="text-xs text-gray-400 italic mt-0.5">{receipt.emitter.note}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Fecha de emision</p>
+                  <p className="text-sm text-gray-700">{formatDate(receipt.issuedAt)}</p>
+                  <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${
+                    receipt.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                    receipt.status === 'PENDING'  ? 'bg-amber-100 text-amber-700' :
+                    'bg-red-100 text-red-700'
+                  }`}>
+                    {receipt.status === 'APPROVED' ? 'Pagado' : receipt.status === 'PENDING' ? 'Pendiente' : 'Rechazado'}
+                  </span>
+                </div>
+              </div>
+
+              <hr className="border-gray-100" />
+
+              {/* Datos del pagador */}
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Datos del pagador</p>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className="text-xs text-gray-400">Empresa</p>
+                    <p className="font-medium text-gray-800">{receipt.payer.companyName}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400">Responsable</p>
+                    <p className="font-medium text-gray-800">{receipt.payer.contactName}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <p className="text-xs text-gray-400">Correo electrónico</p>
+                    <p className="font-medium text-gray-800">{receipt.payer.email}</p>
+                  </div>
+                </div>
+              </div>
+
+              <hr className="border-gray-100" />
+
+              {/* Detalle del concepto */}
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Detalle del concepto</p>
+                <div className="rounded-lg bg-gray-50 border border-gray-100 p-4 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Concepto</span>
+                    <span className="font-medium text-gray-800">{receipt.concept.description}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Plan</span>
+                    <span className="font-medium text-gray-800">{receipt.concept.plan}</span>
+                  </div>
+                  {receipt.concept.periodStart && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Período</span>
+                      <span className="font-medium text-gray-800">
+                        {formatDateShort(receipt.concept.periodStart)} al {formatDateShort(receipt.concept.periodEnd)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Monto */}
+              <div className="rounded-xl bg-primary-50 border border-primary-100 p-4">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-semibold text-gray-700">Total recibido</span>
+                  <span className="text-2xl font-extrabold text-primary-700">{formatGs(receipt.amount.value)}</span>
+                </div>
+                <p className="text-xs text-gray-500 capitalize">
+                  En letras: <em>{receipt.amount.inWords}</em>
+                </p>
+                <p className="text-xs text-gray-400 mt-0.5">Moneda: {receipt.amount.currency}</p>
+              </div>
+
+              {/* Forma de pago */}
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Forma de pago</p>
+                <div className="flex items-center gap-3 text-sm">
+                  <div className="flex h-8 w-12 items-center justify-center rounded border border-gray-200 bg-gray-50">
+                    <span className={`text-xs font-bold ${
+                      receipt.paymentMethod.cardBrand === 'VISA' ? 'text-blue-600' :
+                      receipt.paymentMethod.cardBrand === 'MASTERCARD' ? 'text-orange-500' :
+                      'text-gray-500'
+                    }`}>
+                      {receipt.paymentMethod.cardBrand ?? 'TARJETA'}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-800">
+                      Tarjeta terminada en {receipt.paymentMethod.cardLast4 ?? '****'}
+                    </p>
+                    <p className="text-xs text-gray-400 capitalize">{receipt.paymentMethod.type}</p>
+                  </div>
+                </div>
+              </div>
+
+              <hr className="border-gray-100" />
+
+              {/* Trazabilidad */}
+              <div className="text-xs text-gray-400 space-y-1">
+                <div className="flex justify-between">
+                  <span>ID de transacción</span>
+                  <span className="font-mono">{receipt.receiptId}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Procesado</span>
+                  <span>{formatDate(receipt.processedAt)}</span>
+                </div>
+              </div>
+
+              {/* Leyenda legal */}
+              <div className="rounded-lg bg-gray-50 border border-gray-100 p-3">
+                <p className="text-xs text-gray-500 italic leading-relaxed">{receipt.legalNote}</p>
+              </div>
+
+            </div>
+          </div>
+
+          {/* Acciones post-comprobante */}
+          <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+              Imprimir / Guardar PDF
+            </button>
+            <button
+              type="button"
+              onClick={() => { navigate('/dashboard', { replace: true }); window.location.reload(); }}
+              className="flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 transition-colors"
+            >
+              Ir al Dashboard
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+            </button>
+          </div>
+
+        </div>
+      </div>
+    );
+  }
 
   // Guard: si todavia esta cargando el auth, mostrar spinner
   if (authLoading) {

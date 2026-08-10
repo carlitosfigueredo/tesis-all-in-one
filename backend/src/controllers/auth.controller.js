@@ -447,16 +447,31 @@ const forceChangePassword = async (req, res, next) => {
 /**
  * POST /api/auth/register
  * Registro publico: crea empresa + usuario + asigna rol COMPANY_ADMIN.
+ * Guarda consentimientos informados en consent_records (Ley N.° 7593/2025).
  */
 const register = async (req, res, next) => {
   const ip = getIp(req);
   const ua = getUserAgent(req);
   try {
-    const { companyName, plan, name, email, password } = req.body;
+    const { companyName, plan, name, email, password, consents } = req.body;
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       return res.status(409).json({ success: false, message: 'Ya existe una cuenta con ese correo' });
+    }
+
+    // Validar que se aceptaron ambos consentimientos obligatorios
+    if (!consents?.privacyPolicy?.accepted) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tenes que aceptar la Politica de Privacidad para registrarte',
+      });
+    }
+    if (!consents?.termsAndConditions?.accepted) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tenes que aceptar los Terminos y Condiciones para registrarte',
+      });
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
@@ -465,6 +480,8 @@ const register = async (req, res, next) => {
     const companyAdminRole = await prisma.role.findFirst({
       where: { name: 'COMPANY_ADMIN', companyId: null, isSystem: true },
     });
+
+    const now = new Date();
 
     const result = await prisma.$transaction(async (tx) => {
       const company = await tx.company.create({
@@ -492,6 +509,34 @@ const register = async (req, res, next) => {
         });
       }
 
+      // ── Registrar consentimientos (Ley N.° 7593/2025 — UNIDA punto 35) ──────
+      await tx.consentRecord.createMany({
+        data: [
+          {
+            userId:          user.id,
+            companyId:       company.id,
+            consentType:     'PRIVACY_POLICY',
+            documentVersion: consents.privacyPolicy.version || '1.0',
+            accepted:        true,
+            acceptedAt:      now,
+            ipAddress:       ip,
+            userAgent:       ua,
+            purpose:         'Gestion de cuenta y servicios de analisis de retencion de talento',
+          },
+          {
+            userId:          user.id,
+            companyId:       company.id,
+            consentType:     'TERMS_AND_CONDITIONS',
+            documentVersion: consents.termsAndConditions.version || '1.0',
+            accepted:        true,
+            acceptedAt:      now,
+            ipAddress:       ip,
+            userAgent:       ua,
+            purpose:         'Aceptacion de condiciones de uso del sistema',
+          },
+        ],
+      });
+
       return { company, user };
     });
 
@@ -505,6 +550,26 @@ const register = async (req, res, next) => {
       userAgent: ua,
       status: 'SUCCESS',
       newValue: { companyName: result.company.name, plan: result.company.plan },
+    });
+
+    // Loguear consentimientos en audit_logs (trazabilidad extra)
+    await logAction({
+      tenantId: result.company.id,
+      userId: result.user.id,
+      action: 'CONSENT_RECORDED',
+      resource: 'consent_records',
+      resourceId: result.user.id,
+      ipAddress: ip,
+      userAgent: ua,
+      status: 'SUCCESS',
+      newValue: {
+        consents: ['PRIVACY_POLICY', 'TERMS_AND_CONDITIONS'],
+        versions: {
+          privacyPolicy:      consents.privacyPolicy.version || '1.0',
+          termsAndConditions: consents.termsAndConditions.version || '1.0',
+        },
+        acceptedAt: now.toISOString(),
+      },
     });
 
     // Cargar permisos del nuevo usuario

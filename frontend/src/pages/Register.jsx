@@ -8,6 +8,10 @@ import AlertMessage from '../components/AlertMessage';
 import api from '../services/api';
 import { usePasswordPolicy } from '../hooks/usePasswordPolicy';
 
+// Version de los documentos legales — debe coincidir con PrivacyPolicy.jsx y TermsAndConditions.jsx
+const PRIVACY_VERSION = '1.0';
+const TERMS_VERSION   = '1.0';
+
 const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
 
 const PLANS = [
@@ -33,6 +37,10 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const recaptchaRef = useRef(null);
   const [captchaToken, setCaptchaToken] = useState(null);
+
+  // Consentimientos — NO preseleccionados (requisito UNIDA punto 35)
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
+  const [acceptedTerms, setAcceptedTerms]     = useState(false);
 
   const handleChange = (e) =>
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -71,6 +79,16 @@ export default function Register() {
       return;
     }
 
+    // Validar consentimientos obligatorios (UNIDA punto 35)
+    if (!acceptedPrivacy) {
+      setErrors(['Tenes que aceptar la Politica de Privacidad para continuar']);
+      return;
+    }
+    if (!acceptedTerms) {
+      setErrors(['Tenes que aceptar los Terminos y Condiciones para continuar']);
+      return;
+    }
+
     setLoading(true);
     try {
       const { data: res } = await api.post('/auth/register', {
@@ -81,6 +99,11 @@ export default function Register() {
         password: form.password,
         confirmPassword: form.confirmPassword,
         recaptchaToken: captchaToken,
+        // Consentimientos con version del documento
+        consents: {
+          privacyPolicy:       { accepted: true, version: PRIVACY_VERSION },
+          termsAndConditions:  { accepted: true, version: TERMS_VERSION   },
+        },
       });
 
       // Guardar token y setear usuario en contexto
@@ -250,6 +273,73 @@ export default function Register() {
                 placeholder="Repeti tu contrasena"
                 required
               />
+
+              {/* Aviso de privacidad + consentimientos — NO preseleccionados (UNIDA punto 35) */}
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600">
+                <p className="mb-2 font-medium text-gray-700">Aviso de Privacidad</p>
+                <p>
+                  Los datos personales que proporcionás serán utilizados para gestionar tu cuenta
+                  y brindar los servicios contratados, conforme a la{' '}
+                  <strong>Ley N.º 7593/2025</strong> de Protección de Datos Personales de Paraguay.
+                  Para más información consultá nuestra{' '}
+                  <Link
+                    to="/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary-600 underline hover:text-primary-800"
+                  >
+                    Política de Privacidad
+                  </Link>.
+                </p>
+              </div>
+
+              {/* Casilla 1: Política de Privacidad — NO preseleccionada */}
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={acceptedPrivacy}
+                  onChange={(e) => setAcceptedPrivacy(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  // defaultChecked NO se usa — casilla vacía por defecto (UNIDA punto 35)
+                />
+                <span className="text-xs text-gray-600 leading-relaxed">
+                  He leído el Aviso de Privacidad y consiento el tratamiento de mis datos personales
+                  para las finalidades descritas en la{' '}
+                  <Link
+                    to="/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary-600 underline hover:text-primary-800"
+                  >
+                    Política de Privacidad
+                  </Link>{' '}
+                  (versión {PRIVACY_VERSION}).{' '}
+                  <span className="font-semibold text-red-500">*</span>
+                </span>
+              </label>
+
+              {/* Casilla 2: Términos y Condiciones — NO preseleccionada */}
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                />
+                <span className="text-xs text-gray-600 leading-relaxed">
+                  He leído y acepto los{' '}
+                  <Link
+                    to="/terms"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary-600 underline hover:text-primary-800"
+                  >
+                    Términos y Condiciones de Uso
+                  </Link>{' '}
+                  (versión {TERMS_VERSION}).{' '}
+                  <span className="font-semibold text-red-500">*</span>
+                </span>
+              </label>
 
               {/* reCAPTCHA */}
               {RECAPTCHA_SITE_KEY && (

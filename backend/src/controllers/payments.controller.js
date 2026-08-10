@@ -217,9 +217,142 @@ const getAllPayments = async (req, res, next) => {
 };
 
 /**
- * PATCH /api/admin/companies/:id/status
- * Activar/suspender empresa manualmente (SUPER_ADMIN).
+ * GET /api/payments/receipt/:paymentId
+ * Devuelve el comprobante de pago estructurado (punto 36 Apuntes UNIDA).
+ * Solo el propietario del pago puede verlo.
  */
+const getReceipt = async (req, res, next) => {
+  try {
+    const { paymentId } = req.params;
+
+    const payment = await prisma.payment.findUnique({
+      where: { id: paymentId },
+      include: {
+        company: {
+          select: {
+            id: true,
+            name: true,
+            plan: true,
+          },
+        },
+        subscription: {
+          select: {
+            id: true,
+            planId: true,
+            currentPeriodStart: true,
+            currentPeriodEnd: true,
+          },
+        },
+      },
+    });
+
+    if (!payment) {
+      return res.status(404).json({ success: false, message: 'Comprobante no encontrado' });
+    }
+
+    // Solo el propietario puede ver su comprobante
+    if (payment.companyId !== req.user.companyId) {
+      return res.status(403).json({ success: false, message: 'No tenes permiso para ver este comprobante' });
+    }
+
+    // Obtener usuario pagador
+    const payer = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { name: true, email: true },
+    });
+
+    // Formatear numero de recibo: REC-YYYYMM-XXXX (ultimos 8 chars del UUID)
+    const receiptNumber = `REC-${new Date(payment.createdAt).toISOString().slice(0, 7).replace('-', '')}-${payment.id.slice(-8).toUpperCase()}`;
+
+    const receipt = {
+      // Identificacion del recibo (punto 36)
+      receiptNumber,
+      receiptId:    payment.id,
+      issuedAt:     payment.processedAt || payment.createdAt,
+      status:       payment.status, // APPROVED | PENDING | REJECTED
+
+      // Datos del emisor
+      emitter: {
+        name:  'Sistema BI — Retencion de Talento',
+        email: 'noreply@sistema-bi.com',
+        note:  'Desarrollado como Trabajo de Tesis — UNIDA Paraguay',
+      },
+
+      // Datos del pagador
+      payer: {
+        companyName: payment.company?.name ?? '',
+        contactName: payer?.name ?? '',
+        email:       payer?.email ?? '',
+      },
+
+      // Detalle del concepto
+      concept: {
+        description: payment.description || `Suscripcion plan ${payment.subscription?.planId ?? ''}`,
+        plan:        payment.subscription?.planId ?? payment.company?.plan ?? '',
+        periodStart: payment.subscription?.currentPeriodStart ?? null,
+        periodEnd:   payment.subscription?.currentPeriodEnd   ?? null,
+      },
+
+      // Informacion del monto
+      amount: {
+        value:    payment.amount,
+        currency: payment.currency,
+        inWords:  numberToWords(payment.amount), // helper local
+        total:    payment.amount,
+      },
+
+      // Forma de pago
+      paymentMethod: {
+        type:      payment.paymentMethod,
+        cardBrand: payment.cardBrand ?? null,
+        cardLast4: payment.cardLast4 ?? null,
+      },
+
+      // Trazabilidad
+      processedAt:   payment.processedAt,
+      failureReason: payment.failureReason ?? null,
+
+      // Leyenda legal
+      legalNote: 'Este comprobante electronico acredita unicamente la recepcion del importe indicado y ha sido generado por el Sistema BI de Retencion de Talento.',
+    };
+
+    res.json({ success: true, data: receipt });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── Helper: convierte monto a palabras (PYG) ────────────────────────────────
+const numberToWords = (amount) => {
+  if (!amount || amount <= 0) return 'cero guaranies';
+  const units  = ['', 'un', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve',
+                  'diez', 'once', 'doce', 'trece', 'catorce', 'quince', 'dieciseis',
+                  'diecisiete', 'dieciocho', 'diecinueve'];
+  const tens   = ['', '', 'veinte', 'treinta', 'cuarenta', 'cincuenta', 'sesenta', 'setenta', 'ochenta', 'noventa'];
+  const hundreds = ['', 'cien', 'doscientos', 'trescientos', 'cuatrocientos', 'quinientos',
+                   'seiscientos', 'setecientos', 'ochocientos', 'novecientos'];
+
+  const convert = (n) => {
+    if (n === 0) return '';
+    if (n < 20)  return units[n];
+    if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 ? ' y ' + units[n % 10] : '');
+    if (n < 1000) {
+      const h = Math.floor(n / 100);
+      const rest = n % 100;
+      return (n === 100 ? 'cien' : hundreds[h]) + (rest ? ' ' + convert(rest) : '');
+    }
+    if (n < 1000000) {
+      const m = Math.floor(n / 1000);
+      const rest = n % 1000;
+      return (m === 1 ? 'mil' : convert(m) + ' mil') + (rest ? ' ' + convert(rest) : '');
+    }
+    const m = Math.floor(n / 1000000);
+    const rest = n % 1000000;
+    return (m === 1 ? 'un millon' : convert(m) + ' millones') + (rest ? ' ' + convert(rest) : '');
+  };
+
+  return convert(Math.floor(amount)) + ' guaranies';
+};
 const toggleCompanyStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -266,4 +399,5 @@ module.exports = {
   getTestCards,
   getAllPayments,
   toggleCompanyStatus,
+  getReceipt,
 };
