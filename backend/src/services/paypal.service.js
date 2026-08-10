@@ -145,6 +145,9 @@ const createOrder = async ({ planId, amountPyg, companyId, userId }) => {
             locale: 'es-PY',
             landing_page: 'LOGIN',
             user_action: 'PAY_NOW',
+            // return_url y cancel_url requeridos por PayPal Sandbox
+            return_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/checkout`,
+            cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/checkout`,
           },
         },
       },
