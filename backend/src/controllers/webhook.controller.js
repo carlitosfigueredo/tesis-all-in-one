@@ -316,8 +316,13 @@ const handleAdamsPayWebhook = async (req, res) => {
     }).catch((e) => console.error('[AdamsPay Webhook] Error audit log:', e.message));
 
     // Solo procesar si fue PAID
-    if (status !== 'PAID') {
-      console.log(`[AdamsPay Webhook] Estado ${status} — sin accion`);
+    // AdamsPay no tiene campo status — detectamos pago por amount.paid >= amount.value
+    const amountValue = parseFloat(debt.amount?.value || '0');
+    const amountPaid  = parseFloat(debt.amount?.paid  || '0');
+    const debtIsPaid  = (amountPaid >= amountValue && amountValue > 0) || status === 'PAID';
+
+    if (!debtIsPaid) {
+      console.log(`[AdamsPay Webhook] No pagado — amountPaid=${amountPaid} amountValue=${amountValue} status=${status}`);
       return;
     }
 

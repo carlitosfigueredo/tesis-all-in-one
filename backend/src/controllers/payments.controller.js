@@ -250,17 +250,19 @@ const verifyAdamsPayDebt = async (req, res, next) => {
     const debtData = await getDebt(docId);
     const debt     = debtData.debt || debtData;
 
-    console.log(`[AdamsPay verify] docId=${docId} companyId=${req.user.companyId} debt.status=${debt.status}`);
-    console.log(`[AdamsPay verify] RAW response:`, JSON.stringify(debtData).slice(0, 500));
+    // AdamsPay no tiene campo "status" — el pago se detecta comparando amount.paid vs amount.value
+    const amountValue = parseFloat(debt.amount?.value || '0');
+    const amountPaid  = parseFloat(debt.amount?.paid  || '0');
+    const isPaid      = amountPaid >= amountValue && amountValue > 0;
+    const isPending   = !isPaid && amountPaid === 0;
+    const isExpired   = ['EXPIRED', 'CANCELLED', 'DELETED'].includes(debt.status);
 
-    // Verificar que la deuda pertenece a esta empresa usando el docId del param
+    console.log(`[AdamsPay verify] docId=${docId} isPaid=${isPaid} amountPaid=${amountPaid} amountValue=${amountValue}`);
+
+    // Verificar que la deuda pertenece a esta empresa
     if (!docId.startsWith(req.user.companyId)) {
-      console.warn(`[AdamsPay verify] Acceso denegado: docId="${docId}" no empieza con companyId="${req.user.companyId}"`);
       return res.status(403).json({ success: false, message: 'No tenes permiso para ver esta deuda' });
     }
-
-    const isPaid     = debt.status === 'PAID';
-    const isPending  = ['PENDING', 'CREATED', 'PARTIAL'].includes(debt.status);
     const isExpired  = ['EXPIRED', 'CANCELLED', 'DELETED'].includes(debt.status);
 
     if (isPaid) {
