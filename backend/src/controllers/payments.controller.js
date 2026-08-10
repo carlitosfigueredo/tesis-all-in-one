@@ -263,7 +263,6 @@ const verifyAdamsPayDebt = async (req, res, next) => {
     if (!docId.startsWith(req.user.companyId)) {
       return res.status(403).json({ success: false, message: 'No tenes permiso para ver esta deuda' });
     }
-    const isExpired  = ['EXPIRED', 'CANCELLED', 'DELETED'].includes(debt.status);
 
     if (isPaid) {
       // Activar empresa si no lo estaba
