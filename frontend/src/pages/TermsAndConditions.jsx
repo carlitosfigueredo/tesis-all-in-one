@@ -8,24 +8,24 @@ const SystemIcon = () => (
 
 const Section = ({ title, children }) => (
   <section className="mb-10">
-    <h2 className="mb-3 text-xl font-bold text-gray-900">{title}</h2>
-    <div className="space-y-3 text-sm leading-relaxed text-gray-600">{children}</div>
+    <h2 className="mb-3 text-xl font-bold text-gray-900 dark:text-gray-100">{title}</h2>
+    <div className="space-y-3 text-sm leading-relaxed text-gray-600 dark:text-gray-300">{children}</div>
   </section>
 );
 
 export default function TermsAndConditions() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
 
       {/* Navbar mínimo */}
-      <header className="border-b border-gray-100 bg-white/90 backdrop-blur-sm sticky top-0 z-50">
+      <header className="border-b border-gray-100 dark:border-gray-700 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm sticky top-0 z-50">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
           <Link to="/" className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
               <SystemIcon />
             </div>
-            <span className="text-base font-bold text-gray-900">
-              Sistema BI<span className="hidden sm:inline text-gray-400 font-normal"> · Retención de Talento</span>
+            <span className="text-base font-bold text-gray-900 dark:text-gray-100">
+              Sistema BI<span className="hidden sm:inline text-gray-400 dark:text-gray-500 font-normal"> · Retención de Talento</span>
             </span>
           </Link>
           <Link
@@ -41,9 +41,9 @@ export default function TermsAndConditions() {
       <main className="mx-auto max-w-3xl px-6 py-16">
 
         <div className="mb-12">
-          <h1 className="text-4xl font-extrabold text-gray-900">Términos y condiciones</h1>
-          <p className="mt-3 text-sm text-gray-400">Última actualización: agosto de 2026</p>
-          <p className="mt-4 text-sm text-gray-600">
+          <h1 className="text-4xl font-extrabold text-gray-900 dark:text-gray-100">Términos y condiciones</h1>
+          <p className="mt-3 text-sm text-gray-400 dark:text-gray-500">Última actualización: agosto de 2026</p>
+          <p className="mt-4 text-sm text-gray-600 dark:text-gray-300">
             Al acceder o utilizar este sistema aceptás los presentes términos en su totalidad.
             Si no estás de acuerdo con alguna parte, no debés utilizar el servicio.
           </p>
@@ -204,7 +204,7 @@ export default function TermsAndConditions() {
 
       </main>
 
-      <footer className="border-t border-gray-100 bg-white py-6 text-center text-xs text-gray-400">
+      <footer className="border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 py-6 text-center text-xs text-gray-400 dark:text-gray-500 transition-colors">
         <p>
           © {new Date().getFullYear()} Sistema BI — Retención de Talento. Trabajo de tesis académica.{' '}
           <Link to="/legal" className="underline hover:text-gray-600">Aviso legal</Link>

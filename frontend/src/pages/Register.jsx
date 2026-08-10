@@ -184,7 +184,7 @@ export default function Register() {
                       className={`flex cursor-pointer items-center justify-between rounded-lg border px-4 py-3 transition-colors ${
                         form.plan === p.id
                           ? 'border-primary-500 bg-primary-50'
-                          : 'border-gray-200 hover:border-gray-300'
+                          : 'border-gray-200 bg-white hover:border-gray-300'
                       }`}
                     >
                       <div className="flex items-center gap-3">

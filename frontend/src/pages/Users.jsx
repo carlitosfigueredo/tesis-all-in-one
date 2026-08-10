@@ -98,7 +98,7 @@ export default function Users() {
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
-      <div className="flex flex-1 flex-col overflow-auto">
+      <div className="flex flex-1 flex-col overflow-auto bg-gray-50 dark:bg-gray-900 transition-colors">
         <Navbar title="Usuarios de la empresa" />
         <main className="flex-1 p-6">
 
@@ -138,8 +138,8 @@ export default function Users() {
 
           {/* Formulario de creacion */}
           {showForm && canManageUsers && (
-            <div className="mb-6 rounded-xl bg-white border border-gray-100 shadow-sm p-6">
-              <h2 className="text-base font-semibold text-gray-900 mb-4">Crear nuevo usuario</h2>
+            <div className="mb-6 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm p-6 transition-colors">
+              <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">Crear nuevo usuario</h2>
               <form onSubmit={handleCreate} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Nombre completo</label>
@@ -224,14 +224,14 @@ export default function Users() {
           )}
 
           {/* Tabla */}
-          <div className="rounded-xl bg-white border border-gray-100 shadow-sm overflow-hidden">
+          <div className="rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden transition-colors">
             {loading ? (
               <div className="flex justify-center py-16">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-500 border-t-transparent" />
               </div>
             ) : (
               <table className="w-full text-sm">
-                <thead className="bg-gray-50 text-xs uppercase text-gray-500">
+                <thead className="bg-gray-50 dark:bg-gray-700/50 text-xs uppercase text-gray-500 dark:text-gray-400">
                   <tr>
                     <th className="px-5 py-3 text-left">Nombre</th>
                     <th className="px-5 py-3 text-left">Correo</th>

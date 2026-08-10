@@ -111,7 +111,7 @@ export default function EmployeeDetail() {
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
-      <div className="flex flex-1 flex-col overflow-auto">
+      <div className="flex flex-1 flex-col overflow-auto bg-gray-50 dark:bg-gray-900 transition-colors">
         <Navbar title="Detalle del Empleado" />
         <main className="flex-1 p-6">
 
@@ -142,7 +142,7 @@ export default function EmployeeDetail() {
                 {/* ── Col izquierda: identidad + riesgo ── */}
                 <div className="space-y-4">
                   {/* Card de identidad */}
-                  <div className="rounded-xl bg-white p-5 shadow-sm">
+                  <div className="rounded-xl bg-white dark:bg-gray-800 p-5 shadow-sm transition-colors">
                     <div className="flex items-center gap-4">
                       <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-100 text-2xl font-bold text-blue-600">
                         {emp.rol_tecnologico.charAt(0)}
@@ -164,8 +164,8 @@ export default function EmployeeDetail() {
                   </div>
 
                   {/* Gauge de riesgo */}
-                  <div className="rounded-xl bg-white p-5 shadow-sm text-center">
-                    <p className="mb-3 text-sm font-semibold text-gray-700">Probabilidad de Desercion</p>
+                  <div className="rounded-xl bg-white dark:bg-gray-800 p-5 shadow-sm text-center transition-colors">
+                    <p className="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-200">Probabilidad de Desercion</p>
                     <RiskGauge score={emp.riesgo_desercion} />
                     {emp.es_modelo_base && (
                       <p className="mt-2 text-xs text-amber-500">Calculado con modelo heuristico base</p>
@@ -173,8 +173,8 @@ export default function EmployeeDetail() {
                   </div>
 
                   {/* Factores de riesgo */}
-                  <div className="rounded-xl bg-white p-5 shadow-sm">
-                    <p className="mb-3 text-sm font-semibold text-gray-700">Factores de Riesgo</p>
+                  <div className="rounded-xl bg-white dark:bg-gray-800 p-5 shadow-sm transition-colors">
+                    <p className="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-200">Factores de Riesgo</p>
                     <ul className="space-y-2">
                       {riskFactors.map((f) => (
                         <li key={f.label} className="flex items-center justify-between text-sm">
@@ -192,8 +192,8 @@ export default function EmployeeDetail() {
                 <div className="lg:col-span-2 space-y-4">
 
                   {/* Datos laborales */}
-                  <div className="rounded-xl bg-white p-5 shadow-sm">
-                    <p className="mb-3 text-sm font-semibold text-gray-700">Datos Laborales</p>
+                  <div className="rounded-xl bg-white dark:bg-gray-800 p-5 shadow-sm transition-colors">
+                    <p className="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-200">Datos Laborales</p>
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                       <Field label="Edad" value={`${emp.edad} anios`} />
                       <Field label="Salario Mensual" value={`Gs. ${emp.salario_mensual?.toLocaleString('es-PY')}`} />

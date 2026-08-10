@@ -4,6 +4,36 @@
 
 @layer base {
   body {
-    @apply bg-gray-50 text-gray-900 antialiased;
+    @apply bg-gray-50 text-gray-900 antialiased transition-colors;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  html.dark body {
+    @apply bg-gray-900 text-gray-100;
+  }
+  /* Inputs dentro de contenedores blancos (páginas publicas) mantienen fondo blanco en dark mode */
+  html.dark .bg-white input,
+  html.dark .bg-white select,
+  html.dark .bg-white textarea {
+    background-color: white;
+    color: #111827;
+  }
+  html.dark .bg-white input::placeholder,
+  html.dark .bg-white textarea::placeholder {
+    color: #9ca3af;
+  }
+}
+
+@layer utilities {
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(1rem);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }

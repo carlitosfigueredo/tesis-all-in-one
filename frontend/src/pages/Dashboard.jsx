@@ -34,16 +34,16 @@ const formatIncome = (usdValue, inGs) => {
 
 const KpiCard = ({ label, value, sub, color = 'blue', onClick }) => {
   const colors = {
-    blue:  'bg-blue-50 text-blue-700',
-    red:   'bg-red-50 text-red-700',
-    green: 'bg-green-50 text-green-700',
-    amber: 'bg-amber-50 text-amber-700',
+    blue:  'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
+    red:   'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300',
+    green: 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300',
+    amber: 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300',
   };
   const interactive = !!onClick;
   return (
     <div
       onClick={onClick}
-      className={`rounded-xl p-5 ${colors[color]} ${
+      className={`rounded-xl p-5 ${colors[color]} transition-colors ${
         interactive ? 'cursor-pointer transition-transform hover:scale-[1.02] hover:shadow-md' : ''
       }`}
     >
@@ -96,33 +96,33 @@ export default function Dashboard() {
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
-      <div className="flex flex-1 flex-col overflow-auto">
+      <div className="flex flex-1 flex-col overflow-auto bg-gray-50 dark:bg-gray-900 transition-colors">
         <Navbar title="Dashboard de Retención de Talento" />
         <main className="flex-1 p-6">
 
           {/* Encabezado con nombre de empresa */}
           {user?.companyName && (
             <div className="mb-5 flex items-center gap-2">
-              <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+              <span className="rounded-full bg-blue-50 dark:bg-blue-900/30 px-3 py-1 text-xs font-semibold text-blue-700 dark:text-blue-300">
                 {user.companyName}
               </span>
-              <span className="text-xs text-gray-400">— datos de tu organización</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500">— datos de tu organización</span>
             </div>
           )}
 
           {/* Toggle de moneda */}
           <div className="mb-5 flex items-center justify-end gap-2">
-            <span className="text-xs text-gray-400">Ingresos en:</span>
-            <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs font-medium">
+            <span className="text-xs text-gray-400 dark:text-gray-500">Ingresos en:</span>
+            <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden text-xs font-medium">
               <button
                 onClick={() => setCurrency('USD')}
-                className={`px-3 py-1.5 transition-colors ${currency === 'USD' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+                className={`px-3 py-1.5 transition-colors ${currency === 'USD' ? 'bg-blue-600 text-white' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
               >
                 USD
               </button>
               <button
                 onClick={() => setCurrency('GS')}
-                className={`px-3 py-1.5 transition-colors ${currency === 'GS' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+                className={`px-3 py-1.5 transition-colors ${currency === 'GS' ? 'bg-blue-600 text-white' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
               >
                 Guaraníes (Gs.)
               </button>
@@ -161,8 +161,8 @@ export default function Dashboard() {
             {/* Gráficos fila 1 */}
             <div className="grid gap-6 lg:grid-cols-2">
               {/* Pie - distribución de riesgo */}
-              <div className="rounded-xl bg-white p-5 shadow-sm">
-                <h2 className="mb-4 text-base font-semibold text-gray-700">Distribución de Riesgo de Fuga</h2>
+              <div className="rounded-xl bg-white dark:bg-gray-800 p-5 shadow-sm transition-colors">
+                <h2 className="mb-4 text-base font-semibold text-gray-700 dark:text-gray-200">Distribución de Riesgo de Fuga</h2>
                 <ResponsiveContainer width="100%" height={260}>
                   <PieChart>
                     <Pie data={riskPieData} dataKey="value" nameKey="name" outerRadius={90} label>
@@ -177,8 +177,8 @@ export default function Dashboard() {
               </div>
 
               {/* Bar - riesgo por departamento */}
-              <div className="rounded-xl bg-white p-5 shadow-sm">
-                <h2 className="mb-4 text-base font-semibold text-gray-700">Riesgo Promedio por Departamento</h2>
+              <div className="rounded-xl bg-white dark:bg-gray-800 p-5 shadow-sm transition-colors">
+                <h2 className="mb-4 text-base font-semibold text-gray-700 dark:text-gray-200">Riesgo Promedio por Departamento</h2>
                 <ResponsiveContainer width="100%" height={260}>
                   <BarChart data={deptData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -192,10 +192,10 @@ export default function Dashboard() {
             </div>
 
             {/* Gráfico de tendencia histórica */}
-            <div className="rounded-xl bg-white p-5 shadow-sm">
+            <div className="rounded-xl bg-white dark:bg-gray-800 p-5 shadow-sm transition-colors">
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-base font-semibold text-gray-700">Tendencia Histórica de Riesgo</h2>
-                <span className="text-xs text-gray-400">Últimos 6 meses · datos estimados</span>
+                <h2 className="text-base font-semibold text-gray-700 dark:text-gray-200">Tendencia Histórica de Riesgo</h2>
+                <span className="text-xs text-gray-400 dark:text-gray-500">Últimos 6 meses · datos estimados</span>
               </div>
               <ResponsiveContainer width="100%" height={240}>
                 <LineChart data={trend} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>

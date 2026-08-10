@@ -13,13 +13,13 @@ import { useAuth } from '../context/AuthContext';
 
 const MetricCard = ({ label, value, sub, color = 'blue' }) => {
   const palette = {
-    blue:  'bg-blue-50  text-blue-700  border-blue-100',
-    green: 'bg-green-50 text-green-700 border-green-100',
-    amber: 'bg-amber-50 text-amber-700 border-amber-100',
-    indigo:'bg-indigo-50 text-indigo-700 border-indigo-100',
+    blue:  'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-100 dark:border-blue-800',
+    green: 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-100 dark:border-green-800',
+    amber: 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-100 dark:border-amber-800',
+    indigo:'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border-indigo-100 dark:border-indigo-800',
   };
   return (
-    <div className={`rounded-xl border p-5 ${palette[color]}`}>
+    <div className={`rounded-xl border p-5 transition-colors ${palette[color]}`}>
       <p className="text-xs font-medium uppercase tracking-wide opacity-70">{label}</p>
       <p className="mt-1 text-3xl font-bold">{value}</p>
       {sub && <p className="mt-1 text-xs opacity-60">{sub}</p>}
@@ -344,7 +344,7 @@ export default function ModelML() {
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
-      <div className="flex flex-1 flex-col overflow-auto">
+      <div className="flex flex-1 flex-col overflow-auto bg-gray-50 dark:bg-gray-900 transition-colors">
         <Navbar title="Modelo de Machine Learning" />
         <main className="flex-1 p-6">
 
@@ -450,8 +450,8 @@ export default function ModelML() {
               <div className="mb-6 grid gap-6 lg:grid-cols-2">
 
                 {/* Métricas detalladas */}
-                <div className="rounded-xl bg-white p-5 shadow-sm">
-                  <h3 className="mb-4 text-sm font-semibold text-gray-700">Métricas Detalladas</h3>
+                <div className="rounded-xl bg-white dark:bg-gray-800 p-5 shadow-sm transition-colors">
+                  <h3 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-200">Métricas Detalladas</h3>
                   <table className="w-full text-sm">
                     <tbody className="divide-y divide-gray-50">
                       {[
@@ -475,8 +475,8 @@ export default function ModelML() {
                 </div>
 
                 {/* Matriz de confusión */}
-                <div className="rounded-xl bg-white p-5 shadow-sm">
-                  <h3 className="mb-4 text-sm font-semibold text-gray-700">Resultados en Set de Test</h3>
+                <div className="rounded-xl bg-white dark:bg-gray-800 p-5 shadow-sm transition-colors">
+                  <h3 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-200">Resultados en Set de Test</h3>
                   <ConfusionMatrix cm={metrics.confusion_matrix} />
                   <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-gray-500">
                     <div className="rounded-lg bg-gray-50 p-3">
@@ -492,8 +492,8 @@ export default function ModelML() {
               </div>
 
               {/* ── Importancia de variables ── */}
-              <div className="rounded-xl bg-white p-5 shadow-sm">
-                <h3 className="mb-1 text-sm font-semibold text-gray-700">Importancia de Variables</h3>
+              <div className="rounded-xl bg-white dark:bg-gray-800 p-5 shadow-sm transition-colors">
+                <h3 className="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-200">Importancia de Variables</h3>
                 <p className="mb-4 text-xs text-gray-400">
                   Qué tanto influye cada variable en la decisión del modelo
                 </p>
@@ -545,8 +545,8 @@ export default function ModelML() {
           )}
 
           {/* ── Variables de entrenamiento ── */}
-          <div className="mt-6 rounded-xl bg-white p-5 shadow-sm">
-            <h3 className="text-sm font-semibold text-gray-700">Variables del Modelo de Prediccion</h3>
+          <div className="mt-6 rounded-xl bg-white dark:bg-gray-800 p-5 shadow-sm transition-colors">
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Variables del Modelo de Prediccion</h3>
             <p className="mt-0.5 mb-2 text-xs text-gray-400">
               17 variables · Dataset custom para empresas de software de Asuncion, Paraguay
             </p>

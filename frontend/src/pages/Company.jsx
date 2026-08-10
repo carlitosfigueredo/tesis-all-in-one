@@ -78,6 +78,7 @@ export default function Company() {
   const [users, setUsers] = useState([]);
   const [subscription, setSubscription] = useState(null);
   const [stats, setStats] = useState(null);
+  const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const plan = user?.companyPlan ?? 'BASICO';
@@ -86,14 +87,16 @@ export default function Company() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [usersRes, subRes, statsRes] = await Promise.allSettled([
+        const [usersRes, subRes, statsRes, paymentsRes] = await Promise.allSettled([
           api.get('/users'),
           api.get('/payments/subscription'),
           api.get('/employees/stats'),
+          api.get('/payments/history'),
         ]);
         if (usersRes.status === 'fulfilled') setUsers(usersRes.value.data.data || []);
         if (subRes.status === 'fulfilled') setSubscription(subRes.value.data.data);
         if (statsRes.status === 'fulfilled') setStats(statsRes.value.data.data);
+        if (paymentsRes.status === 'fulfilled') setPayments(paymentsRes.value.data.data || []);
       } catch { /* silenciar */ }
       setLoading(false);
     };
@@ -103,7 +106,7 @@ export default function Company() {
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
-      <div className="flex flex-1 flex-col overflow-auto">
+      <div className="flex flex-1 flex-col overflow-auto bg-gray-50 dark:bg-gray-900 transition-colors">
         <Navbar title="Mi Empresa" />
         <main className="flex-1 p-6 space-y-6">
 
@@ -119,7 +122,7 @@ export default function Company() {
               <div className="grid gap-6 lg:grid-cols-3">
 
                 {/* Card empresa */}
-                <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-100">
+                <div className="rounded-xl bg-white dark:bg-gray-800 p-6 shadow-sm border border-gray-100 dark:border-gray-700 transition-colors">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 text-xl">
                       🏢
@@ -171,9 +174,9 @@ export default function Company() {
 
                 {/* Card usuarios (solo admin) */}
                 {isCompanyAdmin && (
-                  <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-100 lg:col-span-2">
+                  <div className="rounded-xl bg-white dark:bg-gray-800 p-6 shadow-sm border border-gray-100 dark:border-gray-700 lg:col-span-2 transition-colors">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-sm font-semibold text-gray-700">Usuarios de la empresa</h3>
+                      <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Usuarios de la empresa</h3>
                       <button
                         onClick={() => navigate('/users')}
                         className="text-xs text-blue-600 hover:text-blue-800 font-medium"
@@ -222,10 +225,108 @@ export default function Company() {
                 )}
               </div>
 
+              {/* ── Mi Plan y Facturación ── */}
+              <div className="rounded-xl bg-white dark:bg-gray-800 p-6 shadow-sm border border-gray-100 dark:border-gray-700 transition-colors">
+                <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100 mb-4">Mi Plan y Facturación</h3>
+
+                {/* Info del plan + días restantes */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                  <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 p-4 text-center">
+                    <p className="text-xs text-blue-600 dark:text-blue-400 font-medium uppercase tracking-wide">Plan actual</p>
+                    <p className="mt-1 text-lg font-bold text-gray-900 dark:text-gray-100">{planInfo.nombre}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{planInfo.descripcion}</p>
+                  </div>
+                  <div className="rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800 p-4 text-center">
+                    <p className="text-xs text-green-600 dark:text-green-400 font-medium uppercase tracking-wide">Días restantes</p>
+                    <p className="mt-1 text-3xl font-bold text-gray-900 dark:text-gray-100">
+                      {subscription?.currentPeriodEnd
+                        ? Math.max(0, Math.ceil((new Date(subscription.currentPeriodEnd) - new Date()) / (1000 * 60 * 60 * 24)))
+                        : '—'}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      {subscription?.currentPeriodEnd
+                        ? `Vence ${new Date(subscription.currentPeriodEnd).toLocaleDateString('es-PY')}`
+                        : 'Sin suscripción activa'}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 p-4 text-center">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">Estado</p>
+                    <p className="mt-1 text-lg font-bold text-gray-900 dark:text-gray-100">
+                      {subscription?.status === 'ACTIVE' ? '✅ Activo' : subscription?.status ?? '—'}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      {subscription?.status === 'ACTIVE' ? 'Suscripción al día' : 'Verificar estado'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Historial de pagos / recibos */}
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">Historial de pagos</h4>
+                  {payments.length === 0 ? (
+                    <p className="text-sm text-gray-400 dark:text-gray-500 italic">No hay pagos registrados aún.</p>
+                  ) : (
+                    <div className="overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-700">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 dark:bg-gray-700/50 text-xs uppercase text-gray-500 dark:text-gray-400">
+                          <tr>
+                            <th className="px-4 py-2.5 text-left">Fecha</th>
+                            <th className="px-4 py-2.5 text-left">Concepto</th>
+                            <th className="px-4 py-2.5 text-left">Método</th>
+                            <th className="px-4 py-2.5 text-right">Monto</th>
+                            <th className="px-4 py-2.5 text-left">Estado</th>
+                            <th className="px-4 py-2.5 text-center">Recibo</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                          {payments.map((p) => (
+                            <tr key={p.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                              <td className="px-4 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">
+                                {new Date(p.createdAt).toLocaleDateString('es-PY')}
+                              </td>
+                              <td className="px-4 py-3 text-gray-800 dark:text-gray-200 font-medium">
+                                {p.description || 'Suscripción'}
+                              </td>
+                              <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">
+                                {p.paymentMethod === 'paypal' ? 'PayPal' : p.paymentMethod === 'adamspay' ? 'AdamsPay' : p.paymentMethod}
+                              </td>
+                              <td className="px-4 py-3 text-right font-semibold text-gray-900 dark:text-gray-100 tabular-nums">
+                                {p.currency === 'PYG'
+                                  ? `Gs. ${Number(p.amount).toLocaleString('es-PY')}`
+                                  : `USD ${p.amount}`}
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${
+                                  p.status === 'APPROVED' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                                  : p.status === 'PENDING' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
+                                  : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                                }`}>
+                                  {p.status === 'APPROVED' ? 'Aprobado' : p.status === 'PENDING' ? 'Pendiente' : 'Rechazado'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                {p.status === 'APPROVED' && (
+                                  <button
+                                    onClick={() => window.open(`/checkout?receipt=${p.id}`, '_blank')}
+                                    className="text-xs text-primary-600 dark:text-primary-400 hover:underline font-medium"
+                                  >
+                                    Ver
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* ── Explicacion de los campos del tablero ── */}
-              <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-100">
-                <h3 className="text-base font-semibold text-gray-800 mb-1">Que significan los campos del tablero de empleados</h3>
-                <p className="text-sm text-gray-500 mb-4">
+              <div className="rounded-xl bg-white dark:bg-gray-800 p-6 shadow-sm border border-gray-100 dark:border-gray-700 transition-colors">
+                <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100 mb-1">Que significan los campos del tablero de empleados</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
                   Entende de donde viene cada dato y cuales son calculados por el sistema de prediccion.
                 </p>
 
