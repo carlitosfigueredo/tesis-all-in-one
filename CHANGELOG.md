@@ -1,5 +1,108 @@
 # Registro de cambios
 
+## 2026-08-10
+
+### Rediseño de Checkout y pantalla de comprobante
+
+Se rediseño completamente la pagina de Checkout con una estetica mas premium y profesional manteniendo la identidad visual del sitio.
+
+**Checkout:**
+- Fondo gradient oscuro (primary-900 → gray-900) con header de branding
+- Seleccion de plan con efecto glassmorphism (bg-white/10 + backdrop-blur)
+- Tarjeta de pago blanca con sombra pronunciada y resumen visual del monto
+- Pasos numerados (1. Seleccionar plan, 2. Completar pago)
+- Badges de seguridad (SSL, Pago seguro, Activacion inmediata)
+
+**Comprobante/Recibo:**
+- Header dinamico: muestra "Pago aprobado via PayPal" o "via AdamsPay" segun el metodo real
+- Formulario opcional de razon social y RUC para incluir en el PDF al imprimir
+- Aviso explicito: "Este comprobante no constituye factura fiscal" con nota de evolucion futura
+- Clases `print:hidden` en botones para PDFs limpios
+- Fix: monto y vigencia ahora leen tanto `concept.amountGs` como `amount.value` (compatibilidad con estructura real del backend)
+
+**Archivos modificados:**
+- `frontend/src/pages/Checkout.jsx` — Reescrito completamente (ReceiptScreen + pantalla principal)
+- `frontend/tailwind.config.js` — Paleta primary completa (50-950), `darkMode: 'class'`
+
+---
+
+### Dark mode completo
+
+Se implemento dark mode en toda la aplicacion con toggle sol/luna en la Navbar, persistencia en localStorage, y deteccion de preferencia del sistema.
+
+**Infraestructura:**
+- `frontend/src/context/ThemeContext.jsx` — Contexto con toggle, persistencia, y deteccion de `prefers-color-scheme`
+- `frontend/src/App.jsx` — Envuelto con ThemeProvider
+- `frontend/src/index.css` — Base styles para `html.dark body`, fix de inputs dentro de contenedores blancos
+- `frontend/tailwind.config.js` — `darkMode: 'class'`
+
+**Paginas del dashboard:**
+- Dashboard.jsx, Employees.jsx, EmployeeDetail.jsx, ModelML.jsx, Company.jsx, Users.jsx, Profile.jsx
+- Patron: `bg-gray-50 dark:bg-gray-900` en containers, `bg-white dark:bg-gray-800` en cards, headings con `dark:text-gray-200`
+
+**Paginas legales:**
+- PrivacyPolicy.jsx, TermsAndConditions.jsx, Legal.jsx
+- Header, footer, Section component, y badges adaptados
+
+**Layout:**
+- `frontend/src/components/layout/Navbar.jsx` — Toggle dark mode + clases dark en todos los elementos
+- `frontend/src/components/layout/Sidebar.jsx` — Variantes dark
+
+---
+
+### Consentimiento y privacidad (Ley 7593/2025)
+
+Se completo el flujo de consentimiento con banner de cookies, endpoints de consulta/revocacion, y gestion desde el perfil del usuario.
+
+**Backend:**
+- `backend/src/controllers/consent.controller.js` — GET /api/consent (mis consentimientos) y POST /api/consent/revoke (revocar)
+- `backend/src/routes/consent.routes.js` — Rutas protegidas con auth + portal company
+- `backend/src/routes/index.js` — Registro de consent routes
+
+**Frontend:**
+- `frontend/src/components/CookieConsent.jsx` — Banner informativo de cookies tecnicas con animacion slideUp, persistencia en localStorage
+- `frontend/src/pages/Profile.jsx` — Seccion "Mis consentimientos": lista de consentimientos activos/revocados con boton de revocacion y advertencia
+- `frontend/src/App.jsx` — CookieConsent integrado globalmente
+
+---
+
+### Panel Admin: Tasa de cambio PYG/USD
+
+Se agrego la pagina de configuracion de tasa de cambio en el panel del super admin para ajustar la conversion que se usa al procesar pagos via PayPal.
+
+**Frontend:**
+- `frontend/src/pages/admin/AdminExchangeRates.jsx` — Input numerico con preview de conversion en vivo, validacion (1000-50000), toast de confirmacion
+- `frontend/src/components/admin/AdminSidebar.jsx` — Link "Tasa de cambio" agregado
+- `frontend/src/App.jsx` — Ruta /admin/settings/exchange-rates
+
+**Nota:** El backend ya tenia los endpoints GET/PUT /api/admin/config/exchange-rates implementados. Solo faltaba la UI.
+
+---
+
+### Panel Admin: Pagos de todas las empresas
+
+Se agrego la pagina de pagos globales en el panel del super admin con tabla paginada, filtros y KPIs.
+
+**Frontend:**
+- `frontend/src/pages/admin/AdminPayments.jsx` — Tabla con fecha, empresa, concepto, metodo, monto, estado, ID. KPIs rapidos (total, aprobados, recaudado). Filtros por estado y empresa. Paginacion.
+- `frontend/src/components/admin/AdminSidebar.jsx` — Link "Pagos" agregado
+- `frontend/src/App.jsx` — Ruta /admin/payments
+
+---
+
+### Mi Plan y Facturacion (pagina Mi Empresa)
+
+Se agrego la seccion "Mi Plan y Facturacion" en la pagina Company.jsx del portal de empresas.
+
+**Contenido:**
+- 3 tarjetas: Plan actual (nombre + descripcion), Dias restantes (calculo en vivo desde currentPeriodEnd), Estado de suscripcion
+- Tabla de historial de pagos: fecha, concepto, metodo, monto, estado (badge), link a recibo
+
+**Archivos modificados:**
+- `frontend/src/pages/Company.jsx` — Nuevo state `payments`, fetch de /payments/history, seccion visual completa con dark mode
+
+---
+
 ## 2026-07-29
 
 ### Restriccion de entrenamiento por plan
