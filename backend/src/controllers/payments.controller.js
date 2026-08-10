@@ -256,8 +256,8 @@ const verifyAdamsPayDebt = async (req, res, next) => {
     }
 
     const isPaid     = debt.status === 'PAID';
-    const isPending  = debt.status === 'PENDING' || debt.status === 'CREATED';
-    const isExpired  = debt.status === 'EXPIRED' || debt.status === 'CANCELLED';
+    const isPending  = ['PENDING', 'CREATED', 'PARTIAL'].includes(debt.status);
+    const isExpired  = ['EXPIRED', 'CANCELLED', 'DELETED'].includes(debt.status);
 
     if (isPaid) {
       // Activar empresa si no lo estaba
@@ -265,9 +265,11 @@ const verifyAdamsPayDebt = async (req, res, next) => {
         ESTANDAR: 'BASICO', PROFESIONAL: 'PROFESIONAL', CORPORATIVO: 'CORPORATIVO',
       };
 
-      // Extraer planId del docId (formato: companyId-planId-timestamp)
-      const parts  = docId.split('-');
-      const planId = parts.length >= 2 ? parts[parts.length - 2] : null;
+      // Extraer planId del docId (formato: UUID(36 chars)-PLANID-TIMESTAMP)
+      // UUID siempre tiene 36 chars. Luego viene "-PLANID-timestamp"
+      const uuidLen   = 36;
+      const afterUuid = docId.length > uuidLen ? docId.slice(uuidLen + 1) : '';
+      const planId    = afterUuid.split('-')[0] || null; // "ESTANDAR", "PROFESIONAL", etc.
 
       const company = await prisma.company.findUnique({ where: { id: req.user.companyId } });
 
@@ -330,15 +332,17 @@ const verifyAdamsPayDebt = async (req, res, next) => {
         newValue:   { docId, amountPyg, planId },
       });
 
-      // Obtener el comprobante
+      // Obtener el comprobante directamente desde la BD
       try {
-        const { data: receiptRes } = await require('axios').get(
-          `${process.env.BACKEND_URL || 'http://localhost:4000'}/api/payments/receipt/${payment.id}`,
-          { headers: { Authorization: req.headers.authorization } }
-        );
-        return res.json({ success: true, message: 'Pago confirmado via AdamsPay!', data: { ...debtData, paymentId: payment.id, receipt: receiptRes.data } });
+        const receiptPayment = await prisma.payment.findUnique({
+          where: { id: payment.id },
+          include: { company: { select: { id: true, name: true, plan: true } }, subscription: true },
+        });
+        const payer = await prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true, email: true } });
+        const receiptNumber = `REC-${new Date(payment.createdAt).toISOString().slice(0,7).replace('-','')}-${payment.id.slice(-8).toUpperCase()}`;
+        return res.json({ success: true, message: 'Pago confirmado via AdamsPay!', data: { paymentId: payment.id, receiptNumber, status: 'APPROVED', amountPyg: amountPyg } });
       } catch {
-        return res.json({ success: true, message: 'Pago confirmado via AdamsPay!', data: { ...debtData, paymentId: payment.id } });
+        return res.json({ success: true, message: 'Pago confirmado via AdamsPay!', data: { paymentId: payment.id } });
       }
     }
 

@@ -222,24 +222,60 @@ export default function Checkout() {
 
   // Verificar si el usuario volvió de AdamsPay con un pago pendiente
   useEffect(() => {
-    const docId  = sessionStorage.getItem('adamspay_docId');
-    if (!docId) return;
-    sessionStorage.removeItem('adamspay_docId');
-    sessionStorage.removeItem('adamspay_planId');
+    // AdamsPay puede devolver params en la URL o tenerlos en sessionStorage
+    const urlParams    = new URLSearchParams(window.location.search);
+    const payEndReason = urlParams.get('payEndReason');   // success | cancel | error
+    const payTx        = urlParams.get('payTx');          // ID de transaccion de AdamsPay
+    const payProvider  = urlParams.get('payProvider');    // adams
 
-    setLoading(true);
-    api.post(`/payments/adamspay/verify/${docId}`)
-      .then(({ data }) => {
-        if (data.success && data.data?.paymentId) {
-          api.get(`/payments/receipt/${data.data.paymentId}`)
-            .then(({ data: r }) => setReceipt({ ...r.data, paypalCaptureId: null }))
-            .catch(() => setError('Pago confirmado pero no se pudo cargar el comprobante.'));
-        } else {
-          setError(data.message || 'El pago todavía no fue procesado. Si ya pagaste, esperá unos minutos.');
-        }
-      })
-      .catch((err) => setError(err.response?.data?.message ?? 'No se pudo verificar el pago de AdamsPay'))
-      .finally(() => setLoading(false));
+    const docId  = sessionStorage.getItem('adamspay_docId');
+
+    // Si no hay nada de AdamsPay, no hacer nada
+    if (!docId && payProvider !== 'adams') return;
+
+    // Limpiar params de la URL sin recargar la pagina
+    if (payProvider) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    if (docId) {
+      sessionStorage.removeItem('adamspay_docId');
+      sessionStorage.removeItem('adamspay_planId');
+    }
+
+    // Si el usuario canceló, mostrar mensaje y no verificar
+    if (payEndReason === 'cancel' || payEndReason === 'cancelled') {
+      setError('Cancelaste el pago con AdamsPay. Podés intentarlo de nuevo.');
+      return;
+    }
+
+    // Si fue success o hay docId, verificar con el backend
+    if (payEndReason === 'success' || payTx || docId) {
+      setLoading(true);
+      // Usamos el docId del sessionStorage (mas confiable que el payTx)
+      const idToVerify = docId;
+      if (!idToVerify) {
+        setError('No se pudo identificar el pago. Si ya pagaste, contactá soporte.');
+        setLoading(false);
+        return;
+      }
+
+      api.post(`/payments/adamspay/verify/${idToVerify}`)
+        .then(({ data }) => {
+          if (data.success && data.data?.paymentId) {
+            api.get(`/payments/receipt/${data.data.paymentId}`)
+              .then(({ data: r }) => setReceipt({ ...r.data, paypalCaptureId: payTx || null }))
+              .catch(() => {
+                // Si falla el comprobante igual mostrar exito
+                setError('Pago confirmado! Tu empresa ya está activa. Cargando dashboard...');
+                setTimeout(() => { navigate('/dashboard', { replace: true }); window.location.reload(); }, 2000);
+              });
+          } else {
+            setError(data.message || 'El pago todavía no fue procesado. Si ya pagaste, esperá unos minutos y recargá.');
+          }
+        })
+        .catch((err) => setError(err.response?.data?.message ?? 'No se pudo verificar el pago de AdamsPay'))
+        .finally(() => setLoading(false));
+    }
   }, []);
 
   // ── Paso 1: el SDK de PayPal llama esto para crear la orden en nuestro backend
