@@ -6,6 +6,8 @@ node_modules/
 .env
 .env.local
 .env.*.local
+.env.prod
+# (se versiona solo el ejemplo: .env.prod.example)
 
 # Builds
 dist/
