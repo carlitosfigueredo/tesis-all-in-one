@@ -4,6 +4,8 @@
 // via validatePasswordPolicy() + getPasswordPolicy() (lee de BD).
 // Aqui solo validamos tipos, formato y longitud maxima tecnica.
 
+const { isKnownInvalidDomain } = require('../utils/emailDomain.utils');
+
 let z;
 try {
   const zod = require('zod');
@@ -12,6 +14,9 @@ try {
   z = null;
   console.warn('[Auth Schema] Zod no disponible — validacion de schemas desactivada');
 }
+
+// Mensaje único para dominios de correo inexistentes / mal escritos.
+const INVALID_DOMAIN_MSG = 'El dominio del correo no existe o está mal escrito. Revisá que sea correcto (ej. gmail.com)';
 
 // ─── Middleware factory ───────────────────────────────────────────────────────
 
@@ -26,7 +31,7 @@ const validate = (schema) => (req, res, next) => {
     }));
     return res.status(400).json({
       success: false,
-      message: 'Revisa los datos ingresados',
+      message: 'Revisá los datos ingresados',
       errors,
     });
   }
@@ -40,13 +45,13 @@ const loginSchema = z
   ? z.object({
       email: z
         .string({ required_error: 'El correo es obligatorio' })
-        .email('Ingresa un correo valido')
+        .email('Ingresá un correo válido')
         .max(254, 'El correo es demasiado largo')
         .transform((v) => v.toLowerCase().trim()),
       password: z
-        .string({ required_error: 'La contrasena es obligatoria' })
-        .min(1, 'La contrasena no puede estar vacia')
-        .max(256, 'La contrasena es demasiado larga'),
+        .string({ required_error: 'La contraseña es obligatoria' })
+        .min(1, 'La contraseña no puede estar vacía')
+        .max(256, 'La contraseña es demasiado larga'),
     })
   : null;
 
@@ -54,7 +59,7 @@ const forgotPasswordSchema = z
   ? z.object({
       email: z
         .string({ required_error: 'El correo es obligatorio' })
-        .email('Ingresa un correo valido')
+        .email('Ingresá un correo válido')
         .max(254, 'El correo es demasiado largo')
         .transform((v) => v.toLowerCase().trim()),
     })
@@ -65,15 +70,15 @@ const resetPasswordSchema = z
       .object({
         token: z
           .string({ required_error: 'El token es obligatorio' })
-          .min(1, 'El token no puede estar vacio'),
+          .min(1, 'El token no puede estar vacío'),
         newPassword: z
-          .string({ required_error: 'La nueva contrasena es obligatoria' })
-          .min(1, 'La contrasena no puede estar vacia')
-          .max(256, 'La contrasena es demasiado larga'),
-        confirmPassword: z.string({ required_error: 'Confirma tu contrasena' }),
+          .string({ required_error: 'La nueva contraseña es obligatoria' })
+          .min(1, 'La contraseña no puede estar vacía')
+          .max(256, 'La contraseña es demasiado larga'),
+        confirmPassword: z.string({ required_error: 'Confirmá tu contraseña' }),
       })
       .refine((data) => data.newPassword === data.confirmPassword, {
-        message: 'Las contrasenas no coinciden',
+        message: 'Las contraseñas no coinciden',
         path: ['confirmPassword'],
       })
   : null;
@@ -95,7 +100,7 @@ const registerSchema = z
         .transform((v) => v.trim()),
       plan: z
         .enum(['BASICO', 'PROFESIONAL', 'CORPORATIVO'], {
-          errorMap: () => ({ message: 'Plan invalido' }),
+          errorMap: () => ({ message: 'Plan inválido' }),
         })
         .default('BASICO'),
       name: z
@@ -105,14 +110,18 @@ const registerSchema = z
         .transform((v) => v.trim()),
       email: z
         .string({ required_error: 'El correo es obligatorio' })
-        .email('Ingresa un correo valido')
+        .email('Ingresá un correo válido')
         .max(254, 'El correo es demasiado largo')
-        .transform((v) => v.toLowerCase().trim()),
+        .transform((v) => v.toLowerCase().trim())
+        // Capa 1: rechaza dominios inexistentes / typos conocidos (síncrono).
+        .refine((email) => !isKnownInvalidDomain(email), {
+          message: INVALID_DOMAIN_MSG,
+        }),
       password: z
-        .string({ required_error: 'La contrasena es obligatoria' })
-        .min(1, 'La contrasena no puede estar vacia')
-        .max(256, 'La contrasena es demasiado larga'),
-      confirmPassword: z.string({ required_error: 'Confirma tu contrasena' }),
+        .string({ required_error: 'La contraseña es obligatoria' })
+        .min(1, 'La contraseña no puede estar vacía')
+        .max(256, 'La contraseña es demasiado larga'),
+      confirmPassword: z.string({ required_error: 'Confirmá tu contraseña' }),
       // Consentimientos — pasados por el frontend, validados en el controller
       consents: z
         .object({
@@ -124,7 +133,7 @@ const registerSchema = z
       recaptchaToken: z.string().optional(),
     })
     .refine((data) => data.password === data.confirmPassword, {
-      message: 'Las contrasenas no coinciden',
+      message: 'Las contraseñas no coinciden',
       path: ['confirmPassword'],
     })
   : null;

@@ -46,9 +46,9 @@ export default function CookieConsent() {
               No usamos cookies de rastreo ni publicidad.
             </p>
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Mas info en nuestra{' '}
+              Más info en nuestra{' '}
               <Link to="/privacy" className="text-blue-600 dark:text-blue-400 underline hover:text-blue-800">
-                Politica de Privacidad
+                Política de Privacidad
               </Link>
               .
             </p>

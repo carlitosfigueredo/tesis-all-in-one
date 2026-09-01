@@ -54,7 +54,7 @@ const updatePlans = async (req, res, next) => {
       if (!p.id || !p.name || p.priceGs === undefined) {
         return res.status(400).json({
           success: false,
-          message: 'Plan invalido: se requiere id, name y priceGs',
+          message: 'Plan inválido: se requiere id, name y priceGs',
         });
       }
     }
@@ -346,7 +346,7 @@ const extendCompanySubscription = async (req, res, next) => {
 
     const before = await prisma.subscription.findUnique({ where: { companyId: id } });
     if (!before) {
-      return res.status(404).json({ success: false, message: 'La empresa no tiene una suscripcion' });
+      return res.status(404).json({ success: false, message: 'La empresa no tiene una suscripción' });
     }
 
     const updated = await extendSubscription({ companyId: id, months, fromCurrentEnd });

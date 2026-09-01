@@ -1,5 +1,5 @@
-// Indicador visual de fortaleza de contrasena
-// Los requisitos se leen dinamicamente desde el backend via usePasswordPolicy.
+// Indicador visual de fortaleza de contraseña
+// Los requisitos se leen dinámicamente desde el backend via usePasswordPolicy.
 // Uso: <PasswordStrengthIndicator password={value} />
 
 import { usePasswordPolicy } from '../hooks/usePasswordPolicy';

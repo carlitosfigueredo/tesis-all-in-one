@@ -4,6 +4,7 @@ const crypto = require('crypto');
 
 const prisma = require('../lib/prisma');
 const { validatePasswordPolicy }            = require('../utils/password.utils');
+const { hasValidMxRecords }                 = require('../utils/emailDomain.utils');
 const { getPasswordPolicy, getResetTokenConfig } = require('../services/systemConfig.service');
 const { sendPasswordResetEmail,
         sendPasswordChangedEmail,
@@ -52,7 +53,7 @@ const login = async (req, res, next) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ success: false, message: 'El correo y la contrasena son obligatorios' });
+      return res.status(400).json({ success: false, message: 'El correo y la contraseña son obligatorios' });
     }
 
     const user = await prisma.user.findUnique({
@@ -63,7 +64,7 @@ const login = async (req, res, next) => {
     if (!user) {
       await logAction({ action: 'LOGIN_FAILED', resource: 'users', ipAddress: ip, userAgent: ua,
         status: 'FAILURE', errorMsg: `Email no encontrado: ${email}` });
-      return res.status(401).json({ success: false, message: 'El correo o la contrasena no son correctos' });
+      return res.status(401).json({ success: false, message: 'El correo o la contraseña no son correctos' });
     }
 
     // Cargar roles/permisos del usuario
@@ -79,16 +80,16 @@ const login = async (req, res, next) => {
 
     // SUPER_ADMIN no puede loguear por el portal de empresas
     if (roleNames.includes('SUPER_ADMIN')) {
-      return res.status(401).json({ success: false, message: 'El correo o la contrasena no son correctos' });
+      return res.status(401).json({ success: false, message: 'El correo o la contraseña no son correctos' });
     }
 
     if (!user.active) {
-      return res.status(401).json({ success: false, message: 'Tu cuenta esta desactivada. Contacta al administrador' });
+      return res.status(401).json({ success: false, message: 'Tu cuenta está desactivada. Contactá al administrador' });
     }
 
     // Verificar bloqueo por intentos fallidos
     if (user.lockedUntil && new Date() < new Date(user.lockedUntil)) {
-      return res.status(423).json({ success: false, message: 'Cuenta bloqueada temporalmente. Intenta mas tarde' });
+      return res.status(423).json({ success: false, message: 'Cuenta bloqueada temporalmente. Intentá más tarde' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -108,7 +109,7 @@ const login = async (req, res, next) => {
         resource: 'users', resourceId: user.id, ipAddress: ip, userAgent: ua,
         status: 'FAILURE', errorMsg: `Contrasena incorrecta (intento ${attempts})` });
 
-      return res.status(401).json({ success: false, message: 'El correo o la contrasena no son correctos' });
+      return res.status(401).json({ success: false, message: 'El correo o la contraseña no son correctos' });
     }
 
     // Login exitoso: resetear intentos fallidos
@@ -150,7 +151,7 @@ const adminLogin = async (req, res, next) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ success: false, message: 'El correo y la contrasena son obligatorios' });
+      return res.status(400).json({ success: false, message: 'El correo y la contraseña son obligatorios' });
     }
 
     const user = await prisma.user.findUnique({
@@ -279,7 +280,7 @@ const resetPassword = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Todos los campos son obligatorios' });
     }
     if (newPassword !== confirmPassword) {
-      return res.status(400).json({ success: false, message: 'Las contrasenas no coinciden' });
+      return res.status(400).json({ success: false, message: 'Las contraseñas no coinciden' });
     }
 
     const tokenHash = hashToken(token);
@@ -291,16 +292,16 @@ const resetPassword = async (req, res, next) => {
     if (!resetEntry) {
       await logAction({ action: 'PASSWORD_RESET_FAILED', resource: 'users',
         ipAddress: ip, userAgent: ua, status: 'FAILURE', errorMsg: 'Token no encontrado' });
-      return res.status(400).json({ success: false, message: 'El enlace no es valido o ya fue usado' });
+      return res.status(400).json({ success: false, message: 'El enlace no es válido o ya fue usado' });
     }
 
     if (new Date() > new Date(resetEntry.expiresAt)) {
       await prisma.passwordResetToken.delete({ where: { id: resetEntry.id } });
-      return res.status(400).json({ success: false, message: 'El enlace vencio. Solicita uno nuevo' });
+      return res.status(400).json({ success: false, message: 'El enlace venció. Solicitá uno nuevo' });
     }
 
     if (resetEntry.usedAt) {
-      return res.status(400).json({ success: false, message: 'El enlace no es valido o ya fue usado' });
+      return res.status(400).json({ success: false, message: 'El enlace no es válido o ya fue usado' });
     }
 
     const user = resetEntry.user;
@@ -309,7 +310,7 @@ const resetPassword = async (req, res, next) => {
     if (!policyResult.valid) {
       return res.status(400).json({
         success: false,
-        message: 'La contrasena no cumple con los requisitos de seguridad',
+        message: 'La contraseña no cumple con los requisitos de seguridad',
         errors: policyResult.errors,
       });
     }
@@ -333,7 +334,7 @@ const resetPassword = async (req, res, next) => {
       action: 'PASSWORD_RESET_COMPLETED', resource: 'users', resourceId: user.id,
       ipAddress: ip, userAgent: ua, status: 'SUCCESS' });
 
-    return res.json({ success: true, message: 'Tu contrasena fue cambiada correctamente. Ya podes iniciar sesion' });
+    return res.json({ success: true, message: 'Tu contraseña fue cambiada correctamente. Ya podés iniciar sesión' });
   } catch (error) {
     next(error);
   }
@@ -352,7 +353,7 @@ const changePassword = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Todos los campos son obligatorios' });
     }
     if (newPassword !== confirmPassword) {
-      return res.status(400).json({ success: false, message: 'Las contrasenas nuevas no coinciden' });
+      return res.status(400).json({ success: false, message: 'Las contraseñas nuevas no coinciden' });
     }
 
     const user = await prisma.user.findUnique({ where: { id: req.user.id } });
@@ -362,7 +363,7 @@ const changePassword = async (req, res, next) => {
 
     const isMatch = await bcrypt.compare(currentPassword, user.password);
     if (!isMatch) {
-      return res.status(401).json({ success: false, message: 'La contrasena actual no es correcta' });
+      return res.status(401).json({ success: false, message: 'La contraseña actual no es correcta' });
     }
 
     const policy = await getPasswordPolicy();
@@ -370,7 +371,7 @@ const changePassword = async (req, res, next) => {
     if (!policyResult.valid) {
       return res.status(400).json({
         success: false,
-        message: 'La contrasena no cumple los requisitos de seguridad',
+        message: 'La contraseña no cumple los requisitos de seguridad',
         errors: policyResult.errors.map((e) => ({ message: e })),
       });
     }
@@ -383,7 +384,7 @@ const changePassword = async (req, res, next) => {
       action: 'PASSWORD_CHANGED', resource: 'users', resourceId: user.id,
       ipAddress: ip, userAgent: ua, status: 'SUCCESS' });
 
-    return res.json({ success: true, message: 'Contrasena cambiada correctamente' });
+    return res.json({ success: true, message: 'Contraseña cambiada correctamente' });
   } catch (error) {
     next(error);
   }
@@ -405,7 +406,7 @@ const forceChangePassword = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Todos los campos son obligatorios' });
     }
     if (newPassword !== confirmPassword) {
-      return res.status(400).json({ success: false, message: 'Las contrasenas no coinciden' });
+      return res.status(400).json({ success: false, message: 'Las contraseñas no coinciden' });
     }
 
     const user = await prisma.user.findUnique({ where: { id: req.user.id } });
@@ -415,7 +416,7 @@ const forceChangePassword = async (req, res, next) => {
 
     // Solo permitir si el usuario realmente tiene que cambiar la pass
     if (!user.mustChangePassword) {
-      return res.status(400).json({ success: false, message: 'No se requiere cambio de contrasena' });
+      return res.status(400).json({ success: false, message: 'No se requiere cambio de contraseña' });
     }
 
     const policy = await getPasswordPolicy();
@@ -423,7 +424,7 @@ const forceChangePassword = async (req, res, next) => {
     if (!policyResult.valid) {
       return res.status(400).json({
         success: false,
-        message: 'La contrasena no cumple los requisitos de seguridad',
+        message: 'La contraseña no cumple los requisitos de seguridad',
         errors: policyResult.errors.map((e) => ({ message: e })),
       });
     }
@@ -438,7 +439,7 @@ const forceChangePassword = async (req, res, next) => {
       action: 'PASSWORD_CHANGED_FIRST_LOGIN', resource: 'users', resourceId: user.id,
       ipAddress: ip, userAgent: ua, status: 'SUCCESS' });
 
-    return res.json({ success: true, message: 'Contrasena establecida correctamente' });
+    return res.json({ success: true, message: 'Contraseña establecida correctamente' });
   } catch (error) {
     next(error);
   }
@@ -455,6 +456,16 @@ const register = async (req, res, next) => {
   try {
     const { companyName, plan, name, email, password, consents } = req.body;
 
+    // Capa 2: verificar que el dominio del correo pueda recibir mail (registros MX).
+    // Fail-open: si el DNS falla por red/timeout, no bloquea (ver emailDomain.utils).
+    const domainOk = await hasValidMxRecords(email);
+    if (!domainOk) {
+      return res.status(400).json({
+        success: false,
+        message: 'El dominio del correo no existe o no puede recibir correos. Revisá que sea correcto',
+      });
+    }
+
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       return res.status(409).json({ success: false, message: 'Ya existe una cuenta con ese correo' });
@@ -464,13 +475,13 @@ const register = async (req, res, next) => {
     if (!consents?.privacyPolicy?.accepted) {
       return res.status(400).json({
         success: false,
-        message: 'Tenes que aceptar la Politica de Privacidad para registrarte',
+        message: 'Tenés que aceptar la Política de Privacidad para registrarte',
       });
     }
     if (!consents?.termsAndConditions?.accepted) {
       return res.status(400).json({
         success: false,
-        message: 'Tenes que aceptar los Terminos y Condiciones para registrarte',
+        message: 'Tenés que aceptar los Términos y Condiciones para registrarte',
       });
     }
 
@@ -590,7 +601,7 @@ const register = async (req, res, next) => {
 
     return res.status(201).json({
       success: true,
-      message: 'Empresa registrada correctamente. Activa tu plan para acceder a todas las funcionalidades',
+      message: 'Empresa registrada correctamente. Activá tu plan para acceder a todas las funcionalidades',
       data: { token, user: userData },
     });
   } catch (error) {

@@ -1,4 +1,4 @@
-// Panel SUPER_ADMIN — Configuracion de tasa de cambio PYG/USD
+// Panel SUPER_ADMIN — Configuración de tasa de cambio PYG/USD
 // Permite ajustar la tasa de conversion que se usa para procesar pagos via PayPal.
 // Los cambios se persisten en BD y se aplican en ~1 minuto (cache TTL del backend).
 
@@ -57,7 +57,7 @@ export default function AdminExchangeRates() {
         <header className="flex h-16 items-center justify-between border-b border-gray-200 bg-white px-6 flex-shrink-0">
           <div>
             <h1 className="text-base font-semibold text-gray-800">Tasa de cambio</h1>
-            <p className="text-xs text-gray-400">Configuracion de conversion PYG → USD para PayPal</p>
+            <p className="text-xs text-gray-400">Configuración de conversion PYG → USD para PayPal</p>
           </div>
         </header>
 
@@ -73,8 +73,8 @@ export default function AdminExchangeRates() {
               <div className="rounded-xl bg-white border border-gray-100 shadow-sm p-6">
                 <h2 className="text-base font-semibold text-gray-900 mb-1">Tasa PYG → USD</h2>
                 <p className="text-sm text-gray-500 mb-5">
-                  Esta tasa se usa para convertir precios en guaranies a dolares al procesar pagos con PayPal.
-                  Ajustala segun la cotizacion del BCP (Banco Central del Paraguay).
+                  Esta tasa se usa para convertir precios en guaraníes a dolares al procesar pagos con PayPal.
+                  Ajustala según la cotizacion del BCP (Banco Central del Paraguay).
                 </p>
 
                 <div className="space-y-4">
@@ -131,7 +131,7 @@ export default function AdminExchangeRates() {
                 <ul className="space-y-2 text-sm text-gray-600">
                   <li className="flex items-start gap-2">
                     <span className="mt-1 h-1.5 w-1.5 rounded-full bg-blue-500 flex-shrink-0" />
-                    Cuando un usuario paga con PayPal, el sistema convierte el precio en guaranies a dolares usando esta tasa.
+                    Cuando un usuario paga con PayPal, el sistema convierte el precio en guaraníes a dolares usando esta tasa.
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="mt-1 h-1.5 w-1.5 rounded-full bg-blue-500 flex-shrink-0" />

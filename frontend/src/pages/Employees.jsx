@@ -10,7 +10,7 @@ import api from '../services/api';
 // Tasa de cambio referencial GS/USD — se puede mover a una variable de entorno
 const USD_TO_GS = 7500;
 
-// Etiquetas legibles para la escala 1-5 de satisfaccion
+// Etiquetas legibles para la escala 1-5 de satisfacción
 const SATISFACTION_LABELS = {
   1: { text: 'Muy baja',  color: 'text-red-600',   bg: 'bg-red-50'    },
   2: { text: 'Baja',      color: 'text-orange-600', bg: 'bg-orange-50' },
@@ -43,7 +43,7 @@ const SatisfactionCell = ({ value }) => {
   const meta = SATISFACTION_LABELS[value] ?? SATISFACTION_LABELS[1];
   return (
     <span
-      title={`Satisfaccion laboral: ${meta.text} (${value}/5)\nEscala: 1=Muy baja, 2=Baja, 3=Media, 4=Alta, 5=Muy alta`}
+      title={`Satisfacción laboral: ${meta.text} (${value}/5)\nEscala: 1=Muy baja, 2=Baja, 3=Media, 4=Alta, 5=Muy alta`}
       className={`cursor-default rounded-full px-2 py-0.5 text-xs font-medium ${meta.bg} ${meta.color}`}
     >
       {meta.text}
@@ -322,7 +322,7 @@ const ImportModal = ({ onClose, onImported }) => {
                 </table>
               </div>
               {parsed.rows.length > 5 && (
-                <p className="mt-1 text-xs text-gray-400">... y {parsed.rows.length - 5} filas mas</p>
+                <p className="mt-1 text-xs text-gray-400">... y {parsed.rows.length - 5} filas más</p>
               )}
             </div>
           )}
@@ -418,7 +418,7 @@ export default function Employees() {
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-auto bg-gray-50 dark:bg-gray-900 transition-colors">
-        <Navbar title="Empleados — Prediccion de Desercion" />
+        <Navbar title="Empleados — Predicción de Deserción" />
         <main className="flex-1 p-6">
 
           {/* ── Barra de herramientas ── */}
@@ -517,16 +517,16 @@ export default function Employees() {
                       <th className="px-4 py-3 text-left">Edad</th>
                       <th className="px-4 py-3 text-left">Modalidad</th>
                       <th className="px-4 py-3 text-left">Contrato</th>
-                      <th className="px-4 py-3 text-left">Antiguedad</th>
+                      <th className="px-4 py-3 text-left">Antigüedad</th>
                       <th className="px-4 py-3 text-left">Salario (Gs.)</th>
                       <th className="px-4 py-3 text-left">Hs. Extra/mes</th>
                       <th
                         className="px-4 py-3 text-left cursor-help"
-                        title="Satisfaccion laboral (escala 1-5): 1=Muy baja, 5=Muy alta"
+                        title="Satisfacción laboral (escala 1-5): 1=Muy baja, 5=Muy alta"
                       >
-                        Satisfaccion
+                        Satisfacción
                       </th>
-                      <th className="px-4 py-3 text-left">Desercion</th>
+                      <th className="px-4 py-3 text-left">Deserción</th>
                       <th className="px-4 py-3 text-left">Riesgo</th>
                     </tr>
                   </thead>

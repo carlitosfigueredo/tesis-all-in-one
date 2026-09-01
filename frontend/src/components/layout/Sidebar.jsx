@@ -84,7 +84,7 @@ export default function Sidebar() {
           onClick={logout}
           className="w-full rounded-lg px-4 py-2 text-left text-sm text-primary-300 dark:text-gray-300 transition hover:bg-primary-800 dark:hover:bg-gray-800 hover:text-white"
         >
-          🚪 Cerrar sesion
+          🚪 Cerrar sesión
         </button>
       </div>
     </aside>

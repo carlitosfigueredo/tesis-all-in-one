@@ -6,7 +6,7 @@ const CSV_FIELDS = [
   // Obligatorios (datos RRHH)
   {
     campo: 'edad',
-    tipo: 'Numero',
+    tipo: 'Número',
     obligatorio: true,
     descripcion: 'Edad del empleado en anios',
     valores: '18 a 65',
@@ -17,7 +17,7 @@ const CSV_FIELDS = [
     campo: 'nivel_formacion',
     tipo: 'Texto',
     obligatorio: true,
-    descripcion: 'Nivel educativo mas alto alcanzado',
+    descripcion: 'Nivel educativo más alto alcanzado',
     valores: 'Secundaria, Tecnico, Universitario, Posgrado',
     ejemplo: 'Universitario',
     fuente: 'rrhh',
@@ -42,7 +42,7 @@ const CSV_FIELDS = [
   },
   {
     campo: 'antiguedad_meses',
-    tipo: 'Numero',
+    tipo: 'Número',
     obligatorio: true,
     descripcion: 'Meses que lleva en la empresa',
     valores: '0 a 360',
@@ -69,16 +69,16 @@ const CSV_FIELDS = [
   },
   {
     campo: 'salario_mensual',
-    tipo: 'Numero',
+    tipo: 'Número',
     obligatorio: true,
-    descripcion: 'Salario mensual en guaranies (Gs.) sin puntos ni comas',
+    descripcion: 'Salario mensual en guaraníes (Gs.) sin puntos ni comas',
     valores: 'Ej: 8500000 (no 8.500.000)',
     ejemplo: '8500000',
     fuente: 'rrhh',
   },
   {
     campo: 'cantidad_horas_extra_mes',
-    tipo: 'Numero',
+    tipo: 'Número',
     obligatorio: false,
     descripcion: 'Promedio de horas extra mensuales. Si no se tiene, dejar en 0',
     valores: '0 a 80',
@@ -89,23 +89,23 @@ const CSV_FIELDS = [
     campo: 'capacitacion_ultimo_anio',
     tipo: 'Texto',
     obligatorio: false,
-    descripcion: 'Si recibio capacitacion formal en los ultimos 12 meses',
+    descripcion: 'Si recibió capacitación formal en los últimos 12 meses',
     valores: 'Si, No',
     ejemplo: 'Si',
     fuente: 'rrhh',
   },
   {
     campo: 'evaluacion_desempeno',
-    tipo: 'Numero',
+    tipo: 'Número',
     obligatorio: false,
-    descripcion: 'Ultima calificacion de evaluacion de desempeno',
+    descripcion: 'Última calificacion de evaluacion de desempeno',
     valores: '1 (Muy bajo) a 5 (Excelente)',
     ejemplo: '4',
     fuente: 'rrhh',
   },
   {
     campo: 'cantidad_empresas_anteriores',
-    tipo: 'Numero',
+    tipo: 'Número',
     obligatorio: false,
     descripcion: 'Empresas donde trabajo antes de la actual',
     valores: '0 a 15',
@@ -115,7 +115,7 @@ const CSV_FIELDS = [
   // Opcionales (encuesta clima)
   {
     campo: 'satisfaccion_laboral',
-    tipo: 'Numero',
+    tipo: 'Número',
     obligatorio: false,
     descripcion: 'Que tan satisfecho esta con su trabajo (encuesta interna)',
     valores: '1 (Muy baja) a 5 (Muy alta)',
@@ -125,16 +125,16 @@ const CSV_FIELDS = [
   },
   {
     campo: 'satisfaccion_ambiente',
-    tipo: 'Numero',
+    tipo: 'Número',
     obligatorio: false,
-    descripcion: 'Satisfaccion con el ambiente y entorno laboral',
+    descripcion: 'Satisfacción con el ambiente y entorno laboral',
     valores: '1 (Muy baja) a 5 (Muy alta)',
     ejemplo: '4',
     fuente: 'clima',
   },
   {
     campo: 'equilibrio_vida_trabajo',
-    tipo: 'Numero',
+    tipo: 'Número',
     obligatorio: false,
     descripcion: 'Percepcion de balance entre vida personal y trabajo',
     valores: '1 (Muy malo) a 5 (Muy bueno)',
@@ -144,7 +144,7 @@ const CSV_FIELDS = [
   },
   {
     campo: 'estancamiento_carrera',
-    tipo: 'Numero',
+    tipo: 'Número',
     obligatorio: false,
     descripcion: 'Percepcion de estancamiento profesional',
     valores: '1 (Nada estancado) a 5 (Muy estancado)',
@@ -154,7 +154,7 @@ const CSV_FIELDS = [
   },
   {
     campo: 'feedback_lider',
-    tipo: 'Numero',
+    tipo: 'Número',
     obligatorio: false,
     descripcion: 'Calidad de retroalimentacion del lider directo',
     valores: '1 (Muy mala) a 5 (Muy buena)',
@@ -220,18 +220,18 @@ export default function CsvImportGuide({ onClose }) {
             <div className="rounded-lg border border-sky-200 bg-sky-50 p-3">
               <p className="text-sm font-semibold text-sky-700">Datos de RRHH (obligatorios)</p>
               <p className="mt-1 text-xs text-sky-600">
-                Informacion que tu area de Recursos Humanos ya tiene: edad, rol, seniority, salario,
-                antiguedad, modalidad de trabajo, tipo de contrato.
+                Información que tu área de Recursos Humanos ya tiene: edad, rol, seniority, salario,
+                antigüedad, modalidad de trabajo, tipo de contrato.
               </p>
               <p className="mt-2 text-xs font-medium text-sky-700">8 campos obligatorios</p>
             </div>
             <div className="rounded-lg border border-violet-200 bg-violet-50 p-3">
               <p className="text-sm font-semibold text-violet-700">Encuesta clima (opcionales)</p>
               <p className="mt-1 text-xs text-violet-600">
-                Datos que se obtienen de una encuesta interna a los empleados: satisfaccion,
+                Datos que se obtienen de una encuesta interna a los empleados: satisfacción,
                 equilibrio vida-trabajo, estancamiento, feedback del lider.
               </p>
-              <p className="mt-2 text-xs font-medium text-violet-700">5 campos opcionales (mejoran la prediccion)</p>
+              <p className="mt-2 text-xs font-medium text-violet-700">5 campos opcionales (mejoran la predicción)</p>
             </div>
           </div>
 
@@ -239,7 +239,7 @@ export default function CsvImportGuide({ onClose }) {
             <p className="font-semibold">Importante:</p>
             <p className="mt-1">
               Si no tenes los datos de encuesta clima, podes subir el CSV solo con los datos de RRHH.
-              El modelo hara la prediccion con menor precision y te avisara cuales variables faltan.
+              El modelo hara la predicción con menor precision y te avisara cuales variables faltan.
             </p>
           </div>
         </div>
@@ -306,10 +306,10 @@ export default function CsvImportGuide({ onClose }) {
 
           <div className="rounded-lg border-2 border-dashed border-gray-300 p-6 text-center">
             <p className="text-sm text-gray-500">
-              Usa el boton "Seleccionar archivo" del formulario de importacion
+              Usa el boton "Seleccionar archivo" del formulario de importación
             </p>
             <p className="mt-2 text-xs text-gray-400">
-              Formato: CSV con separador coma (,) · Codificacion: UTF-8 · Maximo: 5000 filas
+              Formato: CSV con separador coma (,) · Codificacion: UTF-8 · Máximo: 5000 filas
             </p>
           </div>
 
@@ -330,7 +330,7 @@ export default function CsvImportGuide({ onClose }) {
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-green-500 mt-0.5">✓</span>
-                Que el salario sea un numero positivo
+                Que el salario sea un número positivo
               </li>
             </ul>
           </div>
@@ -340,9 +340,9 @@ export default function CsvImportGuide({ onClose }) {
       {/* ── Paso 4: Resultado ── */}
       {step === 4 && (
         <div className="space-y-3">
-          <h3 className="text-base font-semibold text-gray-800">Paso 4: Prediccion automatica</h3>
+          <h3 className="text-base font-semibold text-gray-800">Paso 4: Predicción automática</h3>
           <p className="text-sm text-gray-600">
-            Una vez importados, el sistema calcula automaticamente el riesgo de desercion de cada empleado.
+            Una vez importados, el sistema calcula automáticamente el riesgo de deserción de cada empleado.
           </p>
 
           <div className="rounded-lg border border-green-200 bg-green-50 p-4 space-y-2">
@@ -350,9 +350,9 @@ export default function CsvImportGuide({ onClose }) {
             <ol className="space-y-1.5 text-xs text-green-700 list-decimal list-inside">
               <li>Se validan todos los datos del CSV</li>
               <li>Se envian los datos al modelo de Machine Learning</li>
-              <li>El modelo calcula el riesgo de desercion (0% a 100%)</li>
+              <li>El modelo calcula el riesgo de deserción (0% a 100%)</li>
               <li>Se asigna un nivel: BAJO, MEDIO, ALTO o CRITICO</li>
-              <li>Los empleados quedan guardados con su prediccion</li>
+              <li>Los empleados quedan guardados con su predicción</li>
             </ol>
           </div>
 

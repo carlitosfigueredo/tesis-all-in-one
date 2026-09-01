@@ -11,7 +11,7 @@ import api from '../services/api';
 
 const PLAN_INFO = {
   BASICO: {
-    nombre: 'Plan Estandar',
+    nombre: 'Plan Estándar',
     color: 'bg-gray-100 text-gray-700 border-gray-200',
     frecuencia: 'Mensual',
     descripcion: 'Predicciones actualizadas 1 vez por mes',
@@ -69,8 +69,8 @@ const FIELD_EXPLANATIONS = [
       { nombre: 'Edad', descripcion: 'Edad del empleado en anios' },
       { nombre: 'Modalidad', descripcion: 'Modalidad de trabajo: Presencial, Hibrido, Remoto' },
       { nombre: 'Contrato', descripcion: 'Tipo de contrato: Indefinido, Plazo fijo, Eventual' },
-      { nombre: 'Antiguedad', descripcion: 'Meses que lleva en la empresa' },
-      { nombre: 'Salario (Gs.)', descripcion: 'Salario mensual en guaranies' },
+      { nombre: 'Antigüedad', descripcion: 'Meses que lleva en la empresa' },
+      { nombre: 'Salario (Gs.)', descripcion: 'Salario mensual en guaraníes' },
       { nombre: 'Hs. Extra/mes', descripcion: 'Promedio de horas extra trabajadas por mes' },
     ],
   },
@@ -78,7 +78,7 @@ const FIELD_EXPLANATIONS = [
     grupo: 'Datos de encuesta clima (opcionales)',
     color: 'border-violet-200 bg-violet-50',
     campos: [
-      { nombre: 'Satisfaccion', descripcion: 'Satisfaccion laboral del empleado (1-5). Viene de una encuesta interna. NO lo calcula el sistema.' },
+      { nombre: 'Satisfacción', descripcion: 'Satisfacción laboral del empleado (1-5). Viene de una encuesta interna. NO lo calcula el sistema.' },
       { nombre: 'Equilibrio vida-trabajo', descripcion: 'Percepcion de balance entre lo personal y lo laboral (1-5)' },
       { nombre: 'Estancamiento', descripcion: 'Si el empleado siente que no crece profesionalmente (1-5)' },
       { nombre: 'Feedback del lider', descripcion: 'Calidad de retroalimentacion que recibe (1-5)' },
@@ -88,15 +88,15 @@ const FIELD_EXPLANATIONS = [
     grupo: 'Campos calculados por el sistema (ML)',
     color: 'border-green-200 bg-green-50',
     campos: [
-      { nombre: 'Riesgo', descripcion: 'Probabilidad de desercion calculada por el modelo de Machine Learning (0-100%). Es el UNICO campo que predice el sistema.' },
-      { nombre: 'Nivel de riesgo', descripcion: 'Clasificacion automatica: BAJO (<30%), MEDIO (30-50%), ALTO (50-75%), CRITICO (>75%)' },
+      { nombre: 'Riesgo', descripcion: 'Probabilidad de deserción calculada por el modelo de Machine Learning (0-100%). Es el UNICO campo que predice el sistema.' },
+      { nombre: 'Nivel de riesgo', descripcion: 'Clasificacion automática: BAJO (<30%), MEDIO (30-50%), ALTO (50-75%), CRITICO (>75%)' },
     ],
   },
   {
     grupo: 'Dato historico',
     color: 'border-amber-200 bg-amber-50',
     campos: [
-      { nombre: 'Desercion', descripcion: 'Indica si el empleado efectivamente se fue de la empresa. Es un dato real, no una prediccion. Sirve para validar que tan bien predice el modelo.' },
+      { nombre: 'Deserción', descripcion: 'Indica si el empleado efectivamente se fue de la empresa. Es un dato real, no una predicción. Sirve para validar que tan bien predice el modelo.' },
     ],
   },
 ];
@@ -258,7 +258,7 @@ export default function Company() {
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-500">Frecuencia prediccion</span>
+                      <span className="text-sm text-gray-500">Frecuencia predicción</span>
                       <span className="text-sm font-medium text-gray-700">{planInfo.frecuencia}</span>
                     </div>
                     <div className="flex items-center justify-between">
@@ -462,7 +462,7 @@ export default function Company() {
               <div className="rounded-xl bg-white dark:bg-gray-800 p-6 shadow-sm border border-gray-100 dark:border-gray-700 transition-colors">
                 <h3 className="text-base font-semibold text-gray-800 dark:text-gray-100 mb-1">Que significan los campos del tablero de empleados</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                  Entende de donde viene cada dato y cuales son calculados por el sistema de prediccion.
+                  Entende de donde viene cada dato y cuales son calculados por el sistema de predicción.
                 </p>
 
                 <div className="grid gap-4 lg:grid-cols-2">
@@ -485,7 +485,7 @@ export default function Company() {
                   <p className="font-semibold">Resumen rapido:</p>
                   <p className="mt-1">
                     La empresa carga los datos de sus empleados (CSV o manual). El unico campo que el sistema
-                    calcula automaticamente es el <strong>Riesgo de Desercion</strong> — usando un modelo de Machine Learning
+                    calcula automáticamente es el <strong>Riesgo de Deserción</strong> — usando un modelo de Machine Learning
                     entrenado con datos del mercado de software de Paraguay. Todo lo demas son datos de entrada.
                   </p>
                 </div>

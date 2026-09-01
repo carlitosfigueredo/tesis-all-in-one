@@ -17,7 +17,7 @@ export default function AdminForgotPassword() {
     e.preventDefault();
 
     if (RECAPTCHA_SITE_KEY && !captchaToken) {
-      setErrorMsg('Completa la verificacion de reCAPTCHA');
+      setErrorMsg('Completá la verificación de reCAPTCHA');
       setStatus('error');
       return;
     }
@@ -28,7 +28,7 @@ export default function AdminForgotPassword() {
       await api.post('/admin/auth/forgot-password', { email, recaptchaToken: captchaToken });
       setStatus('sent');
     } catch (err) {
-      const msg = err.response?.data?.message || 'Algo salio mal. Intenta de nuevo.';
+      const msg = err.response?.data?.message || 'Algo salió mal. Intentá de nuevo.';
       setErrorMsg(msg);
       setStatus('error');
       recaptchaRef.current?.reset();
@@ -48,8 +48,8 @@ export default function AdminForgotPassword() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
             </div>
-            <h1 className="text-xl font-bold text-gray-900">Recuperar contrasena</h1>
-            <p className="mt-1 text-xs text-gray-400">Panel de administracion — Sistema BI</p>
+            <h1 className="text-xl font-bold text-gray-900">Recuperar contraseña</h1>
+            <p className="mt-1 text-xs text-gray-400">Panel de administración — Sistema BI</p>
           </div>
 
           {/* Estado: enviado */}
@@ -60,7 +60,7 @@ export default function AdminForgotPassword() {
               </svg>
               <p className="font-semibold text-green-800 mb-1">Enlace enviado</p>
               <p className="text-sm text-green-700">
-                Si el correo esta registrado como administrador, vas a recibir un enlace para cambiar tu contrasena.
+                Si el correo está registrado como administrador, vas a recibir un enlace para cambiar tu contraseña.
               </p>
               <p className="mt-3 text-xs text-green-600">El enlace vence en 5 minutos.</p>
               <Link
@@ -74,7 +74,7 @@ export default function AdminForgotPassword() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-gray-700" htmlFor="admin-forgot-email">
-                  Correo electronico
+                  Correo electrónico
                 </label>
                 <input
                   id="admin-forgot-email"
