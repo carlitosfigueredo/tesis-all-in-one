@@ -7,7 +7,7 @@ export function AuthProvider({ children }) {
   const [user, setUser]     = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Al montar, restaurar sesion si hay token guardado
+  // Al montar, restaurar sesión si hay token guardado
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -34,7 +34,7 @@ export function AuthProvider({ children }) {
     return userData;
   };
 
-  // Permite setear sesion manualmente (usado por Register)
+  // Permite setear sesión manualmente (usado por Register)
   const setSession = (token, userData) => {
     localStorage.setItem('token', token);
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`;

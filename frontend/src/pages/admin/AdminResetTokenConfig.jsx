@@ -1,4 +1,4 @@
-// Panel SUPER_ADMIN — Configuracion del token de reset de contrasena
+// Panel SUPER_ADMIN — Configuración del token de reset de contraseña
 // Permite definir cuanto tiempo es valido el enlace de recuperacion enviado por email.
 
 import { useEffect, useState } from 'react';
@@ -26,7 +26,7 @@ export default function AdminResetTokenConfig() {
   useEffect(() => {
     api.get('/admin/config/reset-token')
       .then((res) => setConfig({ ...DEFAULT_CONFIG, ...res.data.data }))
-      .catch(() => setToast({ type: 'error', message: 'No se pudo cargar la configuracion' }))
+      .catch(() => setToast({ type: 'error', message: 'No se pudo cargar la configuración' }))
       .finally(() => setLoading(false));
   }, []);
 
@@ -41,7 +41,7 @@ export default function AdminResetTokenConfig() {
       return;
     }
     if (config.maxDailyRequests < 1 || config.maxDailyRequests > 20) {
-      setToast({ type: 'error', message: 'El maximo diario debe estar entre 1 y 20' });
+      setToast({ type: 'error', message: 'El máximo diario debe estar entre 1 y 20' });
       return;
     }
 
@@ -49,7 +49,7 @@ export default function AdminResetTokenConfig() {
     try {
       await api.put('/admin/config/reset-token', config);
       setDirty(false);
-      setToast({ type: 'success', message: 'Configuracion actualizada correctamente' });
+      setToast({ type: 'success', message: 'Configuración actualizada correctamente' });
     } catch (err) {
       setToast({ type: 'error', message: err.response?.data?.message ?? 'Error al guardar' });
     } finally {
@@ -79,7 +79,7 @@ export default function AdminResetTokenConfig() {
         {/* Header */}
         <div className="bg-white border-b border-gray-100 px-8 py-5 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Token de recuperacion de contrasena</h1>
+            <h1 className="text-xl font-bold text-gray-900">Token de recuperacion de contraseña</h1>
             <p className="text-sm text-gray-500 mt-0.5">
               Controla cuanto tiempo es valido el enlace enviado al correo del usuario.
             </p>
@@ -142,8 +142,8 @@ export default function AdminResetTokenConfig() {
             <section className="rounded-xl bg-white border border-gray-100 shadow-sm p-6">
               <h2 className="text-base font-semibold text-gray-900 mb-1">Duracion del enlace</h2>
               <p className="text-sm text-gray-500 mb-5">
-                Tiempo desde que se genera el token hasta que vence. Un valor corto es mas seguro;
-                uno largo es mas comodo para el usuario.
+                Tiempo desde que se genera el token hasta que vence. Un valor corto es más seguro;
+                uno largo es más comodo para el usuario.
               </p>
 
               {/* Opciones rapidas */}
@@ -197,7 +197,7 @@ export default function AdminResetTokenConfig() {
             <section className="rounded-xl bg-white border border-gray-100 shadow-sm p-6">
               <h2 className="text-base font-semibold text-gray-900 mb-1">Limite de solicitudes diarias</h2>
               <p className="text-sm text-gray-500 mb-5">
-                Maximo de enlaces de recuperacion que un mismo usuario puede solicitar por dia.
+                Máximo de enlaces de recuperacion que un mismo usuario puede solicitar por dia.
                 Ayuda a prevenir abusos del sistema de email.
               </p>
 

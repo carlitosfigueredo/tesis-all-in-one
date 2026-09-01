@@ -65,7 +65,7 @@ const requireActiveCompany = async (req, res, next) => {
 
         return res.status(403).json({
           success: false,
-          message: 'Tu suscripcion vencio. Renueva tu plan para volver a acceder',
+          message: 'Tu suscripción venció. Renová tu plan para volver a acceder',
           code: 'SUBSCRIPTION_EXPIRED',
           companyStatus: 'SUSPENDED',
         });
@@ -79,7 +79,7 @@ const requireActiveCompany = async (req, res, next) => {
     if (company.status === 'PENDING_PAYMENT') {
       return res.status(403).json({
         success: false,
-        message: 'Tu empresa esta pendiente de activacion. Completa el pago para acceder a todas las funcionalidades',
+        message: 'Tu empresa está pendiente de activación. Completá el pago para acceder a todas las funcionalidades',
         code: 'PENDING_PAYMENT',
         companyStatus: company.status,
       });
@@ -89,7 +89,7 @@ const requireActiveCompany = async (req, res, next) => {
     if (company.status === 'SUSPENDED') {
       return res.status(403).json({
         success: false,
-        message: 'Tu empresa esta suspendida. Contacta soporte para reactivar tu cuenta',
+        message: 'Tu empresa está suspendida. Contactá a soporte para reactivar tu cuenta',
         code: 'COMPANY_SUSPENDED',
         companyStatus: company.status,
       });

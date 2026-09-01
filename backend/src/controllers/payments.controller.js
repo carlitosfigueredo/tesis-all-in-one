@@ -30,7 +30,7 @@ const createPayPalOrder = async (req, res, next) => {
     const { planId } = req.body;
 
     if (!planId) {
-      return res.status(400).json({ success: false, message: 'Selecciona un plan' });
+      return res.status(400).json({ success: false, message: 'Seleccioná un plan' });
     }
     if (!req.user.companyId) {
       return res.status(400).json({ success: false, message: 'No tenes una empresa asociada' });
@@ -135,13 +135,13 @@ const capturePayPalOrder = async (req, res, next) => {
     if (result.status === 'APPROVED') {
       return res.json({
         success: true,
-        message: 'Pago procesado exitosamente via PayPal. Tu empresa ya esta activa!',
+        message: '¡Pago procesado exitosamente vía PayPal. Tu empresa ya está activa!',
         data: result,
       });
     } else if (result.status === 'PENDING') {
       return res.status(202).json({
         success: true,
-        message: 'Pago en proceso de verificacion por PayPal',
+        message: 'Pago en proceso de verificación por PayPal',
         data: result,
       });
     } else {
@@ -179,7 +179,7 @@ const createAdamsPayDebt = async (req, res, next) => {
   try {
     const { planId } = req.body;
     if (!planId) {
-      return res.status(400).json({ success: false, message: 'Selecciona un plan' });
+      return res.status(400).json({ success: false, message: 'Seleccioná un plan' });
     }
     if (!req.user.companyId) {
       return res.status(400).json({ success: false, message: 'No tenes una empresa asociada' });
@@ -268,7 +268,7 @@ const verifyAdamsPayDebt = async (req, res, next) => {
 
     // Verificar que la deuda pertenece a esta empresa
     if (!docId.startsWith(req.user.companyId)) {
-      return res.status(403).json({ success: false, message: 'No tenes permiso para ver esta deuda' });
+      return res.status(403).json({ success: false, message: 'No tenés permiso para ver esta deuda' });
     }
 
     if (isPaid) {
@@ -398,14 +398,14 @@ const processCheckout = async (req, res, next) => {
   try {
     // Bloquear en produccion (mock no debe usarse en prod)
     if (process.env.NODE_ENV === 'production') {
-      return res.status(501).json({ success: false, message: 'Pasarela de pagos no configurada para produccion' });
+      return res.status(501).json({ success: false, message: 'Pasarela de pagos no configurada para producción' });
     }
 
     const { planId, cardNumber, expiryMonth, expiryYear, cvv, cardholderName } = req.body;
 
     // Validar campos requeridos
     if (!planId) {
-      return res.status(400).json({ success: false, message: 'Selecciona un plan' });
+      return res.status(400).json({ success: false, message: 'Seleccioná un plan' });
     }
 
     // Validar que el usuario tenga empresa
@@ -418,7 +418,7 @@ const processCheckout = async (req, res, next) => {
     if (validationErrors.length > 0) {
       return res.status(400).json({
         success: false,
-        message: 'Datos de tarjeta invalidos',
+        message: 'Datos de tarjeta inválidos',
         errors: validationErrors,
       });
     }
@@ -466,13 +466,13 @@ const processCheckout = async (req, res, next) => {
     if (result.status === 'APPROVED') {
       return res.json({
         success: true,
-        message: 'Pago procesado exitosamente. Tu empresa ya esta activa!',
+        message: '¡Pago procesado exitosamente. Tu empresa ya está activa!',
         data: result,
       });
     } else if (result.status === 'PENDING') {
       return res.status(202).json({
         success: true,
-        message: 'Pago en proceso de verificacion',
+        message: 'Pago en proceso de verificación',
         data: result,
       });
     } else {

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 /**
- * Input de contrasena con toggle de visibilidad (ojito).
+ * Input de contraseña con toggle de visibilidad (ojito).
  * Props: las mismas que un <input> normal + label (opcional).
  */
 export default function PasswordInput({ label, className = '', ...props }) {
@@ -25,7 +25,7 @@ export default function PasswordInput({ label, className = '', ...props }) {
           onClick={() => setShow((v) => !v)}
           className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
           tabIndex={-1}
-          aria-label={show ? 'Ocultar contrasena' : 'Mostrar contrasena'}
+          aria-label={show ? 'Ocultar contraseña' : 'Mostrar contraseña'}
         >
           {show ? (
             // Ojo abierto (visible)

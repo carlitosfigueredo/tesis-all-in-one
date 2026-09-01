@@ -74,13 +74,13 @@ const sendPasswordResetEmail = async ({ to, name, resetUrl }) => {
       .replace(/{{resetUrl}}/g, resetUrl)
       .replace(/{{year}}/g,     new Date().getFullYear());
   } else {
-    html = `<p>Hola, ${name}.</p><p>Cambia tu contrasena: <a href="${resetUrl}">${resetUrl}</a></p><p>Vence en 5 minutos.</p>`;
+    html = `<p>Hola, ${name}.</p><p>Cambiá tu contraseña: <a href="${resetUrl}">${resetUrl}</a></p><p>Vence en 5 minutos.</p>`;
   }
   return sendEmail({
     to,
-    subject: 'Cambia tu contrasena — el enlace vale 5 minutos',
+    subject: 'Cambiá tu contraseña — el enlace vale 5 minutos',
     html,
-    text:    `Hola, ${name}.\n\nCambia tu contrasena: ${resetUrl}\n\nVence en 5 minutos.`,
+    text:    `Hola, ${name}.\n\nCambiá tu contraseña: ${resetUrl}\n\nVence en 5 minutos.`,
   });
 };
 
@@ -94,13 +94,13 @@ const sendPasswordChangedEmail = async ({ to, name, ip, timestamp }) => {
       .replace(/{{timestamp}}/g, fecha)
       .replace(/{{year}}/g,      new Date().getFullYear());
   } else {
-    html = `<p>Hola, ${name}.</p><p>Tu contrasena fue cambiada el ${fecha} desde ${ip || 'IP desconocida'}.</p>`;
+    html = `<p>Hola, ${name}.</p><p>Tu contraseña fue cambiada el ${fecha} desde ${ip || 'IP desconocida'}.</p>`;
   }
   return sendEmail({
     to,
-    subject: 'Tu contrasena fue cambiada',
+    subject: 'Tu contraseña fue cambiada',
     html,
-    text:    `Hola, ${name}.\n\nTu contrasena fue cambiada el ${fecha} desde ${ip}.`,
+    text:    `Hola, ${name}.\n\nTu contraseña fue cambiada el ${fecha} desde ${ip}.`,
   });
 };
 

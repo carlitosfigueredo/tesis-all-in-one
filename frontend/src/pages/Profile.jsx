@@ -15,7 +15,7 @@ const ROLE_LABELS = {
 };
 
 const PLAN_LABELS = {
-  BASICO:      'Plan Estandar',
+  BASICO:      'Plan Estándar',
   PROFESIONAL: 'Plan Profesional',
   CORPORATIVO: 'Plan Corporativo',
 };
@@ -65,11 +65,11 @@ export default function Profile() {
     e.preventDefault();
 
     if (form.newPassword !== form.confirmPassword) {
-      setToast({ type: 'error', title: 'Error', message: 'Las contrasenas nuevas no coinciden' });
+      setToast({ type: 'error', title: 'Error', message: 'Las contraseñas nuevas no coinciden' });
       return;
     }
     if (form.newPassword.length < policy.minLength) {
-      setToast({ type: 'error', title: 'Error', message: `La nueva contrasena debe tener al menos ${policy.minLength} caracteres` });
+      setToast({ type: 'error', title: 'Error', message: `La nueva contraseña debe tener al menos ${policy.minLength} caracteres` });
       return;
     }
 
@@ -80,11 +80,11 @@ export default function Profile() {
         newPassword:     form.newPassword,
         confirmPassword: form.confirmPassword,
       });
-      setToast({ type: 'success', title: 'Listo', message: 'Contrasena cambiada correctamente' });
+      setToast({ type: 'success', title: 'Listo', message: 'Contraseña cambiada correctamente' });
       setForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (err) {
       const data = err.response?.data;
-      const msg = data?.errors?.map((e) => e.message ?? e).join('. ') ?? data?.message ?? 'Error al cambiar la contrasena';
+      const msg = data?.errors?.map((e) => e.message ?? e).join('. ') ?? data?.message ?? 'Error al cambiar la contraseña';
       setToast({ type: 'error', title: 'Error', message: msg });
     } finally {
       setLoading(false);
@@ -128,49 +128,49 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* Formulario cambio de contrasena */}
+          {/* Formulario cambio de contraseña */}
           <div className="rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm p-6 transition-colors">
-            <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-1">Cambiar contrasena</h2>
+            <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-1">Cambiar contraseña</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
-              Actualiza tu contrasena periodicamente para mantener tu cuenta segura.
+              Actualiza tu contraseña periodicamente para mantener tu cuenta segura.
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <PasswordInput
-                label="Contrasena actual"
+                label="Contraseña actual"
                 name="currentPassword"
                 value={form.currentPassword}
                 onChange={handleChange}
                 required
                 autoComplete="current-password"
-                placeholder="Ingresa tu contrasena actual"
+                placeholder="Ingresa tu contraseña actual"
               />
 
               <div>
                 <PasswordInput
-                  label="Nueva contrasena"
+                  label="Nueva contraseña"
                   name="newPassword"
                   value={form.newPassword}
                   onChange={handleChange}
                   required
                   autoComplete="new-password"
-                  placeholder="Ingresa tu nueva contrasena"
+                  placeholder="Ingresa tu nueva contraseña"
                 />
                 <PasswordStrengthIndicator password={form.newPassword} />
               </div>
 
               <div>
                 <PasswordInput
-                  label="Confirmar nueva contrasena"
+                  label="Confirmar nueva contraseña"
                   name="confirmPassword"
                   value={form.confirmPassword}
                   onChange={handleChange}
                   required
                   autoComplete="new-password"
-                  placeholder="Repetir nueva contrasena"
+                  placeholder="Repetir nueva contraseña"
                 />
                 {form.confirmPassword && form.newPassword !== form.confirmPassword && (
-                  <p className="mt-1 text-xs text-red-500">Las contrasenas no coinciden</p>
+                  <p className="mt-1 text-xs text-red-500">Las contraseñas no coinciden</p>
                 )}
               </div>
 
@@ -179,7 +179,7 @@ export default function Profile() {
                 disabled={loading || form.newPassword.length < policy.minLength || form.newPassword !== form.confirmPassword}
                 className="rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
               >
-                {loading ? 'Guardando...' : 'Cambiar contrasena'}
+                {loading ? 'Guardando...' : 'Cambiar contraseña'}
               </button>
             </form>
           </div>
@@ -210,8 +210,8 @@ export default function Profile() {
                   >
                     <div>
                       <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {c.consentType === 'PRIVACY_POLICY' && 'Politica de Privacidad'}
-                        {c.consentType === 'TERMS_AND_CONDITIONS' && 'Terminos y Condiciones'}
+                        {c.consentType === 'PRIVACY_POLICY' && 'Política de Privacidad'}
+                        {c.consentType === 'TERMS_AND_CONDITIONS' && 'Términos y Condiciones'}
                         {c.consentType === 'DATA_PROCESSING' && 'Procesamiento de datos'}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">

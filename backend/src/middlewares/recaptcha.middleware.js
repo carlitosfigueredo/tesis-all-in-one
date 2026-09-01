@@ -23,7 +23,7 @@ const verifyRecaptcha = async (req, res, next) => {
   if (!recaptchaToken) {
     return res.status(400).json({
       success: false,
-      message: 'Completa la verificacion de reCAPTCHA',
+      message: 'Completá la verificación de reCAPTCHA',
       code: 'RECAPTCHA_MISSING',
     });
   }
@@ -47,7 +47,7 @@ const verifyRecaptcha = async (req, res, next) => {
       console.warn('[reCAPTCHA] Verificacion fallida:', data['error-codes']);
       return res.status(400).json({
         success: false,
-        message: 'La verificacion de reCAPTCHA fallo. Intenta de nuevo',
+        message: 'La verificación de reCAPTCHA falló. Intentá de nuevo',
         code: 'RECAPTCHA_FAILED',
       });
     }

@@ -100,10 +100,10 @@ export default function EmployeeDetail() {
   const riskFactors = emp ? [
     { label: 'Horas extra/mes',         risk: emp.cantidad_horas_extra_mes > 15,     text: `${emp.cantidad_horas_extra_mes}h/mes` },
     { label: 'Estancamiento carrera',    risk: emp.estancamiento_carrera >= 4,        text: `${emp.estancamiento_carrera}/5` },
-    { label: 'Satisfaccion laboral',     risk: emp.satisfaccion_laboral <= 2,         text: `${emp.satisfaccion_laboral}/5` },
+    { label: 'Satisfacción laboral',     risk: emp.satisfaccion_laboral <= 2,         text: `${emp.satisfaccion_laboral}/5` },
     { label: 'Equilibrio vida-trabajo',  risk: emp.equilibrio_vida_trabajo <= 2,      text: `${emp.equilibrio_vida_trabajo}/5` },
-    { label: 'Capacitacion',             risk: !emp.capacitacion_ultimo_anio,         text: emp.capacitacion_ultimo_anio ? 'Si' : 'No' },
-    { label: 'Antiguedad',               risk: emp.antiguedad_meses < 12,            text: `${emp.antiguedad_meses} meses` },
+    { label: 'Capacitación',             risk: !emp.capacitacion_ultimo_anio,         text: emp.capacitacion_ultimo_anio ? 'Si' : 'No' },
+    { label: 'Antigüedad',               risk: emp.antiguedad_meses < 12,            text: `${emp.antiguedad_meses} meses` },
     { label: 'Tipo contrato',            risk: emp.tipo_contrato === 'Eventual',     text: emp.tipo_contrato },
     { label: 'Empresas anteriores',      risk: emp.cantidad_empresas_anteriores >= 4, text: `${emp.cantidad_empresas_anteriores} empresas` },
   ] : [];
@@ -165,7 +165,7 @@ export default function EmployeeDetail() {
 
                   {/* Gauge de riesgo */}
                   <div className="rounded-xl bg-white dark:bg-gray-800 p-5 shadow-sm text-center transition-colors">
-                    <p className="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-200">Probabilidad de Desercion</p>
+                    <p className="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-200">Probabilidad de Deserción</p>
                     <RiskGauge score={emp.riesgo_desercion} />
                     {emp.es_modelo_base && (
                       <p className="mt-2 text-xs text-amber-500">Calculado con modelo heuristico base</p>
@@ -197,11 +197,11 @@ export default function EmployeeDetail() {
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                       <Field label="Edad" value={`${emp.edad} anios`} />
                       <Field label="Salario Mensual" value={`Gs. ${emp.salario_mensual?.toLocaleString('es-PY')}`} />
-                      <Field label="Antiguedad" value={`${emp.antiguedad_meses} meses`} />
+                      <Field label="Antigüedad" value={`${emp.antiguedad_meses} meses`} />
                       <Field label="Horas extra/mes" value={`${emp.cantidad_horas_extra_mes}h`} highlight={emp.cantidad_horas_extra_mes > 15} />
                       <Field label="Empresas anteriores" value={emp.cantidad_empresas_anteriores} highlight={emp.cantidad_empresas_anteriores >= 4} />
                       <Field label="Evaluacion desempeno" value={`${emp.evaluacion_desempeno}/5`} />
-                      <Field label="Capacitacion" value={emp.capacitacion_ultimo_anio ? 'Si' : 'No'} highlight={!emp.capacitacion_ultimo_anio} />
+                      <Field label="Capacitación" value={emp.capacitacion_ultimo_anio ? 'Si' : 'No'} highlight={!emp.capacitacion_ultimo_anio} />
                       <Field label="Modalidad" value={emp.modalidad_trabajo} />
                       <Field label="Tipo contrato" value={emp.tipo_contrato} highlight={emp.tipo_contrato === 'Eventual'} />
                     </div>

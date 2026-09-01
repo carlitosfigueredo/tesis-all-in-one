@@ -1,5 +1,5 @@
-// Panel SUPER_ADMIN — Configuracion de politica de contrasenas
-// Permite editar los requisitos de contrasenas que aplican a todos los usuarios.
+// Panel SUPER_ADMIN — Configuración de política de contraseñas
+// Permite editar los requisitos de contraseñas que aplican a todos los usuarios.
 // Los cambios se persisten en BD y el frontend los toma en ~1 minuto (cache TTL).
 
 import { useEffect, useState } from 'react';
@@ -53,11 +53,11 @@ export default function AdminPasswordPolicy() {
   const [toast, setToast]     = useState(null); // { type: 'success'|'error', message }
   const [dirty, setDirty]     = useState(false);
 
-  // Cargar politica vigente
+  // Cargar política vigente
   useEffect(() => {
     api.get('/admin/config/password-policy')
       .then((res) => setPolicy({ ...DEFAULT_POLICY, ...res.data.data }))
-      .catch(() => setToast({ type: 'error', message: 'No se pudo cargar la configuracion' }))
+      .catch(() => setToast({ type: 'error', message: 'No se pudo cargar la configuración' }))
       .finally(() => setLoading(false));
   }, []);
 
@@ -87,9 +87,9 @@ export default function AdminPasswordPolicy() {
       // Invalidar cache del frontend para que tome los nuevos valores inmediatamente
       invalidatePasswordPolicyCache();
       setDirty(false);
-      setToast({ type: 'success', message: 'Politica actualizada correctamente' });
+      setToast({ type: 'success', message: 'Política actualizada correctamente' });
     } catch (err) {
-      const msg = err.response?.data?.message ?? 'Error al guardar la configuracion';
+      const msg = err.response?.data?.message ?? 'Error al guardar la configuración';
       setToast({ type: 'error', message: msg });
     } finally {
       setSaving(false);
@@ -111,9 +111,9 @@ export default function AdminPasswordPolicy() {
         {/* Header */}
         <div className="bg-white border-b border-gray-100 px-8 py-5 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Politica de contrasenas</h1>
+            <h1 className="text-xl font-bold text-gray-900">Política de contraseñas</h1>
             <p className="text-sm text-gray-500 mt-0.5">
-              Define los requisitos minimos que deben cumplir todas las contrasenas del sistema.
+              Define los requisitos minimos que deben cumplir todas las contraseñas del sistema.
             </p>
           </div>
           <button
@@ -174,11 +174,11 @@ export default function AdminPasswordPolicy() {
             <section className="rounded-xl bg-white border border-gray-100 shadow-sm p-6">
               <h2 className="text-base font-semibold text-gray-900 mb-1">Longitud</h2>
               <p className="text-sm text-gray-500 mb-5">
-                Rango de caracteres permitido. NIST recomienda un minimo de 8 y no imponer maximos bajos.
+                Rango de caracteres permitido. NIST recomienda un mínimo de 8 y no imponer maximos bajos.
               </p>
 
               <div className="grid grid-cols-2 gap-6">
-                {/* Minimo */}
+                {/* Mínimo */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 mb-1.5" htmlFor="minLength">
                     Longitud minima
@@ -197,7 +197,7 @@ export default function AdminPasswordPolicy() {
                   </div>
                 </div>
 
-                {/* Maximo */}
+                {/* Máximo */}
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 mb-1.5" htmlFor="maxLength">
                     Longitud maxima
@@ -219,7 +219,7 @@ export default function AdminPasswordPolicy() {
 
               {/* Preview visual */}
               <div className="mt-4 rounded-lg bg-gray-50 px-4 py-3 text-sm text-gray-600">
-                Las contrasenas deben tener entre{' '}
+                Las contraseñas deben tener entre{' '}
                 <span className="font-semibold text-gray-900">{policy.minLength}</span>
                 {' '}y{' '}
                 <span className="font-semibold text-gray-900">{policy.maxLength}</span>
@@ -268,8 +268,8 @@ export default function AdminPasswordPolicy() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span>
-                Los cambios aplican a contrasenas <strong>nuevas</strong> solamente.
-                Las contrasenas ya guardadas no se ven afectadas.
+                Los cambios aplican a contraseñas <strong>nuevas</strong> solamente.
+                Las contraseñas ya guardadas no se ven afectadas.
                 El frontend actualiza el indicador visual en la proxima carga de pagina.
               </span>
             </div>

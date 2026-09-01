@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
  *   message: string (mensaje principal)
  *   messages: string[] (lista de mensajes, alternativa a message)
  *   onClose: () => void (callback al cerrar)
- *   autoClose: number | false (ms para cerrar automaticamente, default false)
+ *   autoClose: number | false (ms para cerrar automáticamente, default false)
  */
 
 const VARIANTS = {

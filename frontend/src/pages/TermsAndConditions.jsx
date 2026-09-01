@@ -180,7 +180,7 @@ export default function TermsAndConditions() {
             </li>
             <li>
               <strong>Ley N.° 1328/1998 de Derechos de Autor y Derechos Conexos</strong> —
-              Protege el codigo fuente del sistema como obra literaria (Arts. 2 y 7) y establece
+              Protege el código fuente del sistema como obra literaria (Arts. 2 y 7) y establece
               los derechos morales y patrimoniales del autor sobre el software (Art. 67).
             </li>
           </ul>
@@ -188,7 +188,7 @@ export default function TermsAndConditions() {
 
         <Section title="11. Ley aplicable y jurisdiccion">
           <p>
-            Estos terminos se rigen por las leyes de la Republica del Paraguay. Cualquier disputa
+            Estos términos se rigen por las leyes de la Republica del Paraguay. Cualquier disputa
             sera sometida a la jurisdiccion de los tribunales competentes de Asuncion, Paraguay.
           </p>
         </Section>

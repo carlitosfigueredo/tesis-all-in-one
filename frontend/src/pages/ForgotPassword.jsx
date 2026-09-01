@@ -17,7 +17,7 @@ export default function ForgotPassword() {
     e.preventDefault();
 
     if (RECAPTCHA_SITE_KEY && !captchaToken) {
-      setErrorMsg('Completa la verificacion de reCAPTCHA');
+      setErrorMsg('Completa la verificación de reCAPTCHA');
       setStatus('error');
       return;
     }
@@ -28,7 +28,7 @@ export default function ForgotPassword() {
       await api.post('/auth/forgot-password', { email, recaptchaToken: captchaToken });
       setStatus('sent');
     } catch (err) {
-      const msg = err.response?.data?.message || 'Algo salio mal. Intenta de nuevo.';
+      const msg = err.response?.data?.message || 'Algo salió mal. Intenta de nuevo.';
       setErrorMsg(msg);
       setStatus('error');
       recaptchaRef.current?.reset();
@@ -47,7 +47,7 @@ export default function ForgotPassword() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Recuperar contrasena</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Recuperar contraseña</h1>
           <p className="mt-1 text-sm text-gray-500">
             Ingresa tu correo y te enviamos un enlace para cambiarla.
           </p>
@@ -62,21 +62,21 @@ export default function ForgotPassword() {
             <p className="font-semibold text-green-800 mb-1">Listo!</p>
             <p className="text-sm text-green-700">
               Si el correo esta registrado, vas a recibir un enlace en breve.
-              Revisa tambien la carpeta de spam.
+              Revisa también la carpeta de spam.
             </p>
             <p className="mt-3 text-xs text-green-600">El enlace vence en 5 minutos.</p>
             <Link
               to="/login"
               className="mt-5 inline-block text-sm font-medium text-primary-600 hover:underline"
             >
-              ← Volver al inicio de sesion
+              ← Volver al inicio de sesión
             </Link>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="forgot-email">
-                Correo electronico
+                Correo electrónico
               </label>
               <input
                 id="forgot-email"
@@ -120,7 +120,7 @@ export default function ForgotPassword() {
 
             <p className="text-center text-sm text-gray-500">
               <Link to="/login" className="font-medium text-primary-600 hover:underline">
-                ← Volver al inicio de sesion
+                ← Volver al inicio de sesión
               </Link>
             </p>
           </form>

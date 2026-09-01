@@ -7,6 +7,7 @@ import PasswordStrengthIndicator from '../components/PasswordStrengthIndicator';
 import AlertMessage from '../components/AlertMessage';
 import api from '../services/api';
 import { usePasswordPolicy } from '../hooks/usePasswordPolicy';
+import { isKnownInvalidDomain } from '../utils/emailDomain';
 
 // Version de los documentos legales — debe coincidir con PrivacyPolicy.jsx y TermsAndConditions.jsx
 const PRIVACY_VERSION = '1.0';
@@ -15,7 +16,7 @@ const TERMS_VERSION   = '1.0';
 const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
 
 const PLANS = [
-  { id: 'BASICO', name: 'Estandar', price: 'Gs. 999.000/mes' },
+  { id: 'BASICO', name: 'Estándar', price: 'Gs. 999.000/mes' },
   { id: 'PROFESIONAL', name: 'Profesional', price: 'Gs. 1.390.000/mes' },
   { id: 'CORPORATIVO', name: 'Corporativo', price: 'Gs. 2.590.000/mes' },
 ];
@@ -56,7 +57,17 @@ export default function Register() {
     setErrors([]);
     if (step === 1) {
       if (!form.companyName.trim()) {
-        setErrors(['Ingresa el nombre de tu empresa']);
+        setErrors(['Ingresá el nombre de tu empresa']);
+        return;
+      }
+    }
+    if (step === 2) {
+      if (!form.name.trim() || !form.email.trim()) {
+        setErrors(['Completá tu nombre y correo']);
+        return;
+      }
+      if (isKnownInvalidDomain(form.email)) {
+        setErrors(['El dominio del correo no existe o está mal escrito. Revisá que sea correcto (ej. gmail.com)']);
         return;
       }
     }
@@ -70,29 +81,33 @@ export default function Register() {
     setErrors([]);
 
     if (form.password !== form.confirmPassword) {
-      setErrors(['Las contrasenas no coinciden']);
+      setErrors(['Las contraseñas no coinciden']);
       return;
     }
     if (form.password.length < policy.minLength) {
-      setErrors([`La contrasena debe tener al menos ${policy.minLength} caracteres`]);
+      setErrors([`La contraseña debe tener al menos ${policy.minLength} caracteres`]);
       return;
     }
     if (!form.name.trim() || !form.email.trim()) {
-      setErrors(['Completa todos los campos']);
+      setErrors(['Completá todos los campos']);
+      return;
+    }
+    if (isKnownInvalidDomain(form.email)) {
+      setErrors(['El dominio del correo no existe o está mal escrito. Revisá que sea correcto (ej. gmail.com)']);
       return;
     }
     if (RECAPTCHA_SITE_KEY && !captchaToken) {
-      setErrors(['Completa la verificacion de reCAPTCHA']);
+      setErrors(['Completá la verificación de reCAPTCHA']);
       return;
     }
 
     // Validar consentimientos obligatorios (UNIDA punto 35)
     if (!acceptedPrivacy) {
-      setErrors(['Tenes que aceptar la Politica de Privacidad para continuar']);
+      setErrors(['Tenés que aceptar la Política de Privacidad para continuar']);
       return;
     }
     if (!acceptedTerms) {
-      setErrors(['Tenes que aceptar los Terminos y Condiciones para continuar']);
+      setErrors(['Tenés que aceptar los Términos y Condiciones para continuar']);
       return;
     }
 
@@ -120,7 +135,7 @@ export default function Register() {
       // Redirigir al checkout pasando el plan seleccionado
       navigate('/checkout', { replace: true, state: { preselectedPlan: form.plan } });
     } catch (err) {
-      const msg = err.response?.data?.message ?? 'Error al registrar. Intenta de nuevo';
+      const msg = err.response?.data?.message ?? 'Error al registrar. Intentá de nuevo';
       const fieldErrors = err.response?.data?.errors?.map((e) => `${e.field}: ${e.message}`) ?? [];
       setErrors(fieldErrors.length > 0 ? fieldErrors : [msg]);
       // Resetear captcha despues de setear errores (para que no cause flash)
@@ -141,9 +156,9 @@ export default function Register() {
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary-500 text-2xl text-white">
             🚀
           </div>
-          <h1 className="text-xl font-bold text-gray-900">Registra tu empresa</h1>
+          <h1 className="text-xl font-bold text-gray-900">Registrá tu empresa</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Comenza a predecir la rotacion de talento en minutos
+            Comenzá a predecir la rotación de talento en minutos
           </p>
         </div>
 
@@ -224,12 +239,12 @@ export default function Register() {
                   value={form.name}
                   onChange={handleChange}
                   className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/30"
-                  placeholder="Ej: Juan Perez"
+                  placeholder="Ej: Juan Pérez"
                   required
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Correo electronico</label>
+                <label className="mb-1 block text-sm font-medium text-gray-700">Correo electrónico</label>
                 <input
                   name="email"
                   type="email"
@@ -246,7 +261,7 @@ export default function Register() {
                   onClick={prevStep}
                   className="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 transition"
                 >
-                  Atras
+                  Atrás
                 </button>
                 <button
                   type="button"
@@ -259,25 +274,25 @@ export default function Register() {
             </div>
           )}
 
-          {/* Paso 3: Contrasena */}
+          {/* Paso 3: Contraseña */}
           {step === 3 && (
             <div className="space-y-4">
-              <h2 className="text-sm font-semibold text-gray-700 mb-3">Crea tu contrasena</h2>
+              <h2 className="text-sm font-semibold text-gray-700 mb-3">Creá tu contraseña</h2>
               <PasswordInput
-                label="Contrasena"
+                label="Contraseña"
                 name="password"
                 value={form.password}
                 onChange={handleChange}
-                placeholder={`Minimo ${policy.minLength} caracteres`}
+                placeholder={`Mínimo ${policy.minLength} caracteres`}
                 required
               />
               <PasswordStrengthIndicator password={form.password} />
               <PasswordInput
-                label="Confirmar contrasena"
+                label="Confirmar contraseña"
                 name="confirmPassword"
                 value={form.confirmPassword}
                 onChange={handleChange}
-                placeholder="Repeti tu contrasena"
+                placeholder="Repetí tu contraseña"
                 required
               />
 
@@ -375,7 +390,7 @@ export default function Register() {
                   onClick={prevStep}
                   className="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 transition"
                 >
-                  Atras
+                  Atrás
                 </button>
                 <button
                   type="submit"
@@ -391,9 +406,9 @@ export default function Register() {
 
         {/* Footer */}
         <div className="mt-6 text-center text-sm text-gray-500">
-          Ya tenes cuenta?{' '}
+          ¿Ya tenés cuenta?{' '}
           <Link to="/login" className="text-primary-600 font-medium hover:underline">
-            Inicia sesion
+            Iniciá sesión
           </Link>
         </div>
       </div>
