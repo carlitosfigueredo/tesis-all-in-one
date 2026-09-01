@@ -4,8 +4,9 @@ const { requirePermission } = require('../middlewares/permission.middleware');
 const {
   getCompanies, getCompany, getAdminStats,
   getPlans, updatePlans, getAdminAuditLogs,
+  changeCompanyPlan, extendCompanySubscription, unlockUser,
 } = require('../controllers/admin.controller');
-const { getAllPayments, toggleCompanyStatus } = require('../controllers/payments.controller');
+const { getAllPayments, toggleCompanyStatus, refundPayment } = require('../controllers/payments.controller');
 const { getPasswordPolicy, setConfig, getResetTokenConfig, getPygToUsdRate } = require('../services/systemConfig.service');
 
 const router = Router();
@@ -17,11 +18,15 @@ router.get('/stats',       requirePermission('admin.companies'), getAdminStats);
 router.get('/companies',   requirePermission('admin.companies'), getCompanies);
 router.get('/companies/:id', requirePermission('admin.companies'), getCompany);
 router.patch('/companies/:id/status', requirePermission('admin.companies'), toggleCompanyStatus);
+router.patch('/companies/:id/plan', requirePermission('admin.companies'), changeCompanyPlan);
+router.post('/companies/:id/subscription/extend', requirePermission('admin.companies'), extendCompanySubscription);
+router.post('/users/:id/unlock', requirePermission('admin.companies'), unlockUser);
 
 router.get('/plans',  requirePermission('admin.plans'), getPlans);
 router.put('/plans',  requirePermission('admin.plans'), updatePlans);
 
 router.get('/payments', requirePermission('admin.payments'), getAllPayments);
+router.post('/payments/:id/refund', requirePermission('admin.payments'), refundPayment);
 
 router.get('/audit-logs', requirePermission('admin.audit'), getAdminAuditLogs);
 
