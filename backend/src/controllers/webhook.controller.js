@@ -13,6 +13,7 @@
 const prisma  = require('../lib/prisma');
 const { getAccessToken } = require('../services/paypal.service');
 const { getPygToUsdRate } = require('../services/systemConfig.service');
+const { PLAN_ID_TO_ENUM } = require('../services/subscription.service');
 
 // Eventos que nos interesan manejar
 const HANDLED_EVENTS = [
@@ -91,10 +92,6 @@ const handleCaptureCompleted = async (resource) => {
   const [companyId, planId] = customId.split(':');
   if (!companyId) return;
 
-  const PLAN_ID_TO_ENUM = {
-    ESTANDAR: 'BASICO', PROFESIONAL: 'PROFESIONAL', CORPORATIVO: 'CORPORATIVO',
-  };
-
   const company = await prisma.company.findUnique({ where: { id: companyId } });
   if (!company) return;
 
@@ -110,17 +107,56 @@ const handleCaptureCompleted = async (resource) => {
     console.log(`[Webhook] Empresa ${companyId} activada via PAYMENT.CAPTURE.COMPLETED`);
   }
 
-  // Actualizar el payment en BD con el captureId si existe
+  // Actualizar el payment correcto correlacionando por captureId / orderId.
+  // NO aprobar indiscriminadamente todos los PENDING de la empresa.
   const captureId = resource.id;
-  if (captureId) {
-    // Buscar el payment por metadata (puede no existir si la captura fue manual)
-    await prisma.payment.updateMany({
-      where: {
-        companyId,
-        status: 'PENDING',
-      },
-      data: { status: 'APPROVED', processedAt: new Date() },
+  const orderId   = resource.supplementary_data?.related_ids?.order_id;
+
+  if (!captureId && !orderId) {
+    console.warn(`[Webhook] CAPTURE.COMPLETED sin captureId ni orderId para empresa ${companyId}`);
+    return;
+  }
+
+  // 1) Intentar por captureId exacto (lo más preciso)
+  let target = await prisma.payment.findFirst({
+    where: { companyId, paypalCaptureId: captureId },
+    select: { id: true, status: true },
+  });
+
+  // 2) Si no, por orderId (la captura suele referenciar la orden)
+  if (!target && orderId) {
+    target = await prisma.payment.findFirst({
+      where: { companyId, paypalOrderId: orderId },
+      select: { id: true, status: true },
     });
+  }
+
+  if (target) {
+    // Actualizar solo ese pago; guardar el captureId si aún no lo tenía
+    if (target.status !== 'APPROVED') {
+      await prisma.payment.update({
+        where: { id: target.id },
+        data:  { status: 'APPROVED', processedAt: new Date(), paypalCaptureId: captureId },
+      });
+      console.log(`[Webhook] Payment ${target.id} aprobado via captura ${captureId}`);
+    }
+  } else {
+    // La captura no tiene un Payment previo (p.ej. capturada fuera de flujo):
+    // registrar uno nuevo para no perder trazabilidad.
+    await prisma.payment.create({
+      data: {
+        companyId,
+        amount:          0, // se desconoce en PYG desde el webhook; queda para conciliación
+        currency:        'PYG',
+        status:          'APPROVED',
+        paymentMethod:   'paypal',
+        description:     `Captura PayPal ${captureId} (registrada por webhook)`,
+        processedAt:     new Date(),
+        paypalOrderId:   orderId || null,
+        paypalCaptureId: captureId || null,
+      },
+    }).catch((e) => console.error('[Webhook] No se pudo registrar payment de captura huérfana:', e.message));
+    console.warn(`[Webhook] Captura ${captureId} sin Payment previo — registrada para conciliación`);
   }
 };
 
@@ -278,9 +314,7 @@ module.exports = { handlePayPalWebhook };
 // o por validar que el docId exista en nuestra BD.
 // ─────────────────────────────────────────
 
-const PLAN_ID_TO_ENUM = {
-  ESTANDAR: 'BASICO', PROFESIONAL: 'PROFESIONAL', CORPORATIVO: 'CORPORATIVO',
-};
+// PLAN_ID_TO_ENUM se importa desde subscription.service
 
 /**
  * POST /api/webhooks/adamspay

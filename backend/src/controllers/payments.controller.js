@@ -4,8 +4,15 @@
 
 const prisma = require('../lib/prisma');
 const { validateCard, processPayment, getPaymentHistory, getSubscription, TEST_CARDS } = require('../services/payment.service');
-const { createOrder, captureOrder } = require('../services/paypal.service');
+const { createOrder, captureOrder, refundCapture, pygToUsd } = require('../services/paypal.service');
 const { createDebt, getDebt }       = require('../services/adamspay.service');
+const {
+  PLAN_ID_TO_ENUM,
+  getSubscriptionStatus,
+  computeProration,
+  schedulePlanChange,
+  clearScheduledPlanChange,
+} = require('../services/subscription.service');
 const { logAction } = require('../services/audit.service');
 const { getIp, getUserAgent } = require('../utils/request.utils');
 
@@ -265,10 +272,7 @@ const verifyAdamsPayDebt = async (req, res, next) => {
     }
 
     if (isPaid) {
-      // Activar empresa si no lo estaba
-      const PLAN_ID_TO_ENUM = {
-        ESTANDAR: 'BASICO', PROFESIONAL: 'PROFESIONAL', CORPORATIVO: 'CORPORATIVO',
-      };
+      // Activar empresa si no lo estaba (PLAN_ID_TO_ENUM centralizado en subscription.service)
 
       // Extraer planId del docId (formato: UUID(36 chars)-PLANID-TIMESTAMP)
       // UUID siempre tiene 36 chars. Luego viene "-PLANID-timestamp"
@@ -518,6 +522,201 @@ const getActiveSubscription = async (req, res, next) => {
 };
 
 /**
+ * GET /api/payments/subscription/status
+ * Estado de la suscripción enriquecido: días restantes, si está por vencer,
+ * si venció. Usado por el frontend para mostrar el banner de vencimiento.
+ */
+const getSubscriptionStatusHandler = async (req, res, next) => {
+  try {
+    if (!req.user.companyId) {
+      return res.status(400).json({ success: false, message: 'No tenes empresa asociada' });
+    }
+
+    const [status, company] = await Promise.all([
+      getSubscriptionStatus(req.user.companyId),
+      prisma.company.findUnique({
+        where: { id: req.user.companyId },
+        select: { status: true },
+      }),
+    ]);
+
+    // companyStatus es el estado de la CUENTA (fresco desde BD), distinto del
+    // status de la suscripción. Permite al frontend distinguir SUSPENDED de
+    // PENDING_PAYMENT sin depender del token, que puede estar desactualizado.
+    const companyStatus = company?.status ?? null;
+
+    if (!status) {
+      return res.json({
+        success: true,
+        data: { hasSubscription: false, companyStatus },
+      });
+    }
+
+    res.json({ success: true, data: { hasSubscription: true, companyStatus, ...status } });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/payments/plan-change/preview?planId=XXX
+ * Previsualiza un cambio de plan: si es upgrade devuelve el monto prorrateado
+ * a pagar; si es downgrade indica que se programa para el próximo ciclo.
+ */
+const previewPlanChange = async (req, res, next) => {
+  try {
+    if (!req.user.companyId) {
+      return res.status(400).json({ success: false, message: 'No tenes empresa asociada' });
+    }
+    const { planId } = req.query;
+    if (!planId) {
+      return res.status(400).json({ success: false, message: 'planId es requerido' });
+    }
+
+    const proration = await computeProration(req.user.companyId, planId);
+    res.json({ success: true, data: proration });
+  } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({ success: false, message: error.message });
+    }
+    next(error);
+  }
+};
+
+/**
+ * POST /api/payments/plan-change
+ * Ejecuta un cambio de plan.
+ * Body: { planId }
+ *  - DOWNGRADE: se programa para el próximo ciclo (sin cobro). Responde 200.
+ *  - UPGRADE: crea una orden PayPal por la diferencia prorrateada. Responde con orderId
+ *    para que el frontend abra el botón de PayPal. El plan se aplica al capturar.
+ */
+const executePlanChange = async (req, res, next) => {
+  const ip = getIp(req);
+  const ua = getUserAgent(req);
+
+  try {
+    if (!req.user.companyId) {
+      return res.status(400).json({ success: false, message: 'No tenes empresa asociada' });
+    }
+    const { planId } = req.body;
+    if (!planId) {
+      return res.status(400).json({ success: false, message: 'planId es requerido' });
+    }
+
+    const proration = await computeProration(req.user.companyId, planId);
+
+    // ── DOWNGRADE: programar para el próximo ciclo ──────────────────────────
+    if (proration.type === 'DOWNGRADE') {
+      await schedulePlanChange(req.user.companyId, planId);
+
+      await logAction({
+        tenantId:   req.user.companyId,
+        userId:     req.user.id,
+        action:     'PLAN_DOWNGRADE_SCHEDULED',
+        resource:   'subscriptions',
+        ipAddress:  ip,
+        userAgent:  ua,
+        status:     'SUCCESS',
+        newValue:   { from: proration.currentPlanId, to: planId, effective: proration.currentPeriodEnd },
+      });
+
+      return res.json({
+        success: true,
+        data: {
+          type: 'DOWNGRADE',
+          scheduled: true,
+          effectiveDate: proration.currentPeriodEnd,
+          message: `Tu plan cambiará a ${planId} al finalizar el ciclo actual (${new Date(proration.currentPeriodEnd).toLocaleDateString('es-PY')}).`,
+        },
+      });
+    }
+
+    // ── UPGRADE: crear orden PayPal por la diferencia prorrateada ───────────
+    // Si la diferencia es 0 (crédito cubre todo), aplicar directo sin cobro.
+    if (proration.amountToPayGs <= 0) {
+      // Aplicar upgrade inmediato sin cobro
+      const periodEnd = new Date();
+      periodEnd.setMonth(periodEnd.getMonth() + 1);
+      await prisma.subscription.update({
+        where: { companyId: req.user.companyId },
+        data:  { planId, currentPeriodStart: new Date(), currentPeriodEnd: periodEnd, status: 'ACTIVE', scheduledPlanId: null },
+      });
+      await prisma.company.update({
+        where: { id: req.user.companyId },
+        data:  { plan: PLAN_ID_TO_ENUM[planId] || 'BASICO', status: 'ACTIVE' },
+      });
+
+      await logAction({
+        tenantId: req.user.companyId, userId: req.user.id,
+        action: 'PLAN_UPGRADE_FREE', resource: 'subscriptions',
+        ipAddress: ip, userAgent: ua, status: 'SUCCESS',
+        newValue: { to: planId, creditCoveredFull: true },
+      });
+
+      return res.json({
+        success: true,
+        data: { type: 'UPGRADE', paid: false, applied: true, message: 'Upgrade aplicado sin costo adicional (crédito suficiente).' },
+      });
+    }
+
+    const order = await createOrder({
+      planId,
+      amountPyg:  proration.amountToPayGs,
+      companyId:  req.user.companyId,
+      userId:     req.user.id,
+      changeType: 'upgrade',
+    });
+
+    await logAction({
+      tenantId:   req.user.companyId,
+      userId:     req.user.id,
+      action:     'PLAN_UPGRADE_ORDER_CREATED',
+      resource:   'payments',
+      resourceId: order.orderId,
+      ipAddress:  ip,
+      userAgent:  ua,
+      status:     'SUCCESS',
+      newValue:   { to: planId, amountToPayGs: proration.amountToPayGs, orderId: order.orderId },
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        type: 'UPGRADE',
+        paid: false,
+        orderId:      order.orderId,
+        amountUsd:    order.amountUsd,
+        amountPyg:    proration.amountToPayGs,
+        unusedCreditGs: proration.unusedCreditGs,
+        planId,
+      },
+    });
+  } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({ success: false, message: error.message });
+    }
+    next(error);
+  }
+};
+
+/**
+ * DELETE /api/payments/plan-change
+ * Cancela un downgrade programado.
+ */
+const cancelScheduledPlanChange = async (req, res, next) => {
+  try {
+    if (!req.user.companyId) {
+      return res.status(400).json({ success: false, message: 'No tenes empresa asociada' });
+    }
+    await clearScheduledPlanChange(req.user.companyId);
+    res.json({ success: true, message: 'Cambio de plan programado cancelado' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * GET /api/payments/test-cards
  * Devuelve las tarjetas de prueba disponibles (solo en desarrollo).
  */
@@ -718,6 +917,125 @@ const numberToWords = (amount) => {
 
   return convert(Math.floor(amount)) + ' guaranies';
 };
+
+/**
+ * POST /api/admin/payments/:id/refund
+ * Reembolsa un pago (SUPER_ADMIN). Solo aplica a pagos APPROVED con paypalCaptureId.
+ * Body: { amountPyg?, reason?, suspendCompany? }
+ *   - amountPyg: monto parcial a reembolsar (en Gs). Si se omite, reembolso total.
+ *   - suspendCompany: si true, suspende la empresa tras el reembolso.
+ */
+const refundPayment = async (req, res, next) => {
+  const ip = getIp(req);
+  const ua = getUserAgent(req);
+
+  try {
+    const { id } = req.params;
+    const { amountPyg, reason, suspendCompany } = req.body;
+
+    const payment = await prisma.payment.findUnique({ where: { id } });
+    if (!payment) {
+      return res.status(404).json({ success: false, message: 'Pago no encontrado' });
+    }
+
+    if (payment.status !== 'APPROVED') {
+      return res.status(400).json({
+        success: false,
+        message: `Solo se pueden reembolsar pagos aprobados (estado actual: ${payment.status})`,
+      });
+    }
+
+    if (!payment.paypalCaptureId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Este pago no tiene captura de PayPal asociada. Reembolso manual requerido para otros metodos.',
+      });
+    }
+
+    // Validar monto parcial (no puede exceder el total)
+    let partialUsd;
+    if (amountPyg != null) {
+      const partial = parseInt(amountPyg, 10);
+      if (isNaN(partial) || partial <= 0 || partial > payment.amount) {
+        return res.status(400).json({
+          success: false,
+          message: `amountPyg debe ser un numero entre 1 y ${payment.amount}`,
+        });
+      }
+      partialUsd = await pygToUsd(partial);
+    }
+
+    // Ejecutar el reembolso en PayPal
+    const refund = await refundCapture({
+      captureId:   payment.paypalCaptureId,
+      amountUsd:   partialUsd, // undefined = total
+      noteToPayer: reason || 'Reembolso procesado por el administrador',
+    });
+
+    // Marcar el pago como REFUNDED en la BD
+    const updated = await prisma.payment.update({
+      where: { id },
+      data:  {
+        status:        'REFUNDED',
+        failureReason: reason || `Reembolsado (PayPal refund ${refund.id})`,
+      },
+    });
+
+    // Opcionalmente suspender la empresa
+    if (suspendCompany === true) {
+      await prisma.company.update({
+        where: { id: payment.companyId },
+        data:  { status: 'SUSPENDED' },
+      }).catch(() => {});
+      await prisma.subscription.updateMany({
+        where: { companyId: payment.companyId },
+        data:  { status: 'CANCELED', canceledAt: new Date() },
+      }).catch(() => {});
+    }
+
+    await logAction({
+      tenantId:   payment.companyId,
+      userId:     req.user.id,
+      action:     'PAYMENT_REFUNDED',
+      resource:   'payments',
+      resourceId: id,
+      ipAddress:  ip,
+      userAgent:  ua,
+      status:     'SUCCESS',
+      oldValue:   { status: 'APPROVED', amount: payment.amount },
+      newValue:   {
+        status: 'REFUNDED',
+        refundId: refund.id,
+        refundStatus: refund.status,
+        amountPyg: amountPyg ?? payment.amount,
+        suspendCompany: suspendCompany === true,
+      },
+    });
+
+    res.json({
+      success: true,
+      message: 'Reembolso procesado correctamente',
+      data: {
+        payment: updated,
+        refund: { id: refund.id, status: refund.status, amount: refund.amount },
+      },
+    });
+  } catch (error) {
+    // Registrar fallo de reembolso para trazabilidad
+    await logAction({
+      userId:    req.user.id,
+      action:    'PAYMENT_REFUND_FAILED',
+      resource:  'payments',
+      resourceId: req.params.id,
+      ipAddress: ip,
+      userAgent: ua,
+      status:    'FAILURE',
+      errorMsg:  error.message,
+    });
+    next(error);
+  }
+};
+
 const toggleCompanyStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -765,8 +1083,13 @@ module.exports = {
   processCheckout,
   getHistory,
   getActiveSubscription,
+  getSubscriptionStatusHandler,
+  previewPlanChange,
+  executePlanChange,
+  cancelScheduledPlanChange,
   getTestCards,
   getAllPayments,
   toggleCompanyStatus,
+  refundPayment,
   getReceipt,
 };
