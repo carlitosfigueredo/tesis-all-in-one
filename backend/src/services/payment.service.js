@@ -5,6 +5,7 @@
 // ─────────────────────────────────────────
 
 const prisma = require('../lib/prisma');
+const { PLAN_ID_TO_ENUM } = require('./subscription.service');
 
 // ─── Tarjetas de prueba ──────────────────────────────────────────────────────
 
@@ -68,13 +69,6 @@ const validateCard = ({ cardNumber, expiryMonth, expiryYear, cvv, cardholderName
   }
 
   return errors;
-};
-
-// Mapeo de plan_config.id al enum Plan de la tabla companies
-const PLAN_ID_TO_ENUM = {
-  ESTANDAR: 'BASICO',
-  PROFESIONAL: 'PROFESIONAL',
-  CORPORATIVO: 'CORPORATIVO',
 };
 
 /**

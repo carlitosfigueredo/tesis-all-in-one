@@ -283,6 +283,9 @@ model Subscription {
   currentPeriodStart DateTime           @default(now())
   currentPeriodEnd   DateTime
   canceledAt         DateTime?
+  // Downgrade programado: plan que se aplicará al renovar el próximo ciclo.
+  // null = sin cambio pendiente.
+  scheduledPlanId    String?
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
