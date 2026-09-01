@@ -1,6 +1,8 @@
 // Panel SUPER_ADMIN — Historial de pagos de todas las empresas
 import { useEffect, useState } from 'react';
 import AdminSidebar from '../../components/admin/AdminSidebar';
+import ConfirmModal from '../../components/admin/ConfirmModal';
+import Toast from '../../components/Toast';
 import api from '../../services/api';
 
 const STATUS_BADGE = {
@@ -26,6 +28,46 @@ export default function AdminPayments() {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading]   = useState(true);
   const [filters, setFilters]   = useState({ status: '', companyId: '' });
+
+  // Refund
+  const [refundTarget, setRefundTarget] = useState(null); // payment seleccionado
+  const [refundForm, setRefundForm]     = useState({ amountPyg: '', reason: '', suspendCompany: false });
+  const [refunding, setRefunding]       = useState(false);
+  const [toast, setToast]               = useState(null);
+
+  const openRefund = (payment) => {
+    setRefundForm({ amountPyg: '', reason: '', suspendCompany: false });
+    setRefundTarget(payment);
+  };
+
+  const closeRefund = () => {
+    if (refunding) return;
+    setRefundTarget(null);
+  };
+
+  const submitRefund = async () => {
+    if (!refundTarget) return;
+    setRefunding(true);
+    try {
+      const body = {};
+      if (refundForm.amountPyg) body.amountPyg = parseInt(refundForm.amountPyg, 10);
+      if (refundForm.reason)    body.reason = refundForm.reason;
+      if (refundForm.suspendCompany) body.suspendCompany = true;
+
+      await api.post(`/admin/payments/${refundTarget.id}/refund`, body);
+      setToast({ type: 'success', title: 'Reembolso procesado', message: 'El pago fue reembolsado correctamente.' });
+      setRefundTarget(null);
+      fetchPayments(page);
+    } catch (err) {
+      setToast({
+        type: 'error',
+        title: 'No se pudo reembolsar',
+        message: err.response?.data?.message ?? 'Error al procesar el reembolso.',
+      });
+    } finally {
+      setRefunding(false);
+    }
+  };
 
   const fetchPayments = async (pg = 1) => {
     setLoading(true);
@@ -132,6 +174,7 @@ export default function AdminPayments() {
                       <th className="px-4 py-3 text-right">Monto</th>
                       <th className="px-4 py-3 text-left">Estado</th>
                       <th className="px-4 py-3 text-left">ID</th>
+                      <th className="px-4 py-3 text-right">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -162,6 +205,18 @@ export default function AdminPayments() {
                         </td>
                         <td className="px-4 py-3 text-xs text-gray-400 font-mono">
                           {p.id.slice(-8)}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {p.status === 'APPROVED' && p.paypalCaptureId ? (
+                            <button
+                              onClick={() => openRefund(p)}
+                              className="rounded-lg border border-red-200 px-3 py-1 text-xs font-medium text-red-600 transition hover:bg-red-50"
+                            >
+                              Reembolsar
+                            </button>
+                          ) : (
+                            <span className="text-xs text-gray-300">—</span>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -195,6 +250,68 @@ export default function AdminPayments() {
           </div>
         </main>
       </div>
+
+      {/* Modal de reembolso */}
+      <ConfirmModal
+        open={!!refundTarget}
+        title="Reembolsar pago"
+        message={refundTarget
+          ? `Vas a reembolsar el pago de ${refundTarget.company?.name ?? 'la empresa'} por ${formatGs(refundTarget.amount)}. Esta acción devuelve el dinero al comprador vía PayPal y no se puede deshacer.`
+          : ''}
+        tone="danger"
+        confirmLabel="Reembolsar"
+        loading={refunding}
+        onConfirm={submitRefund}
+        onClose={closeRefund}
+      >
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              Monto parcial (Gs.) — opcional
+            </label>
+            <input
+              type="number"
+              min="1"
+              max={refundTarget?.amount}
+              value={refundForm.amountPyg}
+              onChange={(e) => setRefundForm(f => ({ ...f, amountPyg: e.target.value }))}
+              placeholder={refundTarget ? `Total: ${refundTarget.amount}` : ''}
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
+            />
+            <p className="mt-1 text-xs text-gray-400">Dejá vacío para reembolso total.</p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Motivo — opcional</label>
+            <input
+              type="text"
+              value={refundForm.reason}
+              onChange={(e) => setRefundForm(f => ({ ...f, reason: e.target.value }))}
+              placeholder="Ej: solicitud del cliente"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
+            />
+          </div>
+
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={refundForm.suspendCompany}
+              onChange={(e) => setRefundForm(f => ({ ...f, suspendCompany: e.target.checked }))}
+              className="rounded border-gray-300"
+            />
+            Suspender la empresa tras el reembolso
+          </label>
+        </div>
+      </ConfirmModal>
+
+      {toast && (
+        <Toast
+          type={toast.type}
+          title={toast.title}
+          message={toast.message}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }

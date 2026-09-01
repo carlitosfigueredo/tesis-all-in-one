@@ -151,7 +151,6 @@ const PlanEditor = ({ plan, onChange }) => {
 
 export default function AdminPlans() {
   const [plans, setPlans]         = useState([]);
-  const [payPerUse, setPayPerUse] = useState({ priceGs: 200000, collaboratorsBlock: 250, description: '' });
   const [loading, setLoading]     = useState(true);
   const [saving, setSaving]       = useState(false);
   const [saved, setSaved]         = useState(false);
@@ -161,7 +160,6 @@ export default function AdminPlans() {
     api.get('/admin/plans')
       .then(({ data }) => {
         setPlans(data.data.plans ?? []);
-        setPayPerUse(data.data.payPerUse ?? { priceGs: 200000, collaboratorsBlock: 250, description: '' });
       })
       .catch(() => setError('No se pudieron cargar los planes'))
       .finally(() => setLoading(false));
@@ -178,7 +176,7 @@ export default function AdminPlans() {
     setError('');
     setSaved(false);
     try {
-      await api.put('/admin/plans', { plans, payPerUse });
+      await api.put('/admin/plans', { plans });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
@@ -244,45 +242,6 @@ export default function AdminPlans() {
                 </div>
               </section>
 
-              {/* Pay per use */}
-              <section>
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-400 mb-4">
-                  Modelo Pay-per-use
-                </h2>
-                <div className="rounded-xl bg-white border border-gray-100 shadow-sm p-6 max-w-xl space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1">Precio por bloque (Gs.)</label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={payPerUse.priceGs ?? ''}
-                      onChange={(e) => setPayPerUse((p) => ({ ...p, priceGs: Number(e.target.value) }))}
-                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:border-blue-400"
-                    />
-                    <p className="mt-1 text-xs text-gray-400">{formatGs(payPerUse.priceGs)}</p>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1">Colaboradores por bloque</label>
-                    <input
-                      type="number"
-                      min={1}
-                      value={payPerUse.collaboratorsBlock ?? ''}
-                      onChange={(e) => setPayPerUse((p) => ({ ...p, collaboratorsBlock: Number(e.target.value) }))}
-                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:border-blue-400"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1">Descripción (visible en landing)</label>
-                    <input
-                      value={payPerUse.description ?? ''}
-                      onChange={(e) => setPayPerUse((p) => ({ ...p, description: e.target.value }))}
-                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:border-blue-400"
-                      placeholder="Ej: Gs. 200.000 por cada 250 colaboradores adicionales"
-                    />
-                  </div>
-                </div>
-              </section>
-
               {/* Preview tabla comparativa */}
               <section>
                 <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-400 mb-4">
@@ -319,11 +278,6 @@ export default function AdminPlans() {
                     </tbody>
                   </table>
                 </div>
-                {payPerUse?.description && (
-                  <p className="mt-3 text-center text-sm italic text-gray-500">
-                    Modelo Pay-per-use: {payPerUse.description}
-                  </p>
-                )}
               </section>
             </>
           )}

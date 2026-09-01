@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
 import Navbar from '../components/layout/Navbar';
+import PlanChangeModal from '../components/PlanChangeModal';
+import Toast from '../components/Toast';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
@@ -25,6 +27,35 @@ const PLAN_INFO = {
     color: 'bg-purple-100 text-purple-700 border-purple-200',
     frecuencia: 'Bajo demanda',
     descripcion: 'Entrena y predice cuando quieras',
+  },
+};
+
+// Estado de la CUENTA (company.status) — distinto del estado de la suscripción.
+// Distingue "recién registrado sin pagar" (PENDING_PAYMENT) de "suspendido".
+const COMPANY_STATUS_INFO = {
+  ACTIVE: {
+    label: 'Activa',
+    badge: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
+    icon: '✅',
+    hint: 'Tu cuenta está al día.',
+  },
+  TRIAL: {
+    label: 'Período de prueba',
+    badge: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
+    icon: '🎁',
+    hint: 'Estás en período de prueba.',
+  },
+  PENDING_PAYMENT: {
+    label: 'Pendiente de activación',
+    badge: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300',
+    icon: '⏳',
+    hint: 'Tu cuenta aún no fue activada. Completá el pago de tu plan para acceder a todas las funcionalidades.',
+  },
+  SUSPENDED: {
+    label: 'Suspendida',
+    badge: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300',
+    icon: '⛔',
+    hint: 'Tu cuenta está suspendida (por falta de pago o suscripción vencida). Renová tu plan para reactivarla.',
   },
 };
 
@@ -80,28 +111,67 @@ export default function Company() {
   const [stats, setStats] = useState(null);
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [planModalOpen, setPlanModalOpen] = useState(false);
+  const [cancelingSchedule, setCancelingSchedule] = useState(false);
+  const [toast, setToast] = useState(null);
 
   const plan = user?.companyPlan ?? 'BASICO';
   const planInfo = PLAN_INFO[plan] ?? PLAN_INFO.BASICO;
 
+  // Estado de la cuenta (company.status). El status de la suscripción va aparte.
+  // Preferimos el valor fresco del endpoint de suscripción; si no, el del token.
+  const companyStatus = subscription?.companyStatus ?? user?.companyStatus ?? 'ACTIVE';
+  const statusInfo = COMPANY_STATUS_INFO[companyStatus] ?? COMPANY_STATUS_INFO.ACTIVE;
+  const needsAttention = companyStatus === 'SUSPENDED' || companyStatus === 'PENDING_PAYMENT';
+
+  const fetchData = async () => {
+    try {
+      const [usersRes, subRes, statsRes, paymentsRes] = await Promise.allSettled([
+        api.get('/users'),
+        api.get('/payments/subscription/status'),
+        api.get('/employees/stats'),
+        api.get('/payments/history'),
+      ]);
+      if (usersRes.status === 'fulfilled') setUsers(usersRes.value.data.data || []);
+      if (subRes.status === 'fulfilled') setSubscription(subRes.value.data.data);
+      if (statsRes.status === 'fulfilled') setStats(statsRes.value.data.data);
+      if (paymentsRes.status === 'fulfilled') setPayments(paymentsRes.value.data.data || []);
+    } catch { /* silenciar */ }
+    setLoading(false);
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [usersRes, subRes, statsRes, paymentsRes] = await Promise.allSettled([
-          api.get('/users'),
-          api.get('/payments/subscription'),
-          api.get('/employees/stats'),
-          api.get('/payments/history'),
-        ]);
-        if (usersRes.status === 'fulfilled') setUsers(usersRes.value.data.data || []);
-        if (subRes.status === 'fulfilled') setSubscription(subRes.value.data.data);
-        if (statsRes.status === 'fulfilled') setStats(statsRes.value.data.data);
-        if (paymentsRes.status === 'fulfilled') setPayments(paymentsRes.value.data.data || []);
-      } catch { /* silenciar */ }
-      setLoading(false);
-    };
     fetchData();
   }, []);
+
+  // Cerrar modal, refrescar datos y notificar según el resultado
+  const handlePlanChangeSuccess = (result) => {
+    setPlanModalOpen(false);
+    if (result?.type === 'DOWNGRADE' && result?.scheduled) {
+      setToast({ type: 'success', title: 'Cambio programado', message: result.message || 'Tu plan cambiará al próximo ciclo.' });
+    } else if (result?.paid) {
+      setToast({ type: 'success', title: 'Plan actualizado', message: 'Tu upgrade fue aplicado. Refrescando datos…' });
+      // El plan del token cambió: recargar para reflejarlo en toda la app
+      setTimeout(() => window.location.reload(), 1500);
+    } else if (result?.applied) {
+      setToast({ type: 'success', title: 'Plan actualizado', message: 'Mejora aplicada sin costo adicional.' });
+      setTimeout(() => window.location.reload(), 1500);
+    }
+    fetchData();
+  };
+
+  const handleCancelSchedule = async () => {
+    setCancelingSchedule(true);
+    try {
+      await api.delete('/payments/plan-change');
+      setToast({ type: 'success', title: 'Cancelado', message: 'Se canceló el cambio de plan programado.' });
+      fetchData();
+    } catch (err) {
+      setToast({ type: 'error', title: 'Error', message: err.response?.data?.message ?? 'No se pudo cancelar.' });
+    } finally {
+      setCancelingSchedule(false);
+    }
+  };
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -118,6 +188,47 @@ export default function Company() {
 
           {!loading && (
             <>
+              {/* ── Aviso destacado si la cuenta requiere atención ── */}
+              {needsAttention && (
+                <div className={`rounded-xl border p-5 flex flex-col sm:flex-row sm:items-center gap-4 ${
+                  companyStatus === 'SUSPENDED'
+                    ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                    : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
+                }`}>
+                  <div className="flex items-start gap-3 flex-1">
+                    <span className="text-2xl" aria-hidden="true">{statusInfo.icon}</span>
+                    <div>
+                      <p className={`text-sm font-bold ${
+                        companyStatus === 'SUSPENDED'
+                          ? 'text-red-800 dark:text-red-200'
+                          : 'text-amber-800 dark:text-amber-200'
+                      }`}>
+                        {companyStatus === 'SUSPENDED' ? 'Cuenta suspendida' : 'Cuenta pendiente de activación'}
+                      </p>
+                      <p className={`text-sm mt-0.5 ${
+                        companyStatus === 'SUSPENDED'
+                          ? 'text-red-700 dark:text-red-300'
+                          : 'text-amber-700 dark:text-amber-300'
+                      }`}>
+                        {statusInfo.hint}
+                      </p>
+                    </div>
+                  </div>
+                  {isCompanyAdmin && (
+                    <button
+                      onClick={() => navigate('/checkout')}
+                      className={`flex-shrink-0 rounded-lg px-4 py-2 text-sm font-semibold text-white transition ${
+                        companyStatus === 'SUSPENDED'
+                          ? 'bg-red-600 hover:bg-red-700'
+                          : 'bg-amber-600 hover:bg-amber-700'
+                      }`}
+                    >
+                      {companyStatus === 'SUSPENDED' ? 'Reactivar cuenta' : 'Activar mi plan'}
+                    </button>
+                  )}
+                </div>
+              )}
+
               {/* ── Info de la empresa ── */}
               <div className="grid gap-6 lg:grid-cols-3">
 
@@ -134,6 +245,12 @@ export default function Company() {
                   </div>
 
                   <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-500">Estado de la cuenta</span>
+                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${statusInfo.badge}`}>
+                        {statusInfo.icon} {statusInfo.label}
+                      </span>
+                    </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-500">Plan actual</span>
                       <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${planInfo.color}`}>
@@ -162,12 +279,30 @@ export default function Company() {
                     )}
                   </div>
 
-                  {plan !== 'CORPORATIVO' && (
+                  {/* Aviso de downgrade programado */}
+                  {subscription?.scheduledPlanId && (
+                    <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
+                      <p className="font-semibold">Cambio de plan programado</p>
+                      <p className="mt-0.5">
+                        Cambiarás a <strong>{subscription.scheduledPlanId}</strong> el{' '}
+                        {new Date(subscription.currentPeriodEnd).toLocaleDateString('es-PY')}.
+                      </p>
+                      <button
+                        onClick={handleCancelSchedule}
+                        disabled={cancelingSchedule}
+                        className="mt-1.5 text-amber-700 underline hover:text-amber-900 disabled:opacity-50"
+                      >
+                        {cancelingSchedule ? 'Cancelando…' : 'Cancelar cambio programado'}
+                      </button>
+                    </div>
+                  )}
+
+                  {isCompanyAdmin && (
                     <button
-                      onClick={() => navigate('/checkout')}
+                      onClick={() => setPlanModalOpen(true)}
                       className="mt-4 w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
                     >
-                      Mejorar plan
+                      Cambiar de plan
                     </button>
                   )}
                 </div>
@@ -250,13 +385,13 @@ export default function Company() {
                     </p>
                   </div>
                   <div className="rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 p-4 text-center">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">Estado</p>
-                    <p className="mt-1 text-lg font-bold text-gray-900 dark:text-gray-100">
-                      {subscription?.status === 'ACTIVE' ? '✅ Activo' : subscription?.status ?? '—'}
+                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">Estado de la cuenta</p>
+                    <p className="mt-1">
+                      <span className={`inline-block rounded-full px-3 py-1 text-sm font-bold ${statusInfo.badge}`}>
+                        {statusInfo.icon} {statusInfo.label}
+                      </span>
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                      {subscription?.status === 'ACTIVE' ? 'Suscripción al día' : 'Verificar estado'}
-                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">{statusInfo.hint}</p>
                   </div>
                 </div>
 
@@ -359,6 +494,23 @@ export default function Company() {
           )}
         </main>
       </div>
+
+      {/* Modal de cambio de plan */}
+      <PlanChangeModal
+        open={planModalOpen}
+        currentPlanId={subscription?.planId}
+        onClose={() => setPlanModalOpen(false)}
+        onSuccess={handlePlanChangeSuccess}
+      />
+
+      {toast && (
+        <Toast
+          type={toast.type}
+          title={toast.title}
+          message={toast.message}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }

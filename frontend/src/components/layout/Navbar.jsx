@@ -1,6 +1,7 @@
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
+import SubscriptionBanner from '../SubscriptionBanner';
 
 export default function Navbar({ title }) {
   const { user, logout } = useAuth();
@@ -13,6 +14,8 @@ export default function Navbar({ title }) {
   };
 
   return (
+    <>
+    <SubscriptionBanner />
     <header className="flex h-16 items-center justify-between border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-6 flex-shrink-0 transition-colors">
       <div className="min-w-0">
         <h1 className="text-base font-semibold text-gray-800 dark:text-gray-100 truncate">{title}</h1>
@@ -61,5 +64,6 @@ export default function Navbar({ title }) {
         </button>
       </div>
     </header>
+    </>
   );
 }

@@ -95,7 +95,6 @@ const ThemeToggle = ({ dark, setDark }) => (
 
 export default function Landing() {
   const [plans, setPlans]         = useState([]);
-  const [payPerUse, setPayPerUse] = useState(null);
   const [loading, setLoading]     = useState(true);
   const [dark, setDark]           = useState(false);
 
@@ -110,7 +109,6 @@ export default function Landing() {
     api.get('/plans')
       .then(({ data }) => {
         setPlans(data.data.plans ?? []);
-        setPayPerUse(data.data.payPerUse ?? null);
       })
       .catch(() => {
         setPlans([
@@ -118,7 +116,6 @@ export default function Landing() {
           { id: 'PROFESIONAL', name: 'Plan Profesional', priceGs: 1390000, highlight: true,  employeeLimit: 500,  features: ['Hasta 500 colaboradores', 'Todo lo del Plan Estandar', 'Prediccion semanal', 'Dashboard avanzado con filtros', 'Importacion masiva CSV', 'Soporte prioritario'], cta: 'Comenzar' },
           { id: 'CORPORATIVO', name: 'Plan Corporativo', priceGs: 2590000, highlight: false, employeeLimit: 1500, features: ['Hasta 1.500 colaboradores', 'Todo lo del Plan Profesional', 'Prediccion bajo demanda', 'Dashboard personalizado', 'Integracion con sistemas HRIS', 'Gerente de cuenta dedicado'], cta: 'Consultar' },
         ]);
-        setPayPerUse({ priceGs: 200000, collaboratorsBlock: 250, description: 'Gs. 200.000 por cada 250 colaboradores adicionales' });
       })
       .finally(() => setLoading(false));
   }, []);
@@ -282,12 +279,6 @@ export default function Landing() {
               <div className="grid grid-cols-1 gap-8 md:grid-cols-3 mb-8">
                 {plans.map((plan) => <PlanCard key={plan.id} plan={plan} dark={dark} />)}
               </div>
-
-              {payPerUse && (
-                <p className={`mt-2 text-center text-sm italic font-medium ${dark ? 'text-gray-500' : 'text-gray-500'}`}>
-                  Modelo Pay-per-use: {payPerUse.description}
-                </p>
-              )}
             </>
           )}
 
