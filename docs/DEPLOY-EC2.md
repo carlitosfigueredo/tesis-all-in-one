@@ -188,10 +188,13 @@ El codigo ya soporta Gmail; solo configuras variables. Pasos:
    SMTP_HOST=smtp.gmail.com
    SMTP_PORT=587
    SMTP_SECURE=false
-   SMTP_USER=tucorreo@gmail.com
-   SMTP_PASS=los16caracteres
-   SMTP_FROM="Sistema BI <tucorreo@gmail.com>"
+   SMTP_USER=TU_CORREO@gmail.com
+   SMTP_PASS=<APP_PASSWORD_DE_16_CARACTERES>
+   SMTP_FROM="Sistema BI <TU_CORREO@gmail.com>"
    ```
+
+   > Los valores de arriba son **ejemplos**. Nunca pongas credenciales reales
+   > en la documentacion ni en el repo: van solo en `.env.prod` (ignorado por git).
 
 4. Recrea el backend para que tome las variables:
 
