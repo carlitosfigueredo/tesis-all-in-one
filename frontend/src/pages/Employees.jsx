@@ -10,7 +10,7 @@ import api from '../services/api';
 // Tasa de cambio referencial GS/USD — se puede mover a una variable de entorno
 const USD_TO_GS = 7500;
 
-// Etiquetas legibles para la escala 1-5 de satisfaccion
+// Etiquetas legibles para la escala 1-5 de satisfacción
 const SATISFACTION_LABELS = {
   1: { text: 'Muy baja',  color: 'text-red-600',   bg: 'bg-red-50'    },
   2: { text: 'Baja',      color: 'text-orange-600', bg: 'bg-orange-50' },
@@ -43,7 +43,7 @@ const SatisfactionCell = ({ value }) => {
   const meta = SATISFACTION_LABELS[value] ?? SATISFACTION_LABELS[1];
   return (
     <span
-      title={`Satisfaccion laboral: ${meta.text} (${value}/5)\nEscala: 1=Muy baja, 2=Baja, 3=Media, 4=Alta, 5=Muy alta`}
+      title={`Satisfacción laboral: ${meta.text} (${value}/5)\nEscala: 1=Muy baja, 2=Baja, 3=Media, 4=Alta, 5=Muy alta`}
       className={`cursor-default rounded-full px-2 py-0.5 text-xs font-medium ${meta.bg} ${meta.color}`}
     >
       {meta.text}
@@ -322,7 +322,7 @@ const ImportModal = ({ onClose, onImported }) => {
                 </table>
               </div>
               {parsed.rows.length > 5 && (
-                <p className="mt-1 text-xs text-gray-400">... y {parsed.rows.length - 5} filas mas</p>
+                <p className="mt-1 text-xs text-gray-400">... y {parsed.rows.length - 5} filas más</p>
               )}
             </div>
           )}
@@ -417,8 +417,8 @@ export default function Employees() {
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
-      <div className="flex flex-1 flex-col overflow-auto">
-        <Navbar title="Empleados — Prediccion de Desercion" />
+      <div className="flex flex-1 flex-col overflow-auto bg-gray-50 dark:bg-gray-900 transition-colors">
+        <Navbar title="Empleados — Predicción de Deserción" />
         <main className="flex-1 p-6">
 
           {/* ── Barra de herramientas ── */}
@@ -430,12 +430,12 @@ export default function Employees() {
               placeholder="Buscar por rol o seniority..."
               value={filters.search}
               onChange={(e) => setFilter('search', e.target.value)}
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 w-64"
+              className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 w-64"
             />
             <select
               value={filters.department}
               onChange={(e) => setFilter('department', e.target.value)}
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
+              className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-blue-400 focus:outline-none"
             >
               <option value="">Todos los roles</option>
               <option value="Frontend">Frontend</option>
@@ -449,7 +449,7 @@ export default function Employees() {
             <select
               value={filters.risk_level}
               onChange={(e) => setFilter('risk_level', e.target.value)}
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
+              className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-blue-400 focus:outline-none"
             >
               <option value="">Todos los riesgos</option>
               <option value="CRITICO">Critico</option>
@@ -460,7 +460,7 @@ export default function Employees() {
             <select
               value={filters.attrition}
               onChange={(e) => setFilter('attrition', e.target.value)}
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none"
+              className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-blue-400 focus:outline-none"
             >
               <option value="">Todos</option>
               <option value="true">Desertaron</option>
@@ -469,16 +469,16 @@ export default function Employees() {
 
             <div className="ml-auto flex items-center gap-2">
               {/* Toggle de moneda */}
-              <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs font-medium">
+              <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden text-xs font-medium">
                 <button
                   onClick={() => setCurrency('USD')}
-                  className={`px-3 py-1.5 transition-colors ${currency === 'USD' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+                  className={`px-3 py-1.5 transition-colors ${currency === 'USD' ? 'bg-blue-600 text-white' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
                 >
                   USD
                 </button>
                 <button
                   onClick={() => setCurrency('GS')}
-                  className={`px-3 py-1.5 transition-colors ${currency === 'GS' ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+                  className={`px-3 py-1.5 transition-colors ${currency === 'GS' ? 'bg-blue-600 text-white' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
                 >
                   GS
                 </button>
@@ -495,13 +495,13 @@ export default function Employees() {
                 Importar CSV
               </button>
 
-              <span className="text-sm text-gray-400">{meta.total} empleados</span>
+              <span className="text-sm text-gray-400 dark:text-gray-500">{meta.total} empleados</span>
             </div>
           </div>
 
 
           {/* ── Tabla ── */}
-          <div className="rounded-xl bg-white shadow-sm overflow-hidden">
+          <div className="rounded-xl bg-white dark:bg-gray-800 shadow-sm overflow-hidden transition-colors">
             {loading ? (
               <div className="flex justify-center py-20">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
@@ -509,7 +509,7 @@ export default function Employees() {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-50 text-xs uppercase text-gray-500">
+                  <thead className="bg-gray-50 dark:bg-gray-700/50 text-xs uppercase text-gray-500 dark:text-gray-400">
                     <tr>
                       <th className="px-4 py-3 text-left">#</th>
                       <th className="px-4 py-3 text-left">Rol</th>
@@ -517,34 +517,34 @@ export default function Employees() {
                       <th className="px-4 py-3 text-left">Edad</th>
                       <th className="px-4 py-3 text-left">Modalidad</th>
                       <th className="px-4 py-3 text-left">Contrato</th>
-                      <th className="px-4 py-3 text-left">Antiguedad</th>
+                      <th className="px-4 py-3 text-left">Antigüedad</th>
                       <th className="px-4 py-3 text-left">Salario (Gs.)</th>
                       <th className="px-4 py-3 text-left">Hs. Extra/mes</th>
                       <th
                         className="px-4 py-3 text-left cursor-help"
-                        title="Satisfaccion laboral (escala 1-5): 1=Muy baja, 5=Muy alta"
+                        title="Satisfacción laboral (escala 1-5): 1=Muy baja, 5=Muy alta"
                       >
-                        Satisfaccion
+                        Satisfacción
                       </th>
-                      <th className="px-4 py-3 text-left">Desercion</th>
+                      <th className="px-4 py-3 text-left">Deserción</th>
                       <th className="px-4 py-3 text-left">Riesgo</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                     {employees.map((emp) => (
                       <tr
                         key={emp.id}
                         onClick={() => navigate(`/employees/${emp.id}`)}
-                        className="cursor-pointer hover:bg-blue-50 transition-colors"
+                        className="cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-700/50 transition-colors"
                       >
-                        <td className="px-4 py-3 text-gray-400 text-xs">{emp.id}</td>
-                        <td className="px-4 py-3 font-medium text-gray-900">{emp.rol_tecnologico}</td>
-                        <td className="px-4 py-3 text-gray-600">{emp.seniority}</td>
-                        <td className="px-4 py-3 text-gray-600">{emp.edad}</td>
-                        <td className="px-4 py-3 text-gray-600 text-xs">{emp.modalidad_trabajo}</td>
-                        <td className="px-4 py-3 text-gray-600 text-xs">{emp.tipo_contrato}</td>
-                        <td className="px-4 py-3 text-gray-600">{emp.antiguedad_meses} meses</td>
-                        <td className="px-4 py-3 text-gray-700 font-medium tabular-nums">
+                        <td className="px-4 py-3 text-gray-400 dark:text-gray-500 text-xs">{emp.id}</td>
+                        <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{emp.rol_tecnologico}</td>
+                        <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{emp.seniority}</td>
+                        <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{emp.edad}</td>
+                        <td className="px-4 py-3 text-gray-600 dark:text-gray-300 text-xs">{emp.modalidad_trabajo}</td>
+                        <td className="px-4 py-3 text-gray-600 dark:text-gray-300 text-xs">{emp.tipo_contrato}</td>
+                        <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{emp.antiguedad_meses} meses</td>
+                        <td className="px-4 py-3 text-gray-700 dark:text-gray-200 font-medium tabular-nums">
                           {emp.salario_mensual?.toLocaleString('es-PY')}
                         </td>
                         <td className="px-4 py-3 text-gray-600">
@@ -577,20 +577,20 @@ export default function Employees() {
 
             {/* ── Paginación ── */}
             {!loading && meta.total_pages > 1 && (
-              <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3 text-sm text-gray-500">
+              <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-700 px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                 <span>Página {meta.page} de {meta.total_pages}</span>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setPage(meta.page - 1)}
                     disabled={meta.page <= 1}
-                    className="rounded px-3 py-1 hover:bg-gray-100 disabled:opacity-40"
+                    className="rounded px-3 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40"
                   >
                     ← Anterior
                   </button>
                   <button
                     onClick={() => setPage(meta.page + 1)}
                     disabled={meta.page >= meta.total_pages}
-                    className="rounded px-3 py-1 hover:bg-gray-100 disabled:opacity-40"
+                    className="rounded px-3 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40"
                   >
                     Siguiente →
                   </button>

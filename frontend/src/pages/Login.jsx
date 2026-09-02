@@ -24,7 +24,7 @@ export default function Login() {
     setError('');
 
     if (RECAPTCHA_SITE_KEY && !captchaToken) {
-      setError('Completa la verificacion de reCAPTCHA');
+      setError('Completá la verificación de reCAPTCHA');
       return;
     }
 
@@ -33,7 +33,7 @@ export default function Login() {
       await login(form.email, form.password, captchaToken);
       navigate('/dashboard');
     } catch (err) {
-      const msg = err.response?.data?.message ?? 'Credenciales incorrectas. Verifica tu correo y contrasena.';
+      const msg = err.response?.data?.message ?? 'Credenciales incorrectas. Verificá tu correo y contraseña.';
       setError(msg);
       setTimeout(() => {
         recaptchaRef.current?.reset();
@@ -53,11 +53,11 @@ export default function Login() {
             📊
           </div>
           <h1 className="text-3xl font-bold leading-tight mb-4">
-            Sistema BI de Retencion de Talento
+            Sistema BI de Retención de Talento
           </h1>
           <p className="text-primary-100 text-base leading-relaxed">
-            Predeci la rotacion de personal con inteligencia artificial.
-            Toma decisiones basadas en datos para retener a tus mejores colaboradores.
+            Predecí la rotación de personal con inteligencia artificial.
+            Tomá decisiones basadas en datos para retener a tus mejores colaboradores.
           </p>
           <div className="mt-10 space-y-3">
             <div className="flex items-center gap-3 text-sm text-primary-100">
@@ -66,7 +66,7 @@ export default function Login() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              Prediccion de fuga con Machine Learning
+              Predicción de fuga con Machine Learning
             </div>
             <div className="flex items-center gap-3 text-sm text-primary-100">
               <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10">
@@ -101,14 +101,14 @@ export default function Login() {
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900">Bienvenido</h2>
             <p className="mt-1 text-sm text-gray-500">
-              Ingresa a tu cuenta para continuar
+              Ingresá a tu cuenta para continuar
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="mb-1.5 block text-sm font-medium text-gray-700" htmlFor="email">
-                Correo electronico
+                Correo electrónico
               </label>
               <input
                 id="email"
@@ -124,14 +124,14 @@ export default function Login() {
             </div>
 
             <PasswordInput
-              label="Contrasena"
+              label="Contraseña"
               id="password"
               name="password"
               required
               autoComplete="current-password"
               value={form.password}
               onChange={handleChange}
-              placeholder="Ingresa tu contrasena"
+              placeholder="Ingresá tu contraseña"
             />
 
             <div className="flex items-center justify-end">
@@ -139,7 +139,7 @@ export default function Login() {
                 to="/forgot-password"
                 className="text-xs text-primary-600 hover:text-primary-700 font-medium"
               >
-                Olvidaste tu contrasena?
+                ¿Olvidaste tu contraseña?
               </Link>
             </div>
 
@@ -158,7 +158,7 @@ export default function Login() {
             {error && (
               <Toast
                 type="error"
-                title="Error al iniciar sesion"
+                title="Error al iniciar sesión"
                 message={error}
                 duration={6000}
                 onClose={() => setError('')}
@@ -179,7 +179,7 @@ export default function Login() {
                   Ingresando...
                 </span>
               ) : (
-                'Iniciar sesion'
+                'Iniciar sesión'
               )}
             </button>
           </form>
@@ -194,9 +194,9 @@ export default function Login() {
           {/* Link a registro */}
           <div className="text-center">
             <p className="text-sm text-gray-500">
-              No tenes cuenta?{' '}
+              ¿No tenés cuenta?{' '}
               <Link to="/register" className="text-primary-600 font-semibold hover:text-primary-700">
-                Registra tu empresa
+                Registrá tu empresa
               </Link>
             </p>
           </div>

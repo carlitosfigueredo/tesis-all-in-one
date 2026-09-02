@@ -30,7 +30,7 @@ const PlanCard = ({ plan, dark }) => (
   >
     {plan.highlight && (
       <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full bg-amber-400 px-4 py-1 text-xs font-bold text-amber-900 shadow">
-        MAS POPULAR
+        MÁS POPULAR
       </span>
     )}
 
@@ -95,7 +95,6 @@ const ThemeToggle = ({ dark, setDark }) => (
 
 export default function Landing() {
   const [plans, setPlans]         = useState([]);
-  const [payPerUse, setPayPerUse] = useState(null);
   const [loading, setLoading]     = useState(true);
   const [dark, setDark]           = useState(false);
 
@@ -110,15 +109,13 @@ export default function Landing() {
     api.get('/plans')
       .then(({ data }) => {
         setPlans(data.data.plans ?? []);
-        setPayPerUse(data.data.payPerUse ?? null);
       })
       .catch(() => {
         setPlans([
-          { id: 'ESTANDAR',    name: 'Plan Estandar',    priceGs: 999000,  highlight: false, employeeLimit: 100,  features: ['Hasta 100 colaboradores', 'Prediccion de desercion mensual', 'Dashboard basico de retencion', 'Exportacion CSV', 'Soporte por correo'], cta: 'Comenzar' },
-          { id: 'PROFESIONAL', name: 'Plan Profesional', priceGs: 1390000, highlight: true,  employeeLimit: 500,  features: ['Hasta 500 colaboradores', 'Todo lo del Plan Estandar', 'Prediccion semanal', 'Dashboard avanzado con filtros', 'Importacion masiva CSV', 'Soporte prioritario'], cta: 'Comenzar' },
-          { id: 'CORPORATIVO', name: 'Plan Corporativo', priceGs: 2590000, highlight: false, employeeLimit: 1500, features: ['Hasta 1.500 colaboradores', 'Todo lo del Plan Profesional', 'Prediccion bajo demanda', 'Dashboard personalizado', 'Integracion con sistemas HRIS', 'Gerente de cuenta dedicado'], cta: 'Consultar' },
+          { id: 'ESTANDAR',    name: 'Plan Estándar',    priceGs: 999000,  highlight: false, employeeLimit: 100,  features: ['Hasta 100 colaboradores', 'Predicción de deserción mensual', 'Dashboard básico de retención', 'Exportación CSV', 'Soporte por correo'], cta: 'Comenzar' },
+          { id: 'PROFESIONAL', name: 'Plan Profesional', priceGs: 1390000, highlight: true,  employeeLimit: 500,  features: ['Hasta 500 colaboradores', 'Todo lo del Plan Estándar', 'Predicción semanal', 'Dashboard avanzado con filtros', 'Importación masiva CSV', 'Soporte prioritario'], cta: 'Comenzar' },
+          { id: 'CORPORATIVO', name: 'Plan Corporativo', priceGs: 2590000, highlight: false, employeeLimit: 1500, features: ['Hasta 1.500 colaboradores', 'Todo lo del Plan Profesional', 'Predicción bajo demanda', 'Dashboard personalizado', 'Integración con sistemas HRIS', 'Gerente de cuenta dedicado'], cta: 'Consultar' },
         ]);
-        setPayPerUse({ priceGs: 200000, collaboratorsBlock: 250, description: 'Gs. 200.000 por cada 250 colaboradores adicionales' });
       })
       .finally(() => setLoading(false));
   }, []);
@@ -136,7 +133,7 @@ export default function Landing() {
               </svg>
             </div>
             <span className={`text-base font-bold leading-tight ${dark ? 'text-white' : 'text-gray-900'}`}>
-              Sistema BI<span className={`hidden sm:inline font-normal ml-1.5 text-xs ${dark ? 'text-gray-400' : 'text-gray-400'}`}>Retencion de Talento</span>
+              Sistema BI<span className={`hidden sm:inline font-normal ml-1.5 text-xs ${dark ? 'text-gray-400' : 'text-gray-400'}`}>Retención de Talento</span>
             </span>
           </Link>
           <nav className={`hidden items-center gap-6 text-sm font-medium md:flex ${dark ? 'text-gray-300' : 'text-gray-600'}`}>
@@ -147,7 +144,7 @@ export default function Landing() {
           <div className="flex items-center gap-3">
             <ThemeToggle dark={dark} setDark={setDark} />
             <Link to="/login" className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${dark ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}>
-              Iniciar sesion
+              Iniciar sesión
             </Link>
           </div>
         </div>
@@ -171,7 +168,7 @@ export default function Landing() {
                 Predeci la fuga de talento en tu empresa
               </h1>
               <p className="mt-6 text-lg text-primary-100 leading-relaxed max-w-lg">
-                Sistema basado en machine learning para predecir y prevenir la rotacion de personal
+                Sistema basado en machine learning para predecir y prevenir la rotación de personal
                 en empresas de desarrollo de software.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -183,7 +180,7 @@ export default function Landing() {
                 </a>
               </div>
               <p className="mt-4 text-sm text-primary-200">
-                Ya tenes cuenta? <Link to="/login" className="font-medium underline hover:text-white">Inicia sesion</Link>
+                Ya tenes cuenta? <Link to="/login" className="font-medium underline hover:text-white">Inicia sesión</Link>
               </p>
             </div>
 
@@ -192,8 +189,8 @@ export default function Landing() {
               <div className="rounded-2xl bg-white/10 backdrop-blur-sm border border-white/10 p-8">
                 <div className="space-y-5">
                   {[
-                    { title: 'Prediccion con ML', desc: 'Algoritmo entrenado con datos del mercado de software paraguayo' },
-                    { title: 'Dashboard interactivo', desc: 'KPIs de retencion, riesgo por area, tendencias de satisfaccion' },
+                    { title: 'Predicción con ML', desc: 'Algoritmo entrenado con datos del mercado de software paraguayo' },
+                    { title: 'Dashboard interactivo', desc: 'KPIs de retención, riesgo por área, tendencias de satisfacción' },
                     { title: 'Multi-empresa seguro', desc: 'Datos aislados por empresa, control de acceso por roles' },
                     { title: '17 variables analizadas', desc: 'Desde salario y seniority hasta encuesta de clima laboral' },
                   ].map((item) => (
@@ -222,14 +219,14 @@ export default function Landing() {
           <div className="text-center mb-14">
             <h2 className={`text-3xl font-extrabold sm:text-4xl ${dark ? 'text-white' : 'text-gray-900'}`}>Como funciona</h2>
             <p className={`mt-3 max-w-xl mx-auto ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Tres pasos simples para predecir la desercion en tu equipo
+              Tres pasos simples para predecir la deserción en tu equipo
             </p>
           </div>
 
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-3">
             {[
-              { step: '1', title: 'Carga tus datos', desc: 'Subi un CSV con los datos de tus empleados: rol, seniority, salario, antiguedad. El sistema valida todo automaticamente.', icon: '📤' },
-              { step: '2', title: 'El modelo predice', desc: 'El algoritmo de Machine Learning analiza 17 variables y calcula la probabilidad de desercion de cada empleado.', icon: '🤖' },
+              { step: '1', title: 'Carga tus datos', desc: 'Subi un CSV con los datos de tus empleados: rol, seniority, salario, antigüedad. El sistema valida todo automáticamente.', icon: '📤' },
+              { step: '2', title: 'El modelo predice', desc: 'El algoritmo de Machine Learning analiza 17 variables y calcula la probabilidad de deserción de cada empleado.', icon: '🤖' },
               { step: '3', title: 'Actua a tiempo', desc: 'Visualiza que empleados tienen mayor riesgo y toma acciones preventivas para retenerlos.', icon: '🎯' },
             ].map((item) => (
               <div key={item.step} className={`rounded-2xl border p-7 transition-all hover:shadow-md ${dark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>
@@ -251,9 +248,9 @@ export default function Landing() {
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {[
               { title: 'Enfocado en Software', desc: 'Variables para equipos de desarrollo: rol, seniority, horas extra, modalidad.', emoji: '💻' },
-              { title: 'Contexto Paraguay', desc: 'Salarios en guaranies, realidad del mercado IT local.', emoji: '🇵🇾' },
+              { title: 'Contexto Paraguay', desc: 'Salarios en guaraníes, realidad del mercado IT local.', emoji: '🇵🇾' },
               { title: 'Datos protegidos', desc: 'Cada empresa tiene datos aislados con acceso por roles.', emoji: '🔒' },
-              { title: 'Resultados rapidos', desc: 'Prediccion inmediata al cargar datos. Sin configuracion.', emoji: '⚡' },
+              { title: 'Resultados rápidos', desc: 'Predicción inmediata al cargar datos. Sin configuración.', emoji: '⚡' },
             ].map((item) => (
               <div key={item.title} className={`rounded-xl border p-5 transition-colors ${dark ? 'border-gray-700 hover:border-gray-600' : 'border-gray-100 hover:border-primary-200'}`}>
                 <span className="text-2xl">{item.emoji}</span>
@@ -270,7 +267,7 @@ export default function Landing() {
         <div className="mx-auto max-w-6xl px-6">
           <div className="mb-12 text-center">
             <h2 className={`text-3xl font-extrabold sm:text-4xl ${dark ? 'text-white' : 'text-gray-900'}`}>Planes de suscripcion</h2>
-            <p className={`mt-3 ${dark ? 'text-gray-400' : 'text-gray-500'}`}>Escalable segun el tamano de tu organizacion</p>
+            <p className={`mt-3 ${dark ? 'text-gray-400' : 'text-gray-500'}`}>Escalable según el tamano de tu organización</p>
           </div>
 
           {loading ? (
@@ -282,18 +279,12 @@ export default function Landing() {
               <div className="grid grid-cols-1 gap-8 md:grid-cols-3 mb-8">
                 {plans.map((plan) => <PlanCard key={plan.id} plan={plan} dark={dark} />)}
               </div>
-
-              {payPerUse && (
-                <p className={`mt-2 text-center text-sm italic font-medium ${dark ? 'text-gray-500' : 'text-gray-500'}`}>
-                  Modelo Pay-per-use: {payPerUse.description}
-                </p>
-              )}
             </>
           )}
 
           <p className={`mt-6 text-center text-xs ${dark ? 'text-gray-600' : 'text-gray-400'}`}>
-            Precios en Guaranies (Gs.). Al contratar aceptas nuestros{' '}
-            <Link to="/terms" className="underline hover:text-primary-600 transition-colors">Terminos y condiciones</Link>.
+            Precios en Guaraníes (Gs.). Al contratar aceptas nuestros{' '}
+            <Link to="/terms" className="underline hover:text-primary-600 transition-colors">Términos y condiciones</Link>.
           </p>
         </div>
       </section>
@@ -301,8 +292,8 @@ export default function Landing() {
       {/* ── CTA final (mismo gradiente del hero) ── */}
       <section className="bg-gradient-to-br from-primary-700 via-primary-600 to-primary-800 py-16">
         <div className="mx-auto max-w-3xl px-6 text-center">
-          <h2 className="text-3xl font-extrabold text-white">Listo para reducir la rotacion de tu equipo?</h2>
-          <p className="mt-4 text-primary-100">Registra tu empresa y comenza a analizar los datos de tu organizacion.</p>
+          <h2 className="text-3xl font-extrabold text-white">Listo para reducir la rotación de tu equipo?</h2>
+          <p className="mt-4 text-primary-100">Registra tu empresa y comenza a analizar los datos de tu organización.</p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link to="/register" className="rounded-xl bg-white px-10 py-3.5 text-base font-semibold text-primary-600 shadow hover:bg-primary-50 transition-colors">
               Registrar empresa
@@ -328,7 +319,7 @@ export default function Landing() {
                 <span className={`font-bold text-sm ${dark ? 'text-white' : 'text-gray-900'}`}>Sistema BI</span>
               </div>
               <p className={`text-sm leading-relaxed ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
-                Plataforma de inteligencia de negocios para la prediccion de fuga de talento.
+                Plataforma de inteligencia de negocios para la predicción de fuga de talento.
                 Trabajo de tesis — UNIDA, Asuncion 2026.
               </p>
             </div>
@@ -337,13 +328,13 @@ export default function Landing() {
               <ul className={`space-y-2 text-sm ${dark ? 'text-gray-400' : 'text-gray-600'}`}>
                 <li><a href="#planes" className={`transition-colors ${dark ? 'hover:text-white' : 'hover:text-primary-600'}`}>Planes</a></li>
                 <li><Link to="/register" className={`transition-colors ${dark ? 'hover:text-white' : 'hover:text-primary-600'}`}>Registrar empresa</Link></li>
-                <li><Link to="/login" className={`transition-colors ${dark ? 'hover:text-white' : 'hover:text-primary-600'}`}>Iniciar sesion</Link></li>
+                <li><Link to="/login" className={`transition-colors ${dark ? 'hover:text-white' : 'hover:text-primary-600'}`}>Iniciar sesión</Link></li>
               </ul>
             </div>
             <div>
               <h4 className={`mb-3 text-xs font-semibold uppercase tracking-wider ${dark ? 'text-gray-500' : 'text-gray-400'}`}>Legal</h4>
               <ul className={`space-y-2 text-sm ${dark ? 'text-gray-400' : 'text-gray-600'}`}>
-                <li><Link to="/terms" className={`transition-colors ${dark ? 'hover:text-white' : 'hover:text-primary-600'}`}>Terminos y condiciones</Link></li>
+                <li><Link to="/terms" className={`transition-colors ${dark ? 'hover:text-white' : 'hover:text-primary-600'}`}>Términos y condiciones</Link></li>
                 <li><Link to="/legal" className={`transition-colors ${dark ? 'hover:text-white' : 'hover:text-primary-600'}`}>Aviso legal</Link></li>
               </ul>
             </div>
@@ -355,9 +346,9 @@ export default function Landing() {
             </div>
           </div>
           <div className={`mt-10 flex flex-col items-center justify-between gap-4 border-t pt-6 text-xs sm:flex-row ${dark ? 'border-gray-800 text-gray-500' : 'border-gray-100 text-gray-400'}`}>
-            <p>&copy; {new Date().getFullYear()} Sistema BI — Retencion de Talento. Trabajo de tesis academica.</p>
+            <p>&copy; {new Date().getFullYear()} Sistema BI — Retención de Talento. Trabajo de tesis academica.</p>
             <div className="flex gap-4">
-              <Link to="/terms" className={`transition-colors ${dark ? 'hover:text-gray-300' : 'hover:text-gray-600'}`}>Terminos</Link>
+              <Link to="/terms" className={`transition-colors ${dark ? 'hover:text-gray-300' : 'hover:text-gray-600'}`}>Términos</Link>
               <Link to="/legal" className={`transition-colors ${dark ? 'hover:text-gray-300' : 'hover:text-gray-600'}`}>Legal</Link>
             </div>
           </div>

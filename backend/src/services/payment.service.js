@@ -5,6 +5,7 @@
 // ─────────────────────────────────────────
 
 const prisma = require('../lib/prisma');
+const { PLAN_ID_TO_ENUM } = require('./subscription.service');
 
 // ─── Tarjetas de prueba ──────────────────────────────────────────────────────
 
@@ -21,7 +22,7 @@ const TEST_CARDS = {
   '5555555555554443': { brand: 'MASTERCARD', status: 'REJECTED', reason: 'CVV incorrecto' },
 
   // Tarjeta que queda PENDIENTE (simula procesamiento lento)
-  '4000000000003220': { brand: 'VISA', status: 'PENDING', reason: 'Requiere verificacion adicional' },
+  '4000000000003220': { brand: 'VISA', status: 'PENDING', reason: 'Requiere verificación adicional' },
 };
 
 /**
@@ -43,7 +44,7 @@ const validateCard = ({ cardNumber, expiryMonth, expiryYear, cvv, cardholderName
   const clean = (cardNumber || '').replace(/\s/g, '');
 
   if (!clean || clean.length < 13 || clean.length > 19) {
-    errors.push('Numero de tarjeta invalido');
+    errors.push('Número de tarjeta inválido');
   }
   if (!expiryMonth || !expiryYear) {
     errors.push('Fecha de vencimiento requerida');
@@ -51,9 +52,9 @@ const validateCard = ({ cardNumber, expiryMonth, expiryYear, cvv, cardholderName
     const month = parseInt(expiryMonth, 10);
     const year = parseInt(expiryYear, 10);
     if (isNaN(month) || month < 1 || month > 12) {
-      errors.push('Mes invalido');
+      errors.push('Mes inválido');
     } else if (isNaN(year) || year < new Date().getFullYear()) {
-      errors.push('Ano invalido');
+      errors.push('Año inválido');
     } else {
       const now = new Date();
       const expiry = new Date(year, month); // month es 1-12, new Date usa 0-11, asi que month = fin del mes
@@ -61,20 +62,13 @@ const validateCard = ({ cardNumber, expiryMonth, expiryYear, cvv, cardholderName
     }
   }
   if (!cvv || cvv.length < 3 || cvv.length > 4) {
-    errors.push('CVV invalido');
+    errors.push('CVV inválido');
   }
   if (!cardholderName || cardholderName.trim().length < 3) {
     errors.push('Nombre del titular requerido');
   }
 
   return errors;
-};
-
-// Mapeo de plan_config.id al enum Plan de la tabla companies
-const PLAN_ID_TO_ENUM = {
-  ESTANDAR: 'BASICO',
-  PROFESIONAL: 'PROFESIONAL',
-  CORPORATIVO: 'CORPORATIVO',
 };
 
 /**

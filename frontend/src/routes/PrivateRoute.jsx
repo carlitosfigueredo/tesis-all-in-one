@@ -18,7 +18,7 @@ export default function PrivateRoute() {
     return <Navigate to="/login" replace />;
   }
 
-  // Si el usuario debe cambiar su contrasena (primer login), forzar cambio
+  // Si el usuario debe cambiar su contraseña (primer login), forzar cambio
   if (user?.mustChangePassword) {
     return <ForceChangePassword />;
   }

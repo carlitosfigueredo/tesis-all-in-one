@@ -280,7 +280,7 @@ const createEmployee = async (req, res, next) => {
     if (errors.length > 0) {
       return res.status(400).json({
         success: false,
-        message: 'Errores de validacion',
+        message: 'Errores de validación',
         errors,
       });
     }
@@ -431,7 +431,7 @@ const importEmployees = async (req, res, next) => {
     }
 
     if (rows.length > 5000) {
-      return res.status(400).json({ success: false, message: 'El limite por importacion es de 5000 filas' });
+      return res.status(400).json({ success: false, message: 'El límite por importación es de 5000 filas' });
     }
 
     const companyId = req.user.roleNames?.includes('SUPER_ADMIN')

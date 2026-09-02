@@ -91,7 +91,7 @@ const createUser = async (req, res, next) => {
 
     // Validaciones
     if (!name || !email || !password) {
-      return res.status(400).json({ success: false, message: 'Nombre, correo y contrasena son obligatorios' });
+      return res.status(400).json({ success: false, message: 'Nombre, correo y contraseña son obligatorios' });
     }
 
     const policy = await getPasswordPolicy();
@@ -119,7 +119,7 @@ const createUser = async (req, res, next) => {
     });
 
     if (!role) {
-      return res.status(400).json({ success: false, message: 'Rol no valido' });
+      return res.status(400).json({ success: false, message: 'Rol no válido' });
     }
 
     // Verificar email unico

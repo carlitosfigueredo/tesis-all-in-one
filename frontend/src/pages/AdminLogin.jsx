@@ -24,7 +24,7 @@ export default function AdminLogin() {
     setError('');
 
     if (RECAPTCHA_SITE_KEY && !captchaToken) {
-      setError('Completa la verificacion de reCAPTCHA');
+      setError('Completá la verificación de reCAPTCHA');
       return;
     }
 
@@ -55,7 +55,7 @@ export default function AdminLogin() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
             </div>
-            <h1 className="text-xl font-bold text-gray-900">Panel de administracion</h1>
+            <h1 className="text-xl font-bold text-gray-900">Panel de administración</h1>
             <p className="mt-1 text-xs text-gray-400">Acceso restringido — Sistema BI</p>
           </div>
 
@@ -64,14 +64,14 @@ export default function AdminLogin() {
             <svg className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
             </svg>
-            <span>Uso interno. Si sos cliente, usa el <Link to="/login" className="font-semibold underline">acceso de empresas</Link>.</span>
+            <span>Uso interno. Si sos cliente, usá el <Link to="/login" className="font-semibold underline">acceso de empresas</Link>.</span>
           </div>
 
           {/* Formulario */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="mb-1.5 block text-sm font-medium text-gray-700" htmlFor="admin-email">
-                Correo electronico
+                Correo electrónico
               </label>
               <input
                 id="admin-email"
@@ -87,14 +87,14 @@ export default function AdminLogin() {
             </div>
 
             <PasswordInput
-              label="Contrasena"
+              label="Contraseña"
               id="admin-password"
               name="password"
               required
               autoComplete="current-password"
               value={form.password}
               onChange={handleChange}
-              placeholder="Ingresa tu contrasena"
+              placeholder="Ingresá tu contraseña"
             />
 
             {/* reCAPTCHA */}
@@ -140,7 +140,7 @@ export default function AdminLogin() {
                 to="/admin/forgot-password"
                 className="text-xs text-gray-400 hover:text-gray-600 font-medium"
               >
-                Olvidaste tu contrasena?
+                ¿Olvidaste tu contraseña?
               </Link>
             </div>
           </form>

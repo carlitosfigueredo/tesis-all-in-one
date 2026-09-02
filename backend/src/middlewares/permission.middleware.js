@@ -86,7 +86,7 @@ const requirePermission = (...requiredPermissions) => async (req, res, next) => 
     if (!hasPermission) {
       return res.status(403).json({
         success: false,
-        message: 'No tenes permiso para realizar esta accion',
+        message: 'No tenés permiso para realizar esta acción',
         requiredPermissions,
       });
     }

@@ -30,7 +30,7 @@ const protect = async (req, res, next) => {
     });
 
     if (!user || !user.active) {
-      return res.status(401).json({ success: false, message: 'Token invalido o usuario desactivado' });
+      return res.status(401).json({ success: false, message: 'Token inválido o usuario desactivado' });
     }
 
     // Cargar permisos y roles
@@ -54,7 +54,7 @@ const protect = async (req, res, next) => {
 
     next();
   } catch {
-    return res.status(401).json({ success: false, message: 'Token expirado o invalido' });
+    return res.status(401).json({ success: false, message: 'Token expirado o inválido' });
   }
 };
 

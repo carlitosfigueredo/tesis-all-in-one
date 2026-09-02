@@ -57,11 +57,11 @@ export default function Users() {
     setSuccess('');
 
     if (form.password !== form.confirmPassword) {
-      setErrors(['Las contrasenas no coinciden']);
+      setErrors(['Las contraseñas no coinciden']);
       return;
     }
     if (form.password.length < 8) {
-      setErrors(['La contrasena debe tener al menos 8 caracteres']);
+      setErrors(['La contraseña debe tener al menos 8 caracteres']);
       return;
     }
 
@@ -98,7 +98,7 @@ export default function Users() {
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
-      <div className="flex flex-1 flex-col overflow-auto">
+      <div className="flex flex-1 flex-col overflow-auto bg-gray-50 dark:bg-gray-900 transition-colors">
         <Navbar title="Usuarios de la empresa" />
         <main className="flex-1 p-6">
 
@@ -138,8 +138,8 @@ export default function Users() {
 
           {/* Formulario de creacion */}
           {showForm && canManageUsers && (
-            <div className="mb-6 rounded-xl bg-white border border-gray-100 shadow-sm p-6">
-              <h2 className="text-base font-semibold text-gray-900 mb-4">Crear nuevo usuario</h2>
+            <div className="mb-6 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm p-6 transition-colors">
+              <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">Crear nuevo usuario</h2>
               <form onSubmit={handleCreate} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Nombre completo</label>
@@ -150,7 +150,7 @@ export default function Users() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Correo electronico</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Correo electrónico</label>
                   <input
                     name="email" type="email" value={form.email} onChange={handleChange} required
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-primary-500"
@@ -170,32 +170,32 @@ export default function Users() {
                 </div>
                 <div />
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Contrasena temporal</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña temporal</label>
                   <PasswordInput
                     name="password"
                     value={form.password}
                     onChange={handleChange}
                     required
-                    placeholder="Minimo 8 caracteres"
+                    placeholder="Mínimo 8 caracteres"
                   />
                   <PasswordStrengthIndicator password={form.password} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Confirmar contrasena</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Confirmar contraseña</label>
                   <PasswordInput
                     name="confirmPassword"
                     value={form.confirmPassword}
                     onChange={handleChange}
                     required
-                    placeholder="Repetir contrasena"
+                    placeholder="Repetir contraseña"
                   />
                   {form.confirmPassword && form.password !== form.confirmPassword && (
-                    <p className="mt-1 text-xs text-red-500">Las contrasenas no coinciden</p>
+                    <p className="mt-1 text-xs text-red-500">Las contraseñas no coinciden</p>
                   )}
                 </div>
                 <div className="sm:col-span-2">
                   <p className="text-xs text-gray-400">
-                    El usuario debera cambiar esta contrasena al iniciar sesion por primera vez.
+                    El usuario debera cambiar esta contraseña al iniciar sesión por primera vez.
                   </p>
                 </div>
 
@@ -224,14 +224,14 @@ export default function Users() {
           )}
 
           {/* Tabla */}
-          <div className="rounded-xl bg-white border border-gray-100 shadow-sm overflow-hidden">
+          <div className="rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden transition-colors">
             {loading ? (
               <div className="flex justify-center py-16">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-500 border-t-transparent" />
               </div>
             ) : (
               <table className="w-full text-sm">
-                <thead className="bg-gray-50 text-xs uppercase text-gray-500">
+                <thead className="bg-gray-50 dark:bg-gray-700/50 text-xs uppercase text-gray-500 dark:text-gray-400">
                   <tr>
                     <th className="px-5 py-3 text-left">Nombre</th>
                     <th className="px-5 py-3 text-left">Correo</th>

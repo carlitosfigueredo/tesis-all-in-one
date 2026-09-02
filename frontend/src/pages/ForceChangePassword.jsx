@@ -23,11 +23,11 @@ export default function ForceChangePassword() {
     e.preventDefault();
 
     if (form.newPassword !== form.confirmPassword) {
-      setToast({ type: 'error', title: 'Error', message: 'Las contrasenas no coinciden' });
+      setToast({ type: 'error', title: 'Error', message: 'Las contraseñas no coinciden' });
       return;
     }
     if (form.newPassword.length < policy.minLength) {
-      setToast({ type: 'error', title: 'Error', message: `La contrasena debe tener al menos ${policy.minLength} caracteres` });
+      setToast({ type: 'error', title: 'Error', message: `La contraseña debe tener al menos ${policy.minLength} caracteres` });
       return;
     }
 
@@ -40,13 +40,13 @@ export default function ForceChangePassword() {
         newPassword: form.newPassword,
         confirmPassword: form.confirmPassword,
       });
-      setToast({ type: 'success', title: 'Contrasena actualizada', message: 'Redirigiendo al dashboard...' });
+      setToast({ type: 'success', title: 'Contraseña actualizada', message: 'Redirigiendo al dashboard...' });
       setTimeout(() => {
         window.location.reload(); // Recargar para que /auth/me tome mustChangePassword: false
       }, 1500);
     } catch (err) {
       const data = err.response?.data;
-      const msg = data?.errors?.map((e) => e.message ?? e).join('. ') ?? data?.message ?? 'Error al cambiar la contrasena';
+      const msg = data?.errors?.map((e) => e.message ?? e).join('. ') ?? data?.message ?? 'Error al cambiar la contraseña';
       setToast({ type: 'error', title: 'Error', message: msg });
     } finally {
       setLoading(false);
@@ -62,11 +62,11 @@ export default function ForceChangePassword() {
             🔐
           </div>
           <h1 className="text-3xl font-bold leading-tight mb-4">
-            Cambio de contrasena obligatorio
+            Cambio de contraseña obligatorio
           </h1>
           <p className="text-primary-100 text-base leading-relaxed">
-            Tu cuenta fue creada con una contrasena temporal. Por seguridad,
-            debes establecer una contrasena personal antes de continuar.
+            Tu cuenta fue creada con una contraseña temporal. Por seguridad,
+            debes establecer una contraseña personal antes de continuar.
           </p>
           <div className="mt-10 space-y-3">
             <div className="flex items-center gap-3 text-sm text-primary-100">
@@ -75,7 +75,7 @@ export default function ForceChangePassword() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              Minimo {policy.minLength} caracteres
+              Mínimo {policy.minLength} caracteres
             </div>
             <div className="flex items-center gap-3 text-sm text-primary-100">
               <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10">
@@ -91,7 +91,7 @@ export default function ForceChangePassword() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              No compartas tu contrasena con nadie
+              No compartas tu contraseña con nadie
             </div>
           </div>
         </div>
@@ -108,36 +108,36 @@ export default function ForceChangePassword() {
           </div>
 
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-900">Establece tu contrasena</h2>
+            <h2 className="text-2xl font-bold text-gray-900">Establece tu contraseña</h2>
             <p className="mt-1 text-sm text-gray-500">
-              Hola <strong>{user?.name}</strong>, crea una contrasena personal para tu cuenta.
+              Hola <strong>{user?.name}</strong>, crea una contraseña personal para tu cuenta.
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <PasswordInput
-                label="Nueva contrasena"
+                label="Nueva contraseña"
                 name="newPassword"
                 value={form.newPassword}
                 onChange={handleChange}
                 required
-                placeholder="Ingresa tu nueva contrasena"
+                placeholder="Ingresa tu nueva contraseña"
               />
               <PasswordStrengthIndicator password={form.newPassword} />
             </div>
 
             <div>
               <PasswordInput
-                label="Confirmar contrasena"
+                label="Confirmar contraseña"
                 name="confirmPassword"
                 value={form.confirmPassword}
                 onChange={handleChange}
                 required
-                placeholder="Repetir contrasena"
+                placeholder="Repetir contraseña"
               />
               {form.confirmPassword && form.newPassword !== form.confirmPassword && (
-                <p className="mt-1 text-xs text-red-500">Las contrasenas no coinciden</p>
+                <p className="mt-1 text-xs text-red-500">Las contraseñas no coinciden</p>
               )}
             </div>
 
@@ -155,7 +155,7 @@ export default function ForceChangePassword() {
                   Guardando...
                 </span>
               ) : (
-                'Guardar contrasena y continuar'
+                'Guardar contraseña y continuar'
               )}
             </button>
           </form>
@@ -165,7 +165,7 @@ export default function ForceChangePassword() {
               onClick={logout}
               className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
             >
-              Cerrar sesion
+              Cerrar sesión
             </button>
           </div>
         </div>

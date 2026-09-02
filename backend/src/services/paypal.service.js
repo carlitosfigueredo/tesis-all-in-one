@@ -87,12 +87,8 @@ const paypalFetch = async (path, options = {}) => {
   return json;
 };
 
-// Mapeo de plan_config.id al enum Plan de la tabla companies
-const PLAN_ID_TO_ENUM = {
-  ESTANDAR:    'BASICO',
-  PROFESIONAL: 'PROFESIONAL',
-  CORPORATIVO: 'CORPORATIVO',
-};
+// Mapeo de plan_config.id al enum Plan de la tabla companies (centralizado)
+const { PLAN_ID_TO_ENUM } = require('./subscription.service');
 
 const { getPygToUsdRate } = require('./systemConfig.service');
 
@@ -115,11 +111,16 @@ const pygToUsd = async (amountPyg) => {
  * @param {string} params.companyId - ID de la empresa
  * @param {string} params.userId    - ID del usuario
  */
-const createOrder = async ({ planId, amountPyg, companyId, userId }) => {
+const createOrder = async ({ planId, amountPyg, companyId, userId, changeType }) => {
   const amountUsd = await pygToUsd(amountPyg);
 
   // Idempotency key unico por intento (evita doble procesamiento — punto 14 Apuntes UNIDA)
   const requestId = `order-${companyId}-${planId}-${Date.now()}`;
+
+  // custom_id lleva un 4º segmento opcional para señalar un upgrade prorrateado
+  const customId = changeType
+    ? `${companyId}:${planId}:${userId}:${changeType}`
+    : `${companyId}:${planId}:${userId}`;
 
   const order = await paypalFetch('/v2/checkout/orders', {
     method: 'POST',
@@ -130,7 +131,7 @@ const createOrder = async ({ planId, amountPyg, companyId, userId }) => {
         {
           reference_id: `${companyId}-${planId}`,
           description: `Suscripcion plan ${planId} — Sistema BI Retencion de Talento`,
-          custom_id: `${companyId}:${planId}:${userId}`,
+          custom_id: customId,
           amount: {
             currency_code: 'USD',
             value: amountUsd,
@@ -238,7 +239,16 @@ const captureOrder = async ({ orderId, companyId, planId, userId }) => {
 
   // Si fue aprobado: activar empresa y renovar suscripcion
   if (isApproved) {
-    const planEnum  = PLAN_ID_TO_ENUM[planId] || 'BASICO';
+    // Downgrade programado: si el cliente está renovando el MISMO plan que tiene
+    // y hay un cambio programado, aplicar ese plan ahora (inicio del nuevo ciclo).
+    // Una elección explícita de otro plan (upgrade/cambio directo) tiene prioridad
+    // y limpia cualquier downgrade programado.
+    const renewingSamePlan = planId === subscription.planId;
+    const effectivePlanId = (renewingSamePlan && subscription.scheduledPlanId)
+      ? subscription.scheduledPlanId
+      : planId;
+
+    const planEnum  = PLAN_ID_TO_ENUM[effectivePlanId] || 'BASICO';
     const periodEnd = new Date();
     periodEnd.setMonth(periodEnd.getMonth() + 1);
 
@@ -249,7 +259,13 @@ const captureOrder = async ({ orderId, companyId, planId, userId }) => {
 
     await prisma.subscription.update({
       where: { id: subscription.id },
-      data:  { status: 'ACTIVE', planId, currentPeriodEnd: periodEnd },
+      data:  {
+        status: 'ACTIVE',
+        planId: effectivePlanId,
+        currentPeriodStart: new Date(),
+        currentPeriodEnd: periodEnd,
+        scheduledPlanId: null, // consumido/limpiado
+      },
     });
   }
 
@@ -274,10 +290,41 @@ const getOrderDetails = async (orderId) => {
   return paypalFetch(`/v2/checkout/orders/${orderId}`);
 };
 
+/**
+ * Reembolsa una captura de PayPal (total o parcial).
+ * Docs: https://developer.paypal.com/docs/api/payments/v2/#captures_refund
+ *
+ * @param {object} params
+ * @param {string} params.captureId   - paypalCaptureId almacenado en el Payment
+ * @param {number} [params.amountUsd] - Monto a reembolsar en USD. Si se omite, reembolso total.
+ * @param {string} [params.noteToPayer] - Nota opcional visible para el comprador
+ * @returns {Promise<object>} respuesta del refund de PayPal (id, status, amount, ...)
+ */
+const refundCapture = async ({ captureId, amountUsd, noteToPayer }) => {
+  if (!captureId) {
+    throw Object.assign(new Error('captureId requerido para reembolsar'), { statusCode: 400 });
+  }
+
+  // Body vacío = reembolso total. Con amount = reembolso parcial.
+  const body = {};
+  if (amountUsd != null) {
+    body.amount = { value: Number(amountUsd).toFixed(2), currency_code: 'USD' };
+  }
+  if (noteToPayer) {
+    body.note_to_payer = noteToPayer;
+  }
+
+  return paypalFetch(`/v2/payments/captures/${captureId}/refund`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+};
+
 module.exports = {
   createOrder,
   captureOrder,
   getOrderDetails,
+  refundCapture,
   getAccessToken,
   pygToUsd,
 };

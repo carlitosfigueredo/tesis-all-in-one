@@ -8,6 +8,7 @@ const paymentsRoutes  = require('./payments.routes');
 const predictRoutes   = require('./predict.routes');
 const modelRoutes     = require('./model.routes');
 const webhookRoutes   = require('./webhook.routes');
+const consentRoutes   = require('./consent.routes');
 const { getPublicPlans } = require('../controllers/admin.controller');
 
 const router = Router();
@@ -35,6 +36,7 @@ router.use('/users',     usersRoutes);
 router.use('/payments',  paymentsRoutes);
 router.use('/predict',   predictRoutes);
 router.use('/model',     modelRoutes);
+router.use('/consent',   consentRoutes);
 
 // ── Portal super admin ────────────────────────────────────────────────────────
 router.use('/admin/auth', adminAuthRoutes);

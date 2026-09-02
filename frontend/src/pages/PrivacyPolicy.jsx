@@ -15,8 +15,8 @@ const SystemIcon = () => (
 
 const Section = ({ title, children }) => (
   <section className="mb-10">
-    <h2 className="mb-3 text-xl font-bold text-gray-900">{title}</h2>
-    <div className="space-y-3 text-sm leading-relaxed text-gray-600">{children}</div>
+    <h2 className="mb-3 text-xl font-bold text-gray-900 dark:text-gray-100">{title}</h2>
+    <div className="space-y-3 text-sm leading-relaxed text-gray-600 dark:text-gray-300">{children}</div>
   </section>
 );
 
@@ -26,17 +26,17 @@ const CONTACT_EMAIL = 'carlosalberto.figueredoquevedo@gmail.com';
 
 export default function PrivacyPolicy() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
 
       {/* Navbar mínimo */}
-      <header className="border-b border-gray-100 bg-white/90 backdrop-blur-sm sticky top-0 z-50">
+      <header className="border-b border-gray-100 dark:border-gray-700 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm sticky top-0 z-50">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
           <Link to="/" className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600">
               <SystemIcon />
             </div>
-            <span className="text-base font-bold text-gray-900">
-              Sistema BI<span className="hidden sm:inline text-gray-400 font-normal"> · Retención de Talento</span>
+            <span className="text-base font-bold text-gray-900 dark:text-gray-100">
+              Sistema BI<span className="hidden sm:inline text-gray-400 dark:text-gray-500 font-normal"> · Retención de Talento</span>
             </span>
           </Link>
           <Link
@@ -52,18 +52,18 @@ export default function PrivacyPolicy() {
       <main className="mx-auto max-w-3xl px-6 py-16">
 
         <div className="mb-12">
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-blue-50 dark:bg-blue-900/30 px-3 py-1 text-xs font-medium text-blue-700 dark:text-blue-300">
             Versión {PRIVACY_VERSION}
           </div>
-          <h1 className="text-4xl font-extrabold text-gray-900">Política de Privacidad</h1>
-          <p className="mt-3 text-sm text-gray-400">Última actualización: {LAST_UPDATE}</p>
-          <p className="mt-4 text-sm text-gray-600">
+          <h1 className="text-4xl font-extrabold text-gray-900 dark:text-gray-100">Política de Privacidad</h1>
+          <p className="mt-3 text-sm text-gray-400 dark:text-gray-500">Última actualización: {LAST_UPDATE}</p>
+          <p className="mt-4 text-sm text-gray-600 dark:text-gray-300">
             Esta política describe cómo tratamos los datos personales en el Sistema BI de Retención de Talento,
             conforme a la <strong>Ley N.º 7593/2025 de Protección de Datos Personales</strong> de la República del Paraguay.
           </p>
 
           {/* Aviso de privacidad inline (resumen) */}
-          <div className="mt-6 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800">
+          <div className="mt-6 rounded-xl border border-blue-100 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4 text-sm text-blue-800 dark:text-blue-200">
             <strong>Aviso de Privacidad:</strong> Los datos personales que proporcionás en este sistema serán utilizados
             para gestionar tu cuenta y brindar los servicios de análisis de retención de talento contratados.
             El suministro de la información es voluntario. Para conocer el tratamiento completo de tus datos,
@@ -316,7 +316,7 @@ export default function PrivacyPolicy() {
 
       </main>
 
-      <footer className="border-t border-gray-100 bg-white py-6 text-center text-xs text-gray-400">
+      <footer className="border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 py-6 text-center text-xs text-gray-400 dark:text-gray-500 transition-colors">
         <p>
           © {new Date().getFullYear()} Sistema BI — Retención de Talento. Trabajo de tesis académica.{' '}
           <Link to="/terms" className="underline hover:text-gray-600">Términos</Link>

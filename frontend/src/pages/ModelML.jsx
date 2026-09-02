@@ -13,13 +13,13 @@ import { useAuth } from '../context/AuthContext';
 
 const MetricCard = ({ label, value, sub, color = 'blue' }) => {
   const palette = {
-    blue:  'bg-blue-50  text-blue-700  border-blue-100',
-    green: 'bg-green-50 text-green-700 border-green-100',
-    amber: 'bg-amber-50 text-amber-700 border-amber-100',
-    indigo:'bg-indigo-50 text-indigo-700 border-indigo-100',
+    blue:  'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-100 dark:border-blue-800',
+    green: 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-100 dark:border-green-800',
+    amber: 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-100 dark:border-amber-800',
+    indigo:'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border-indigo-100 dark:border-indigo-800',
   };
   return (
-    <div className={`rounded-xl border p-5 ${palette[color]}`}>
+    <div className={`rounded-xl border p-5 transition-colors ${palette[color]}`}>
       <p className="text-xs font-medium uppercase tracking-wide opacity-70">{label}</p>
       <p className="mt-1 text-3xl font-bold">{value}</p>
       {sub && <p className="mt-1 text-xs opacity-60">{sub}</p>}
@@ -79,19 +79,19 @@ const ConfusionMatrix = ({ cm }) => {
 
 // ─── Datos de las variables de entrenamiento ─────────────────────────────────
 // Dataset custom: empresas de desarrollo de software - Asuncion, Paraguay
-// 17 variables (12 datos RRHH + 5 encuesta clima) + 1 target (desercion)
+// 17 variables (12 datos RRHH + 5 encuesta clima) + 1 target (deserción)
 
 const TRAINING_FEATURES = [
-  // ── Variables CRITICAS (alto impacto en prediccion) ──
+  // ── Variables CRITICAS (alto impacto en predicción) ──
   {
     feature: 'satisfaccion_laboral',
-    label: 'Satisfaccion Laboral',
+    label: 'Satisfacción Laboral',
     type: 'Ordinal',
     scale: '1 (Muy baja) — 5 (Muy alta)',
     source: 'Encuesta clima',
     tier: 'critica',
-    description: 'Nivel de satisfaccion del empleado con su trabajo y responsabilidades diarias.',
-    risk: 'Valores 1-2 son predictores directos de desercion. Variable de mayor impacto.',
+    description: 'Nivel de satisfacción del empleado con su trabajo y responsabilidades diarias.',
+    risk: 'Valores 1-2 son predictores directos de deserción. Variable de mayor impacto.',
   },
   {
     feature: 'equilibrio_vida_trabajo',
@@ -120,7 +120,7 @@ const TRAINING_FEATURES = [
     scale: '2.500.000 — 28.000.000 Gs.',
     source: 'Datos RRHH',
     tier: 'critica',
-    description: 'Remuneracion mensual en guaranies. Predictor fuerte en un mercado IT competitivo.',
+    description: 'Remuneracion mensual en guaraníes. Predictor fuerte en un mercado IT competitivo.',
     risk: 'Salario por debajo de la mediana del seniority aumenta significativamente el riesgo.',
   },
   // ── Variables de ALTA importancia ──
@@ -146,17 +146,17 @@ const TRAINING_FEATURES = [
   },
   {
     feature: 'capacitacion_ultimo_anio',
-    label: 'Capacitacion (ultimo anio)',
+    label: 'Capacitación (último anio)',
     type: 'Binaria',
     scale: 'Si / No',
     source: 'Datos RRHH',
     tier: 'alta',
-    description: 'Si el empleado recibio alguna capacitacion formal en los ultimos 12 meses.',
-    risk: 'Sin capacitacion indica falta de inversion en el empleado. Factor de retencion clave.',
+    description: 'Si el empleado recibió alguna capacitación formal en los últimos 12 meses.',
+    risk: 'Sin capacitación indica falta de inversión en el empleado. Factor de retención clave.',
   },
   {
     feature: 'antiguedad_meses',
-    label: 'Antiguedad en la Empresa (meses)',
+    label: 'Antigüedad en la Empresa (meses)',
     type: 'Numerica',
     scale: '1 — 120 meses',
     source: 'Datos RRHH',
@@ -173,7 +173,7 @@ const TRAINING_FEATURES = [
     source: 'Datos RRHH',
     tier: 'media',
     description: 'Tipo de contrato laboral vigente. En Paraguay hay mucho contrato temporal en IT.',
-    risk: 'Contratos eventuales y a plazo fijo tienen mayor rotacion natural.',
+    risk: 'Contratos eventuales y a plazo fijo tienen mayor rotación natural.',
   },
   {
     feature: 'cantidad_empresas_anteriores',
@@ -192,18 +192,18 @@ const TRAINING_FEATURES = [
     scale: '1 (Muy bajo) — 5 (Excelente)',
     source: 'Datos RRHH',
     tier: 'media',
-    description: 'Ultima calificacion formal de desempeno del empleado.',
+    description: 'Última calificacion formal de desempeno del empleado.',
     risk: 'Desempeno bajo puede anticipar salida involuntaria o voluntaria.',
   },
   {
     feature: 'satisfaccion_ambiente',
-    label: 'Satisfaccion con el Ambiente',
+    label: 'Satisfacción con el Ambiente',
     type: 'Ordinal',
     scale: '1 (Muy baja) — 5 (Muy alta)',
     source: 'Encuesta clima',
     tier: 'media',
-    description: 'Satisfaccion con el entorno fisico y social del trabajo.',
-    risk: 'Ambiente negativo incrementa intencion de renuncia.',
+    description: 'Satisfacción con el entorno físico y social del trabajo.',
+    risk: 'Ambiente negativo incrementa intención de renuncia.',
   },
   // ── Variables de importancia BAJA (contextuales) ──
   {
@@ -213,7 +213,7 @@ const TRAINING_FEATURES = [
     scale: 'Presencial / Hibrido / Remoto',
     source: 'Datos RRHH',
     tier: 'baja',
-    description: 'Modalidad contractual de trabajo. Remoto tiende a retener mas en IT.',
+    description: 'Modalidad contractual de trabajo. Remoto tiende a retener más en IT.',
     risk: 'Presencial sin opcion de flexibilidad puede ser factor de salida.',
   },
   {
@@ -223,8 +223,8 @@ const TRAINING_FEATURES = [
     scale: '20 — 55 anios',
     source: 'Datos RRHH',
     tier: 'baja',
-    description: 'Edad del empleado. Empleados mas jovenes tienen mayor movilidad.',
-    risk: 'Rango 25-32 asociado a mayor rotacion en mercado IT.',
+    description: 'Edad del empleado. Empleados más jóvenes tienen mayor movilidad.',
+    risk: 'Rango 25-32 asociado a mayor rotación en mercado IT.',
   },
   {
     feature: 'nivel_formacion',
@@ -233,7 +233,7 @@ const TRAINING_FEATURES = [
     scale: 'Secundaria / Tecnico / Universitario / Posgrado',
     source: 'Datos RRHH',
     tier: 'baja',
-    description: 'Nivel educativo mas alto alcanzado por el empleado.',
+    description: 'Nivel educativo más alto alcanzado por el empleado.',
     risk: 'Posgrado sin reconocimiento salarial puede generar frustracion.',
   },
   {
@@ -244,7 +244,7 @@ const TRAINING_FEATURES = [
     source: 'Datos RRHH',
     tier: 'baja',
     description: 'Rol principal del empleado en el equipo de desarrollo.',
-    risk: 'Roles con alta demanda en el mercado (DevOps, Data) tienen mas ofertas externas.',
+    risk: 'Roles con alta demanda en el mercado (DevOps, Data) tienen más ofertas externas.',
   },
   {
     feature: 'seniority',
@@ -254,7 +254,7 @@ const TRAINING_FEATURES = [
     source: 'Datos RRHH',
     tier: 'baja',
     description: 'Nivel de experiencia y responsabilidad dentro del equipo.',
-    risk: 'Semi-Senior es el punto de mayor rotacion (ya tiene experiencia, busca mas).',
+    risk: 'Semi-Senior es el punto de mayor rotación (ya tiene experiencia, busca más).',
   },
 ];
 
@@ -344,14 +344,14 @@ export default function ModelML() {
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
-      <div className="flex flex-1 flex-col overflow-auto">
+      <div className="flex flex-1 flex-col overflow-auto bg-gray-50 dark:bg-gray-900 transition-colors">
         <Navbar title="Modelo de Machine Learning" />
         <main className="flex-1 p-6">
 
           {/* ── Header ── */}
           <div className="mb-6 flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-gray-800">Random Forest — Prediccion de Desercion Laboral</h2>
+              <h2 className="text-lg font-semibold text-gray-800">Random Forest — Predicción de Deserción Laboral</h2>
               <p className="text-sm text-gray-500">Dataset custom: Software PY · 1.000 empleados · 17 variables</p>
             </div>
             <div className="flex items-center gap-3">
@@ -450,8 +450,8 @@ export default function ModelML() {
               <div className="mb-6 grid gap-6 lg:grid-cols-2">
 
                 {/* Métricas detalladas */}
-                <div className="rounded-xl bg-white p-5 shadow-sm">
-                  <h3 className="mb-4 text-sm font-semibold text-gray-700">Métricas Detalladas</h3>
+                <div className="rounded-xl bg-white dark:bg-gray-800 p-5 shadow-sm transition-colors">
+                  <h3 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-200">Métricas Detalladas</h3>
                   <table className="w-full text-sm">
                     <tbody className="divide-y divide-gray-50">
                       {[
@@ -475,8 +475,8 @@ export default function ModelML() {
                 </div>
 
                 {/* Matriz de confusión */}
-                <div className="rounded-xl bg-white p-5 shadow-sm">
-                  <h3 className="mb-4 text-sm font-semibold text-gray-700">Resultados en Set de Test</h3>
+                <div className="rounded-xl bg-white dark:bg-gray-800 p-5 shadow-sm transition-colors">
+                  <h3 className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-200">Resultados en Set de Test</h3>
                   <ConfusionMatrix cm={metrics.confusion_matrix} />
                   <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-gray-500">
                     <div className="rounded-lg bg-gray-50 p-3">
@@ -492,8 +492,8 @@ export default function ModelML() {
               </div>
 
               {/* ── Importancia de variables ── */}
-              <div className="rounded-xl bg-white p-5 shadow-sm">
-                <h3 className="mb-1 text-sm font-semibold text-gray-700">Importancia de Variables</h3>
+              <div className="rounded-xl bg-white dark:bg-gray-800 p-5 shadow-sm transition-colors">
+                <h3 className="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-200">Importancia de Variables</h3>
                 <p className="mb-4 text-xs text-gray-400">
                   Qué tanto influye cada variable en la decisión del modelo
                 </p>
@@ -534,7 +534,7 @@ export default function ModelML() {
               <p className="text-4xl">🤖</p>
               <p className="mt-3 text-base font-semibold text-gray-700">El modelo aun no fue entrenado</p>
               <p className="mt-1 text-sm text-gray-400">
-                Hace click en "Entrenar modelo" para iniciar el proceso con el dataset de desercion
+                Hace click en "Entrenar modelo" para iniciar el proceso con el dataset de deserción
               </p>
               {status?.dataset_records && (
                 <p className="mt-2 text-xs text-gray-400">
@@ -545,8 +545,8 @@ export default function ModelML() {
           )}
 
           {/* ── Variables de entrenamiento ── */}
-          <div className="mt-6 rounded-xl bg-white p-5 shadow-sm">
-            <h3 className="text-sm font-semibold text-gray-700">Variables del Modelo de Prediccion</h3>
+          <div className="mt-6 rounded-xl bg-white dark:bg-gray-800 p-5 shadow-sm transition-colors">
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Variables del Modelo de Predicción</h3>
             <p className="mt-0.5 mb-2 text-xs text-gray-400">
               17 variables · Dataset custom para empresas de software de Asuncion, Paraguay
             </p>
@@ -608,8 +608,8 @@ export default function ModelML() {
               <p className="font-semibold">Sobre las variables de "Encuesta clima":</p>
               <p className="mt-1">
                 Estas 5 variables son opcionales al cargar empleados, pero son las de mayor impacto
-                en la prediccion. Si la empresa no las proporciona, el modelo usa valores neutros (3)
-                y la confianza de la prediccion se reduce. Se recomienda que la empresa realice una
+                en la predicción. Si la empresa no las proporciona, el modelo usa valores neutros (3)
+                y la confianza de la predicción se reduce. Se recomienda que la empresa realice una
                 encuesta de clima interna para obtener estos datos.
               </p>
             </div>

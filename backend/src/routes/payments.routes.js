@@ -10,6 +10,10 @@ const {
   processCheckout,
   getHistory,
   getActiveSubscription,
+  getSubscriptionStatusHandler,
+  previewPlanChange,
+  executePlanChange,
+  cancelScheduledPlanChange,
   getTestCards,
   getReceipt,
 } = require('../controllers/payments.controller');
@@ -40,6 +44,14 @@ router.post('/process', requirePermission('payments.process'), processCheckout);
 
 // GET /api/payments/history
 router.get('/history',      requirePermission('payments.view'), getHistory);
+
+// GET /api/payments/subscription/status — estado enriquecido (días restantes, por vencer)
+router.get('/subscription/status', requirePermission('payments.view'), getSubscriptionStatusHandler);
+
+// ── Cambio de plan (upgrade prorrateado / downgrade programado) ───────────────
+router.get('/plan-change/preview', requirePermission('payments.view'), previewPlanChange);
+router.post('/plan-change',        requirePermission('payments.process'), executePlanChange);
+router.delete('/plan-change',      requirePermission('payments.process'), cancelScheduledPlanChange);
 
 // GET /api/payments/subscription
 router.get('/subscription', requirePermission('payments.view'), getActiveSubscription);
