@@ -1,13 +1,20 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
 import Sidebar from '../components/layout/Sidebar';
 import Navbar from '../components/layout/Navbar';
+import PlanChangeModal from '../components/PlanChangeModal';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+
+// Enum Plan (companies) → plan_config.id que espera PlanChangeModal
+const PLAN_ENUM_TO_ID = {
+  BASICO: 'ESTANDAR',
+  PROFESIONAL: 'PROFESIONAL',
+  CORPORATIVO: 'CORPORATIVO',
+};
 
 // ─── Componentes auxiliares ──────────────────────────────────────────────────
 
@@ -288,12 +295,13 @@ const SOURCE_COLORS = {
 
 export default function ModelML() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [status, setStatus]   = useState(null);
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [training, setTraining] = useState(false);
   const [error, setError]     = useState('');
+  const [planModalOpen, setPlanModalOpen] = useState(false);
+  const [currentPlanId, setCurrentPlanId] = useState(null); // plan_config.id de la suscripcion
 
   // Solo CORPORATIVO puede entrenar bajo demanda
   const companyPlan = user?.companyPlan ?? 'BASICO';
@@ -312,6 +320,24 @@ export default function ModelML() {
   };
 
   useEffect(() => { fetchStatus(); }, []);
+
+  // Plan actual (plan_config.id) para el modal de cambio de plan.
+  // Preferimos el de la suscripción; si no, mapeamos desde el enum del token.
+  useEffect(() => {
+    api.get('/payments/subscription/status')
+      .then(({ data }) => {
+        setCurrentPlanId(data.data?.planId ?? PLAN_ENUM_TO_ID[companyPlan] ?? 'ESTANDAR');
+      })
+      .catch(() => setCurrentPlanId(PLAN_ENUM_TO_ID[companyPlan] ?? 'ESTANDAR'));
+  }, [companyPlan]);
+
+  const handlePlanChangeSuccess = (result) => {
+    setPlanModalOpen(false);
+    // Un upgrade pagado/aplicado cambia el plan del token: recargar para reflejarlo
+    if (result?.paid || result?.applied) {
+      setTimeout(() => window.location.reload(), 1200);
+    }
+  };
 
   const handleTrain = async () => {
     setTraining(true);
@@ -384,7 +410,7 @@ export default function ModelML() {
                       Aguarda unos dias para tener tus resultados actualizados.
                     </p>
                     <button
-                      onClick={() => navigate('/checkout')}
+                      onClick={() => setPlanModalOpen(true)}
                       className="mt-2 text-xs font-semibold text-blue-600 hover:text-blue-800 underline"
                     >
                       Actualiza tu plan y obtenelo ahora
@@ -617,6 +643,14 @@ export default function ModelML() {
 
         </main>
       </div>
+
+      {/* Modal de cambio de plan (upgrade con prorrateo) */}
+      <PlanChangeModal
+        open={planModalOpen}
+        currentPlanId={currentPlanId}
+        onClose={() => setPlanModalOpen(false)}
+        onSuccess={handlePlanChangeSuccess}
+      />
     </div>
   );
 }
