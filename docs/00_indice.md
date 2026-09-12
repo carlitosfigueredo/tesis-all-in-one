@@ -14,3 +14,4 @@
 | 08 | [Flujos Principales](./08_flujos.md) | Diagramas de secuencia de los flujos clave |
 | 09 | [Variables de Entorno](./09_variables_entorno.md) | Referencia de todas las variables de configuración |
 | 10 | [Guía de Desarrollo](./10_guia_desarrollo.md) | Cómo levantar, ejecutar y extender el proyecto |
+| 11 | [Ciclo de Predicción y Aprendizaje](./11_ciclo_prediccion_y_aprendizaje.md) | Recálculo según el plan y reentrenamiento acumulativo del modelo |
