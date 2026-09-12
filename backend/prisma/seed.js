@@ -269,6 +269,7 @@ async function main() {
   if (existingEmployees === 0) {
     const sampleEmployees = [
       {
+        codigo_empleado: 'EMP-001', nombre: 'Carla', apellido: 'Gimenez',
         edad: 28, nivel_formacion: 'Universitario', rol_tecnologico: 'Backend',
         seniority: 'Semi-Senior', antiguedad_meses: 18, modalidad_trabajo: 'Hibrido',
         tipo_contrato: 'Indefinido', salario_mensual: 8500000,
@@ -279,6 +280,7 @@ async function main() {
         riesgo_desercion: 0.22, nivel_riesgo: 'BAJO', companyId: demoCompany.id,
       },
       {
+        codigo_empleado: 'EMP-002', nombre: 'Diego', apellido: 'Rojas',
         edad: 24, nivel_formacion: 'Tecnico', rol_tecnologico: 'Frontend',
         seniority: 'Junior', antiguedad_meses: 4, modalidad_trabajo: 'Presencial',
         tipo_contrato: 'Eventual', salario_mensual: 4500000,
@@ -289,6 +291,7 @@ async function main() {
         riesgo_desercion: 0.82, nivel_riesgo: 'CRITICO', companyId: demoCompany.id,
       },
       {
+        codigo_empleado: 'EMP-003', nombre: 'Sofia', apellido: 'Benitez',
         edad: 35, nivel_formacion: 'Posgrado', rol_tecnologico: 'DevOps',
         seniority: 'Senior', antiguedad_meses: 48, modalidad_trabajo: 'Remoto',
         tipo_contrato: 'Indefinido', salario_mensual: 18000000,
@@ -299,6 +302,7 @@ async function main() {
         riesgo_desercion: 0.08, nivel_riesgo: 'BAJO', companyId: demoCompany.id,
       },
       {
+        codigo_empleado: 'EMP-004', nombre: 'Matias', apellido: 'Fernandez',
         edad: 22, nivel_formacion: 'Universitario', rol_tecnologico: 'QA',
         seniority: 'Trainee', antiguedad_meses: 3, modalidad_trabajo: 'Hibrido',
         tipo_contrato: 'Plazo fijo', salario_mensual: 3500000,
@@ -309,6 +313,7 @@ async function main() {
         riesgo_desercion: 0.55, nivel_riesgo: 'ALTO', companyId: demoCompany.id,
       },
       {
+        codigo_empleado: 'EMP-005', nombre: 'Lucia', apellido: 'Ayala',
         edad: 30, nivel_formacion: 'Universitario', rol_tecnologico: 'Fullstack',
         seniority: 'Semi-Senior', antiguedad_meses: 24, modalidad_trabajo: 'Remoto',
         tipo_contrato: 'Indefinido', salario_mensual: 10000000,
