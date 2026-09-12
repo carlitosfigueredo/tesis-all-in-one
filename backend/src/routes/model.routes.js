@@ -2,6 +2,9 @@ const { Router } = require('express');
 const { protect } = require('../middlewares/auth.middleware');
 const { requireActiveCompany } = require('../middlewares/companyStatus.middleware');
 const { getModelStatus, trainModel } = require('../services/ml.service');
+const { retrainGlobalModel } = require('../services/globalTraining.service');
+const { logAction } = require('../services/audit.service');
+const { getIp, getUserAgent } = require('../utils/request.utils');
 
 const router = Router();
 
@@ -41,6 +44,59 @@ router.post('/train', async (req, res, next) => {
     const metrics = await trainModel();
     res.json({ success: true, data: metrics });
   } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/model/retrain-global
+ * Reentrenamiento acumulativo: junta los datos anonimizados de deserción real
+ * de TODAS las empresas y reentrena el modelo global.
+ * Solo SUPER_ADMIN (es un modelo compartido por todo el sistema).
+ */
+router.post('/retrain-global', async (req, res, next) => {
+  try {
+    const isSuperAdmin = req.user.roleNames?.includes('SUPER_ADMIN');
+    if (!isSuperAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'Solo un administrador del sistema puede reentrenar el modelo global.',
+      });
+    }
+
+    const result = await retrainGlobalModel();
+
+    await logAction({
+      userId:    req.user.id,
+      action:    'GLOBAL_MODEL_RETRAINED',
+      resource:  'model',
+      ipAddress: getIp(req),
+      userAgent: getUserAgent(req),
+      status:    'SUCCESS',
+      newValue:  {
+        datasetSize: result.datasetSize,
+        positivos:   result.positivos,
+        negativos:   result.negativos,
+        auc_roc:     result.metrics?.auc_roc,
+      },
+    });
+
+    res.json({
+      success: true,
+      message: `Modelo global reentrenado con ${result.datasetSize} registros ` +
+               `(${result.positivos} desertaron, ${result.negativos} permanecieron).`,
+      data: {
+        datasetSize: result.datasetSize,
+        positivos:   result.positivos,
+        negativos:   result.negativos,
+        metrics:     result.metrics,
+      },
+    });
+  } catch (error) {
+    // Errores de validación del dataset (datos insuficientes) → 422 con mensaje claro.
+    if (error.statusCode === 422) {
+      return res.status(422).json({ success: false, message: error.message });
+    }
     next(error);
   }
 });

@@ -8,6 +8,7 @@ const prisma = require('../lib/prisma');
 const { logAction }  = require('../services/audit.service');
 const { getIp, getUserAgent } = require('../utils/request.utils');
 const mlService = require('../services/ml.service');
+const { evaluateRecalcPolicy } = require('../services/recalcPolicy.service');
 
 // ─── Constantes de validacion ────────────────────────────────────────────────
 
@@ -18,9 +19,15 @@ const VALID_CONTRATO = ['Indefinido', 'Plazo fijo', 'Eventual'];
 const VALID_FORMACION = ['Secundaria', 'Tecnico', 'Universitario', 'Posgrado'];
 
 const REQUIRED_FIELDS = [
+  'codigo_empleado', 'nombre', 'apellido',
   'edad', 'nivel_formacion', 'rol_tecnologico', 'seniority',
   'antiguedad_meses', 'modalidad_trabajo', 'tipo_contrato', 'salario_mensual',
 ];
+
+// Umbral de seguridad para bajas masivas: si un import daria de baja a MAS
+// de este porcentaje de los empleados activos, se exige confirmacion explicita
+// (protege contra subir un CSV parcial por error).
+const BULK_DEACTIVATION_THRESHOLD = 0.30; // 30%
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -79,6 +86,9 @@ const parseEmployeeRow = (row, lineNum = null) => {
 
   // Construir objeto para Prisma
   const data = {
+    codigo_empleado: String(row.codigo_empleado).trim(),
+    nombre: String(row.nombre).trim(),
+    apellido: String(row.apellido).trim(),
     edad,
     nivel_formacion: row.nivel_formacion,
     rol_tecnologico: row.rol_tecnologico,
@@ -271,6 +281,34 @@ const getEmployeeById = async (req, res, next) => {
   }
 };
 
+// ─── GET /api/employees/:id/history ───────────────────────────────────────────
+
+/**
+ * Devuelve el historial de riesgo de un empleado (snapshots ordenados por fecha),
+ * para graficar como evoluciono su probabilidad de desercion en el tiempo.
+ */
+const getEmployeeHistory = async (req, res, next) => {
+  try {
+    // Verificar que el empleado pertenezca a la empresa del usuario (tenant)
+    const where = { id: req.params.id, ...getCompanyFilter(req.user) };
+    const employee = await prisma.employee.findFirst({ where, select: { id: true } });
+
+    if (!employee) {
+      return res.status(404).json({ success: false, message: 'Empleado no encontrado' });
+    }
+
+    const snapshots = await prisma.riskSnapshot.findMany({
+      where: { employeeId: employee.id },
+      orderBy: { createdAt: 'asc' },
+      select: { riesgo_desercion: true, nivel_riesgo: true, createdAt: true },
+    });
+
+    res.json({ success: true, data: snapshots });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // ─── POST /api/employees ──────────────────────────────────────────────────────
 
 const createEmployee = async (req, res, next) => {
@@ -298,6 +336,15 @@ const createEmployee = async (req, res, next) => {
         riesgo_desercion: prediction.riesgo_desercion,
         nivel_riesgo: prediction.nivel_riesgo,
         companyId,
+      },
+    });
+
+    // Primer snapshot de riesgo (historial)
+    await prisma.riskSnapshot.create({
+      data: {
+        employeeId: employee.id,
+        riesgo_desercion: employee.riesgo_desercion,
+        nivel_riesgo: employee.nivel_riesgo,
       },
     });
 
@@ -373,6 +420,15 @@ const updateEmployee = async (req, res, next) => {
       },
     });
 
+    // Snapshot del riesgo recalculado (historial)
+    await prisma.riskSnapshot.create({
+      data: {
+        employeeId: final.id,
+        riesgo_desercion: final.riesgo_desercion,
+        nivel_riesgo: final.nivel_riesgo,
+      },
+    });
+
     await logAction({
       tenantId:   req.user.companyId ?? null,
       userId:     req.user.id,
@@ -440,6 +496,7 @@ const importEmployees = async (req, res, next) => {
 
     const validationErrors = [];
     const validRows = [];
+    const codigosVistos = new Map(); // codigo_empleado -> lineNum (para detectar duplicados en el CSV)
 
     rows.forEach((row, idx) => {
       const lineNum = idx + 2; // +2 porque linea 1 es header
@@ -447,9 +504,21 @@ const importEmployees = async (req, res, next) => {
 
       if (errors.length > 0) {
         validationErrors.push({ line: lineNum, errors });
-      } else {
-        validRows.push({ ...data, companyId });
+        return;
       }
+
+      // Un mismo codigo no puede repetirse dentro del mismo archivo:
+      // no sabriamos cual de las dos filas es la version correcta.
+      const codigo = data.codigo_empleado;
+      if (codigosVistos.has(codigo)) {
+        validationErrors.push({
+          line: lineNum,
+          errors: [`Linea ${lineNum}: codigo_empleado "${codigo}" duplicado (ya aparece en la linea ${codigosVistos.get(codigo)})`],
+        });
+        return;
+      }
+      codigosVistos.set(codigo, lineNum);
+      validRows.push({ ...data, companyId });
     });
 
     // Si hay errores, rechazar el lote
@@ -461,18 +530,135 @@ const importEmployees = async (req, res, next) => {
       });
     }
 
-    // Calcular predicciones ML en batch
-    const predictions = await mlService.calcularRiesgoBatch(validRows);
+    // ── Política de recálculo según el plan ───────────────────────────────────
+    // Los datos SIEMPRE se importan y se acumula historial. Pero el RIESGO solo se
+    // recalcula con la frecuencia del plan (Estándar mensual / Profesional semanal /
+    // Corporativo bajo demanda). Si no toca recalcular, se importan los datos pero
+    // se conserva el riesgo previo del empleado (los nuevos quedan "pendientes").
+    const isSuperAdmin = req.user.roleNames?.includes('SUPER_ADMIN');
+    const company = companyId
+      ? await prisma.company.findUnique({
+          where: { id: companyId },
+          select: { plan: true, lastRecalculatedAt: true },
+        })
+      : null;
 
-    // Agregar riesgo a cada fila
-    const rowsWithPredictions = validRows.map((row, i) => ({
-      ...row,
-      riesgo_desercion: predictions[i].riesgo_desercion,
-      nivel_riesgo: predictions[i].nivel_riesgo,
-    }));
+    const policy = evaluateRecalcPolicy({
+      plan: company?.plan ?? 'BASICO',
+      lastRecalculatedAt: company?.lastRecalculatedAt ?? null,
+      isSuperAdmin,
+    });
 
-    // Insertar en batch
-    const result = await prisma.employee.createMany({ data: rowsWithPredictions });
+    // Solo llamamos al modelo ML si la ventana del plan lo permite.
+    let predictions = null;
+    if (policy.canRecalculate) {
+      predictions = await mlService.calcularRiesgoBatch(validRows);
+    }
+
+    const codigosDelCsv = validRows.map((r) => r.codigo_empleado);
+
+    // Opciones de baja (llegan del frontend):
+    //  - deactivateAbsent: el usuario opto por dar de baja a los ausentes (checkbox)
+    //  - confirmDeactivation: el usuario ya confirmo una baja masiva que supero el umbral
+    const deactivateAbsent   = req.body.deactivateAbsent === true;
+    const confirmDeactivation = req.body.confirmDeactivation === true;
+
+    // ── Upsert por (companyId, codigo_empleado) + snapshots ──
+    // El upsert de datos SIEMPRE se aplica. El riesgo solo se actualiza (y se crea
+    // snapshot) si la política del plan permitió recalcular en esta importación.
+    let creados = 0;
+    let actualizados = 0;
+    const savedEmployees = [];
+
+    await prisma.$transaction(async (tx) => {
+      for (let i = 0; i < validRows.length; i++) {
+        const { codigo_empleado, ...rest } = validRows[i];
+        const pred = predictions ? predictions[i] : null;
+
+        const existing = await tx.employee.findFirst({
+          where: { companyId, codigo_empleado },
+          select: { id: true },
+        });
+
+        // Campos de riesgo a escribir:
+        //  - si recalculamos → usamos la predicción nueva
+        //  - si NO recalculamos → conservamos el riesgo previo (empleado existente)
+        //    o dejamos el default (0/BAJO) para uno nuevo, que quedará "pendiente".
+        const riskData = pred
+          ? { riesgo_desercion: pred.riesgo_desercion, nivel_riesgo: pred.nivel_riesgo }
+          : {};
+
+        let saved;
+        if (existing) {
+          saved = await tx.employee.update({
+            where: { id: existing.id },
+            data: { ...rest, codigo_empleado, status: 'ACTIVE', ...riskData },
+          });
+          actualizados += 1;
+        } else {
+          saved = await tx.employee.create({
+            data: { ...rest, codigo_empleado, companyId, status: 'ACTIVE', ...riskData },
+          });
+          creados += 1;
+        }
+
+        // Snapshot solo cuando hubo recálculo real (evita puntos falsos en el historial).
+        if (pred) {
+          await tx.riskSnapshot.create({
+            data: {
+              employeeId: saved.id,
+              riesgo_desercion: saved.riesgo_desercion,
+              nivel_riesgo: saved.nivel_riesgo,
+            },
+          });
+        }
+
+        savedEmployees.push(saved);
+      }
+
+      // Si recalculamos, registrar el momento para respetar la ventana del plan.
+      if (policy.canRecalculate && companyId) {
+        await tx.company.update({
+          where: { id: companyId },
+          data: { lastRecalculatedAt: new Date() },
+        });
+      }
+    });
+
+    // ── Manejo de bajas (empleados activos que NO vinieron en el CSV) ──
+    let dadosDeBaja = 0;
+    let bajasPendientes = [];          // lista para preview (cuando no se aplican todavia)
+    let needsConfirmation = false;     // true si supera el umbral y falta confirmar
+
+    if (deactivateAbsent) {
+      // ¿Quienes quedarian de baja? (activos que no estan en el CSV)
+      const ausentes = await prisma.employee.findMany({
+        where: {
+          companyId,
+          status: 'ACTIVE',
+          codigo_empleado: { notIn: codigosDelCsv },
+        },
+        select: { id: true, codigo_empleado: true, nombre: true, apellido: true, rol_tecnologico: true, seniority: true },
+      });
+
+      // Base para el umbral: cuantos empleados activos hay en total ahora.
+      const totalActivos = await prisma.employee.count({ where: { companyId, status: 'ACTIVE' } });
+      const proporcion = totalActivos > 0 ? ausentes.length / totalActivos : 0;
+      const superaUmbral = proporcion > BULK_DEACTIVATION_THRESHOLD;
+
+      if (ausentes.length > 0 && superaUmbral && !confirmDeactivation) {
+        // Baja masiva sin confirmar: NO aplicar, pedir confirmacion mostrando a quienes afecta.
+        needsConfirmation = true;
+        bajasPendientes = ausentes;
+      } else if (ausentes.length > 0) {
+        // Dentro del umbral, o ya confirmado: aplicar bajas.
+        const baja = await prisma.employee.updateMany({
+          where: { id: { in: ausentes.map((a) => a.id) } },
+          data: { status: 'INACTIVE' },
+        });
+        dadosDeBaja = baja.count;
+      }
+    }
 
     await logAction({
       tenantId:  companyId,
@@ -482,13 +668,52 @@ const importEmployees = async (req, res, next) => {
       ipAddress: getIp(req),
       userAgent: getUserAgent(req),
       status:    'SUCCESS',
-      newValue:  { count: result.count },
+      newValue:  { creados, actualizados, dadosDeBaja, bajasPendientes: bajasPendientes.length },
     });
+
+    // Resumen de riesgo del lote recien importado (para la pantalla de resultados).
+    const summary = { total: savedEmployees.length, critico: 0, alto: 0, medio: 0, bajo: 0 };
+    for (const emp of savedEmployees) {
+      const nivel = emp.nivel_riesgo ?? 'BAJO';
+      if (nivel === 'CRITICO') summary.critico += 1;
+      else if (nivel === 'ALTO') summary.alto += 1;
+      else if (nivel === 'MEDIO') summary.medio += 1;
+      else summary.bajo += 1;
+    }
+
+    // Devolvemos los empleados con su prediccion para que el frontend pueda
+    // explicar el "por que" de cada caso. Limitamos el payload a 500 registros.
+    const employees = savedEmployees.slice(0, 500);
+
+    const partes = [];
+    if (creados) partes.push(`${creados} nuevo(s)`);
+    if (actualizados) partes.push(`${actualizados} actualizado(s)`);
+    if (dadosDeBaja) partes.push(`${dadosDeBaja} dado(s) de baja`);
+    if (needsConfirmation) partes.push(`${bajasPendientes.length} baja(s) pendiente(s) de confirmar`);
+    const resumenTexto = partes.length ? partes.join(', ') : 'sin cambios';
 
     res.status(201).json({
       success: true,
-      message: `${result.count} empleado(s) importado(s) correctamente con prediccion de riesgo`,
-      data: { imported: result.count },
+      message: `Importación completada: ${resumenTexto}.`,
+      data: {
+        creados,
+        actualizados,
+        dadosDeBaja,
+        summary,
+        employees,
+        // Preview de bajas que superan el umbral y requieren confirmacion explicita.
+        needsConfirmation,
+        bajasPendientes,
+        umbralPorcentaje: Math.round(BULK_DEACTIVATION_THRESHOLD * 100),
+        // Estado del recálculo según el plan (para que el frontend lo explique).
+        recalculo: {
+          aplicado: policy.canRecalculate,
+          frecuencia: policy.frecuencia,
+          proximaFecha: policy.nextAvailableAt,
+          diasParaProxima: policy.daysUntilNext,
+          motivo: policy.reason,
+        },
+      },
     });
   } catch (error) {
     next(error);
@@ -503,6 +728,35 @@ const importEmployees = async (req, res, next) => {
  */
 const recalculateRisk = async (req, res, next) => {
   try {
+    const isSuperAdmin = req.user.roleNames?.includes('SUPER_ADMIN');
+    const companyId = req.user.companyId;
+
+    // ── Política de recálculo según el plan ───────────────────────────────────
+    // Bloquea el recálculo manual si aún no pasó la ventana del plan.
+    if (!isSuperAdmin && companyId) {
+      const company = await prisma.company.findUnique({
+        where: { id: companyId },
+        select: { plan: true, lastRecalculatedAt: true },
+      });
+      const policy = evaluateRecalcPolicy({
+        plan: company?.plan ?? 'BASICO',
+        lastRecalculatedAt: company?.lastRecalculatedAt ?? null,
+        isSuperAdmin,
+      });
+      if (!policy.canRecalculate) {
+        return res.status(429).json({
+          success: false,
+          message: policy.reason,
+          code: 'RECALC_NOT_AVAILABLE',
+          data: {
+            frecuencia: policy.frecuencia,
+            proximaFecha: policy.nextAvailableAt,
+            diasParaProxima: policy.daysUntilNext,
+          },
+        });
+      }
+    }
+
     const companyFilter = getCompanyFilter(req.user);
     const employees = await prisma.employee.findMany({ where: companyFilter });
 
@@ -513,17 +767,32 @@ const recalculateRisk = async (req, res, next) => {
     // Predecir en batch
     const predictions = await mlService.calcularRiesgoBatch(employees);
 
-    // Actualizar cada empleado con su nueva prediccion
+    // Actualizar cada empleado con su nueva prediccion + snapshot al historial
     let updated = 0;
     for (let i = 0; i < employees.length; i++) {
-      await prisma.employee.update({
+      const emp = await prisma.employee.update({
         where: { id: employees[i].id },
         data: {
           riesgo_desercion: predictions[i].riesgo_desercion,
           nivel_riesgo: predictions[i].nivel_riesgo,
         },
       });
+      await prisma.riskSnapshot.create({
+        data: {
+          employeeId: emp.id,
+          riesgo_desercion: emp.riesgo_desercion,
+          nivel_riesgo: emp.nivel_riesgo,
+        },
+      });
       updated++;
+    }
+
+    // Registrar el momento del recálculo para respetar la ventana del plan.
+    if (companyId) {
+      await prisma.company.update({
+        where: { id: companyId },
+        data: { lastRecalculatedAt: new Date() },
+      });
     }
 
     await logAction({
@@ -547,13 +816,65 @@ const recalculateRisk = async (req, res, next) => {
   }
 };
 
+// ─── POST /api/employees/deactivate-absent ────────────────────────────────────
+
+/**
+ * Segundo paso del flujo de bajas: aplica las bajas que el usuario confirmo
+ * despues de superar el umbral de seguridad. Recibe la lista de codigos a dar
+ * de baja y los marca INACTIVE (solo dentro de la empresa del usuario).
+ */
+const deactivateAbsentEmployees = async (req, res, next) => {
+  try {
+    const { codigos } = req.body;
+
+    if (!Array.isArray(codigos) || codigos.length === 0) {
+      return res.status(400).json({ success: false, message: 'No se recibieron empleados para dar de baja' });
+    }
+
+    const companyId = req.user.roleNames?.includes('SUPER_ADMIN')
+      ? (req.body.companyId || null)
+      : req.user.companyId;
+
+    // Solo se dan de baja empleados ACTIVOS de la empresa cuyos codigos fueron enviados.
+    const baja = await prisma.employee.updateMany({
+      where: {
+        companyId,
+        status: 'ACTIVE',
+        codigo_empleado: { in: codigos },
+      },
+      data: { status: 'INACTIVE' },
+    });
+
+    await logAction({
+      tenantId:  companyId,
+      userId:    req.user.id,
+      action:    'EMPLOYEES_DEACTIVATED',
+      resource:  'employees',
+      ipAddress: getIp(req),
+      userAgent: getUserAgent(req),
+      status:    'SUCCESS',
+      newValue:  { dadosDeBaja: baja.count },
+    });
+
+    res.json({
+      success: true,
+      message: `${baja.count} empleado(s) dado(s) de baja`,
+      data: { dadosDeBaja: baja.count },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getAllEmployees,
   getEmployeeById,
+  getEmployeeHistory,
   getEmployeesStats,
   createEmployee,
   updateEmployee,
   deleteEmployee,
   importEmployees,
   recalculateRisk,
+  deactivateAbsentEmployees,
 };
