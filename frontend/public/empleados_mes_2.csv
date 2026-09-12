@@ -1,0 +1,21 @@
+codigo_empleado,nombre,apellido,edad,nivel_formacion,rol_tecnologico,seniority,antiguedad_meses,modalidad_trabajo,tipo_contrato,salario_mensual,cantidad_horas_extra_mes,capacitacion_ultimo_anio,evaluacion_desempeno,cantidad_empresas_anteriores,satisfaccion_laboral,satisfaccion_ambiente,equilibrio_vida_trabajo,estancamiento_carrera,feedback_lider,desercion
+EMP-101,Ramon,Villalba,29,Universitario,Backend,Junior,2,Eventual,Eventual,5200000,35,No,2,6,1,1,1,5,1,No
+EMP-102,Nadia,Cabrera,26,Tecnico,QA,Trainee,3,Presencial,Eventual,4300000,32,No,2,5,1,2,1,5,1,No
+EMP-103,Hugo,Melgarejo,41,Universitario,Frontend,Semi-Senior,8,Hibrido,Plazo fijo,9800000,24,No,3,4,2,2,2,4,2,No
+EMP-104,Belen,Servin,34,Posgrado,DevOps,Senior,6,Remoto,Eventual,15600000,28,No,3,3,2,3,2,4,2,No
+EMP-105,Ivan,Duarte,30,Universitario,Fullstack,Semi-Senior,10,Presencial,Plazo fijo,11200000,22,No,3,3,2,3,3,4,2,No
+EMP-106,Tamara,Acosta,37,Tecnico,Data,Junior,7,Hibrido,Eventual,7100000,20,No,4,4,2,3,2,4,3,No
+EMP-107,Cesar,Ovelar,28,Universitario,Mobile,Semi-Senior,9,Remoto,Plazo fijo,10500000,26,No,3,2,3,2,4,2,2,No
+EMP-108,Gloria,Riveros,45,Universitario,Backend,Senior,14,Hibrido,Indefinido,18900000,18,No,4,3,3,2,3,4,3,No
+EMP-109,Pablo,Caceres,33,Posgrado,Frontend,Semi-Senior,11,Remoto,Indefinido,12700000,16,Si,3,2,3,3,3,3,3,No
+EMP-110,Rocio,Franco,39,Universitario,DevOps,Lead,20,Presencial,Indefinido,25400000,14,No,4,3,3,3,3,3,3,No
+EMP-111,Marcos,Ramirez,27,Tecnico,QA,Junior,16,Hibrido,Indefinido,6800000,10,Si,4,2,3,4,3,3,4,No
+EMP-112,Andrea,Lopez,31,Universitario,Data,Semi-Senior,24,Remoto,Indefinido,13900000,8,Si,4,3,4,3,3,2,4,No
+EMP-113,Fabio,Nunez,35,Posgrado,Backend,Senior,30,Hibrido,Indefinido,21200000,6,Si,5,2,4,4,2,2,4,No
+EMP-114,Silvia,Aguero,42,Universitario,Fullstack,Lead,48,Remoto,Indefinido,28800000,5,Si,5,3,4,4,3,1,5,No
+EMP-115,Dario,Insfran,29,Universitario,Frontend,Junior,18,Presencial,Indefinido,7400000,4,Si,4,1,4,4,3,2,4,No
+EMP-116,Paola,Vera,38,Posgrado,Data,Senior,36,Hibrido,Indefinido,19600000,3,Si,5,2,5,5,2,1,5,No
+EMP-117,Nestor,Gonzalez,33,Tecnico,Mobile,Semi-Senior,27,Remoto,Indefinido,11800000,2,Si,4,2,4,5,2,2,4,No
+EMP-118,Carmen,Espinola,46,Universitario,DevOps,Senior,60,Hibrido,Indefinido,23100000,0,Si,5,3,5,4,3,1,5,No
+EMP-119,Julio,Meza,30,Posgrado,Backend,Semi-Senior,22,Remoto,Indefinido,14300000,5,Si,4,4,4,5,2,2,4,No
+EMP-120,Elena,Barrios,40,Universitario,Fullstack,Lead,72,Presencial,Indefinido,30200000,3,Si,5,2,5,5,2,1,5,No
