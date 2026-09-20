@@ -8,9 +8,9 @@ import Sidebar from '../components/layout/Sidebar';
 import Navbar from '../components/layout/Navbar';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useExchangeRate } from '../hooks/useExchangeRate';
 
 const RISK_COLORS = ['#22c55e', '#f59e0b', '#ef4444'];
-const USD_TO_GS = 7500;
 
 // Datos mock de tendencia histórica (últimos 6 meses)
 // En producción vendrían de /api/employees/trend
@@ -24,9 +24,9 @@ const generateTrend = () => {
   }));
 };
 
-const formatIncome = (usdValue, inGs) => {
+const formatIncome = (usdValue, inGs, usdToGs) => {
   if (inGs) {
-    const gs = Math.round(usdValue * USD_TO_GS);
+    const gs = Math.round(usdValue * usdToGs);
     return `Gs. ${gs.toLocaleString('es-PY')}`;
   }
   return `$${usdValue.toLocaleString('en-US')}`;
@@ -63,6 +63,7 @@ export default function Dashboard() {
   const [stats, setStats]       = useState(null);
   const [currency, setCurrency] = useState('USD');
   const [trend]                 = useState(generateTrend);
+  const { rate: usdToGs }       = useExchangeRate();
 
   useEffect(() => {
     api.get('/employees/stats').then(({ data }) => setStats(data.data));
@@ -78,7 +79,7 @@ export default function Dashboard() {
 
   // Ingreso promedio mensual (si el endpoint lo provee)
   const avgIncome = stats?.avg_monthly_income != null
-    ? formatIncome(stats.avg_monthly_income, currency === 'GS')
+    ? formatIncome(stats.avg_monthly_income, currency === 'GS', usdToGs)
     : null;
 
   // Datos para gráficos
@@ -150,7 +151,7 @@ export default function Dashboard() {
               <KpiCard
                 label="Ingreso Promedio Mensual"
                 value={avgIncome}
-                sub={currency === 'GS' ? 'Tipo de cambio: Gs. 7.500/USD' : 'Dólares estadounidenses'}
+                sub={currency === 'GS' ? `Tipo de cambio: Gs. ${Number(usdToGs).toLocaleString('es-PY')}/USD` : 'Dólares estadounidenses'}
                 color="green"
               />
             ) : (

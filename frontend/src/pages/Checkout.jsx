@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 import { useAuth } from '../context/AuthContext';
+import { useExchangeRate } from '../hooks/useExchangeRate';
 import AlertMessage from '../components/AlertMessage';
 import api from '../services/api';
 
@@ -330,6 +331,7 @@ export default function Checkout() {
   const navigate  = useNavigate();
   const location  = useLocation();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const { rate: pygToUsd } = useExchangeRate();
   const [plans, setPlans]               = useState([]);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [loading, setLoading]           = useState(false);
@@ -640,7 +642,7 @@ export default function Checkout() {
                       <div className="flex items-center justify-between pt-2 border-t border-primary-100/50">
                         <span className="text-xs text-gray-500">Equivalente aproximado</span>
                         <span className="text-sm font-semibold text-primary-700">
-                          ≈ USD {(selectedPlan.priceGs / 7500).toFixed(2)}
+                          ≈ USD {(selectedPlan.priceGs / pygToUsd).toFixed(2)}
                         </span>
                       </div>
                     </div>

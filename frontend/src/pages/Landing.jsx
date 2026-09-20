@@ -96,6 +96,7 @@ const ThemeToggle = ({ dark, setDark }) => (
 export default function Landing() {
   const [plans, setPlans]         = useState([]);
   const [loading, setLoading]     = useState(true);
+  const [plansError, setPlansError] = useState(false);
   const [dark, setDark]           = useState(false);
 
   useEffect(() => {
@@ -106,16 +107,17 @@ export default function Landing() {
   }, []);
 
   useEffect(() => {
+    // Los planes (precios, limites, features) son la fuente de verdad de la BD.
+    // Si falla la carga, mostramos un estado de error en vez de precios inventados
+    // que podrian quedar desincronizados de la configuracion real.
     api.get('/plans')
       .then(({ data }) => {
         setPlans(data.data.plans ?? []);
+        setPlansError(false);
       })
       .catch(() => {
-        setPlans([
-          { id: 'ESTANDAR',    name: 'Plan Estándar',    priceGs: 999000,  highlight: false, employeeLimit: 100,  features: ['Hasta 100 colaboradores', 'Predicción de deserción mensual', 'Dashboard básico de retención', 'Exportación CSV', 'Soporte por correo'], cta: 'Comenzar' },
-          { id: 'PROFESIONAL', name: 'Plan Profesional', priceGs: 1390000, highlight: true,  employeeLimit: 500,  features: ['Hasta 500 colaboradores', 'Todo lo del Plan Estándar', 'Predicción semanal', 'Dashboard avanzado con filtros', 'Importación masiva CSV', 'Soporte prioritario'], cta: 'Comenzar' },
-          { id: 'CORPORATIVO', name: 'Plan Corporativo', priceGs: 2590000, highlight: false, employeeLimit: 1500, features: ['Hasta 1.500 colaboradores', 'Todo lo del Plan Profesional', 'Predicción bajo demanda', 'Dashboard personalizado', 'Integración con sistemas HRIS', 'Gerente de cuenta dedicado'], cta: 'Consultar' },
-        ]);
+        setPlans([]);
+        setPlansError(true);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -273,6 +275,14 @@ export default function Landing() {
           {loading ? (
             <div className="flex justify-center py-12">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
+            </div>
+          ) : plans.length === 0 ? (
+            <div className={`rounded-xl border py-12 text-center ${dark ? 'border-gray-800 bg-gray-800/50 text-gray-400' : 'border-gray-200 bg-white text-gray-500'}`}>
+              <p className="text-sm">
+                {plansError
+                  ? 'No pudimos cargar los planes en este momento. Por favor recargá la página o intentá más tarde.'
+                  : 'No hay planes disponibles por el momento.'}
+              </p>
             </div>
           ) : (
             <>

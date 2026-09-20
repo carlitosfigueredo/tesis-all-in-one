@@ -7,6 +7,7 @@ const prisma = require('../lib/prisma');
 const { logAction } = require('../services/audit.service');
 const { getIp, getUserAgent } = require('../utils/request.utils');
 const { readRecentLogs } = require('../lib/logger');
+const { getPygToUsdRate } = require('../services/systemConfig.service');
 const {
   planIdToEnum,
   daysUntil,
@@ -23,6 +24,21 @@ const getPublicPlans = async (_req, res, next) => {
       orderBy: { priceGs: 'asc' },
     });
     res.json({ success: true, data: { plans } });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── GET /api/exchange-rate (publico) ─────────────────────────────────────────
+
+/**
+ * Devuelve la tasa de conversion PYG → USD vigente (desde SystemConfig).
+ * Publico: el frontend la usa para mostrar equivalencias en USD.
+ */
+const getPublicExchangeRate = async (_req, res, next) => {
+  try {
+    const rate = await getPygToUsdRate();
+    res.json({ success: true, data: { PYG_TO_USD: rate } });
   } catch (error) {
     next(error);
   }
@@ -584,6 +600,7 @@ module.exports = {
   getPlans,
   updatePlans,
   getPublicPlans,
+  getPublicExchangeRate,
   getAdminAuditLogs,
   getSystemLogs,
 };

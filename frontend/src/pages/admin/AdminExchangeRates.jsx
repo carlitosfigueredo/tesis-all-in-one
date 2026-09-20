@@ -7,17 +7,32 @@ import AdminSidebar from '../../components/admin/AdminSidebar';
 import api from '../../services/api';
 
 export default function AdminExchangeRates() {
-  const [rate, setRate]       = useState(7500);
+  const [rate, setRate]       = useState('');       // se carga desde la BD
   const [loading, setLoading] = useState(true);
   const [saving, setSaving]   = useState(false);
   const [toast, setToast]     = useState(null);
   const [dirty, setDirty]     = useState(false);
+  const [examplePriceGs, setExamplePriceGs] = useState(null); // precio real de un plan
 
   useEffect(() => {
+    // Tasa vigente (fuente de verdad en BD)
     api.get('/admin/config/exchange-rates')
-      .then((res) => setRate(res.data.data?.PYG_TO_USD ?? 7500))
+      .then((res) => {
+        const v = res.data.data?.PYG_TO_USD;
+        if (v != null) setRate(v);
+      })
       .catch(() => setToast({ type: 'error', message: 'No se pudo cargar la tasa de cambio' }))
       .finally(() => setLoading(false));
+
+    // Precio real de un plan para la vista previa de conversion (evita hardcodear un monto)
+    api.get('/plans')
+      .then((res) => {
+        const plans = res.data.data?.plans ?? [];
+        // Usar el plan destacado si existe, si no el primero.
+        const ref = plans.find((p) => p.highlight) ?? plans[0];
+        if (ref?.priceGs) setExamplePriceGs(ref.priceGs);
+      })
+      .catch(() => { /* la vista previa es opcional */ });
   }, []);
 
   const handleSave = async () => {
@@ -45,9 +60,9 @@ export default function AdminExchangeRates() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  // Ejemplo de conversion
-  const exampleGs = 1390000;
-  const exampleUsd = rate > 0 ? (exampleGs / rate).toFixed(2) : '—';
+  // Ejemplo de conversion (usa el precio real de un plan traido de la BD)
+  const exampleGs = examplePriceGs;
+  const exampleUsd = (exampleGs && rate > 0) ? (exampleGs / rate).toFixed(2) : '—';
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -101,13 +116,15 @@ export default function AdminExchangeRates() {
                   </div>
 
                   {/* Preview de conversion */}
-                  <div className="rounded-lg bg-blue-50 border border-blue-100 p-4">
-                    <p className="text-xs font-medium text-blue-600 uppercase tracking-wide mb-1">Vista previa</p>
-                    <p className="text-sm text-gray-700">
-                      Un plan de <strong>Gs. {Number(exampleGs).toLocaleString('es-PY')}</strong> se cobraria como{' '}
-                      <strong className="text-blue-700">USD {exampleUsd}</strong> en PayPal.
-                    </p>
-                  </div>
+                  {exampleGs && (
+                    <div className="rounded-lg bg-blue-50 border border-blue-100 p-4">
+                      <p className="text-xs font-medium text-blue-600 uppercase tracking-wide mb-1">Vista previa</p>
+                      <p className="text-sm text-gray-700">
+                        Un plan de <strong>Gs. {Number(exampleGs).toLocaleString('es-PY')}</strong> se cobraria como{' '}
+                        <strong className="text-blue-700">USD {exampleUsd}</strong> en PayPal.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Boton guardar */}
