@@ -1,4 +1,6 @@
 require('dotenv').config();
+// Capturar console.* hacia el archivo de logs lo antes posible.
+require('./lib/logger').installConsoleCapture();
 const app = require('./app');
 const { startSubscriptionExpiryJob } = require('./jobs/subscriptionExpiry.job');
 

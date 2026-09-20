@@ -3,7 +3,7 @@ const { protect, requireRole, requirePortal } = require('../middlewares/auth.mid
 const { requirePermission } = require('../middlewares/permission.middleware');
 const {
   getCompanies, getCompany, getAdminStats,
-  getPlans, updatePlans, getAdminAuditLogs,
+  getPlans, updatePlans, getAdminAuditLogs, getSystemLogs,
   changeCompanyPlan, extendCompanySubscription, unlockUser,
 } = require('../controllers/admin.controller');
 const { getAllPayments, toggleCompanyStatus, refundPayment } = require('../controllers/payments.controller');
@@ -29,6 +29,7 @@ router.get('/payments', requirePermission('admin.payments'), getAllPayments);
 router.post('/payments/:id/refund', requirePermission('admin.payments'), refundPayment);
 
 router.get('/audit-logs', requirePermission('admin.audit'), getAdminAuditLogs);
+router.get('/system-logs', requirePermission('admin.audit'), getSystemLogs);
 
 // ─── Configuracion del sistema ────────────────────────────────────────────────
 

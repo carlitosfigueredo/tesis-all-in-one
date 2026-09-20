@@ -75,9 +75,28 @@ const LogRow = ({ log }) => {
         <td className="px-4 py-3">
           <ActionBadge action={log.action} />
         </td>
-        <td className="px-4 py-3 text-xs text-gray-500">{log.resource ?? '—'}</td>
-        <td className="px-4 py-3 text-xs text-gray-500 font-mono truncate max-w-[120px]">
-          {log.userId ?? <span className="text-gray-300">anónimo</span>}
+        <td className="px-4 py-3 text-xs text-gray-500">
+          {log.resourceLabel ? (
+            <span className="text-gray-700">
+              {log.resourceLabel}
+              {log.resource && <span className="text-gray-300"> · {log.resource}</span>}
+            </span>
+          ) : (
+            log.resource ?? '—'
+          )}
+        </td>
+        <td className="px-4 py-3 text-xs">
+          {log.user?.name || log.user?.email ? (
+            <span className="text-gray-700" title={log.user?.email ?? ''}>
+              {log.user?.name ?? log.user?.email}
+            </span>
+          ) : log.userId ? (
+            <span className="text-gray-400 font-mono truncate max-w-[120px] inline-block align-bottom" title={log.userId}>
+              {log.userId.slice(0, 8)}…
+            </span>
+          ) : (
+            <span className="text-gray-300">anónimo</span>
+          )}
         </td>
         <td className="px-4 py-3 text-xs text-gray-400">{log.ipAddress ?? '—'}</td>
         <td className="px-4 py-3"><StatusBadge status={log.status} /></td>
@@ -94,10 +113,24 @@ const LogRow = ({ log }) => {
               {/* Info básica */}
               <div className="space-y-1.5">
                 <p className="font-semibold text-gray-500 uppercase tracking-wide mb-2">Detalles</p>
-                <p><span className="text-gray-400">ID log:</span> <span className="font-mono text-gray-700">{log.id}</span></p>
-                {log.resourceId && <p><span className="text-gray-400">ID recurso:</span> <span className="font-mono text-gray-700">{log.resourceId}</span></p>}
-                {log.tenantId   && <p><span className="text-gray-400">Empresa:</span> <span className="text-gray-700">{log.tenantId}</span></p>}
+                {(log.user?.name || log.user?.email) && (
+                  <p>
+                    <span className="text-gray-400">Usuario:</span>{' '}
+                    <span className="text-gray-700">{log.user?.name ?? '—'}</span>
+                    {log.user?.email && <span className="text-gray-400"> ({log.user.email})</span>}
+                  </p>
+                )}
+                {log.company?.name && (
+                  <p><span className="text-gray-400">Empresa:</span> <span className="text-gray-700">{log.company.name}</span></p>
+                )}
+                {log.resourceLabel && (
+                  <p><span className="text-gray-400">Recurso:</span> <span className="text-gray-700">{log.resourceLabel}</span></p>
+                )}
                 {log.userAgent  && <p><span className="text-gray-400">User-agent:</span> <span className="text-gray-600 break-all">{log.userAgent}</span></p>}
+                <p className="pt-1 border-t border-gray-100 mt-2"><span className="text-gray-400">ID log:</span> <span className="font-mono text-gray-400 text-[11px]">{log.id}</span></p>
+                {log.userId     && <p><span className="text-gray-400">ID usuario:</span> <span className="font-mono text-gray-400 text-[11px]">{log.userId}</span></p>}
+                {log.resourceId && <p><span className="text-gray-400">ID recurso:</span> <span className="font-mono text-gray-400 text-[11px]">{log.resourceId}</span></p>}
+                {log.tenantId   && <p><span className="text-gray-400">ID empresa:</span> <span className="font-mono text-gray-400 text-[11px]">{log.tenantId}</span></p>}
                 {log.errorMsg   && (
                   <p><span className="text-red-500">Error:</span> <span className="text-red-700">{log.errorMsg}</span></p>
                 )}

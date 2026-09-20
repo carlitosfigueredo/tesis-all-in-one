@@ -5,6 +5,7 @@ const morgan = require('morgan');
 
 const router = require('./routes');
 const errorHandler = require('./middlewares/errorHandler');
+const logger = require('./lib/logger');
 
 const app = express();
 
@@ -29,8 +30,9 @@ app.use(
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Logger de peticiones HTTP
+// Logger de peticiones HTTP — a consola y a archivo (logs/app.log)
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+app.use(morgan('combined', { stream: logger.stream }));
 
 // ─────────────────────────────────────────
 // Rutas

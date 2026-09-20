@@ -29,6 +29,7 @@ import AdminDashboard  from './pages/admin/AdminDashboard';
 import AdminCompanies  from './pages/admin/AdminCompanies';
 import AdminPlans      from './pages/admin/AdminPlans';
 import AdminAuditLogs  from './pages/admin/AdminAuditLogs';
+import AdminSystemLogs from './pages/admin/AdminSystemLogs';
 import AdminPasswordPolicy from './pages/admin/AdminPasswordPolicy';
 import AdminResetTokenConfig from './pages/admin/AdminResetTokenConfig';
 import AdminExchangeRates from './pages/admin/AdminExchangeRates';
@@ -73,6 +74,7 @@ export default function App() {
               <Route path="/admin/companies" element={<AdminCompanies />} />
               <Route path="/admin/plans"     element={<AdminPlans />} />
               <Route path="/admin/audit"     element={<AdminAuditLogs />} />
+              <Route path="/admin/system-logs" element={<AdminSystemLogs />} />
               <Route path="/admin/payments"  element={<AdminPayments />} />
               <Route path="/admin/settings/password-policy" element={<AdminPasswordPolicy />} />
               <Route path="/admin/settings/reset-token"     element={<AdminResetTokenConfig />} />
