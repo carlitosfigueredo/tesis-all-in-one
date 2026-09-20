@@ -1,0 +1,21 @@
+# ─────────────────────────────────────────────────────────────
+# Copiá este archivo a terraform.tfvars y ajustá los valores.
+#   cp terraform.tfvars.example terraform.tfvars
+# terraform.tfvars está en .gitignore (no se sube al repo).
+# ─────────────────────────────────────────────────────────────
+
+region       = "us-east-1"
+project_name = "tesis-bi"
+environment  = "prod"
+
+# Instancia Graviton (ARM). t4g.medium es un buen punto de partida.
+instance_type    = "t4g.medium"
+root_volume_size = 30
+
+# SSH: poné el nombre de tu key pair de EC2 y TU IP pública.
+# Averiguá tu IP: curl ifconfig.me
+key_pair_name    = "" # ej: "tesis-bi-key"
+ssh_allowed_cidr = "0.0.0.0/0" # ej: "200.100.50.25/32"  <- cambialo por seguridad
+
+# IP fija para que no cambie al reiniciar
+associate_eip = true
