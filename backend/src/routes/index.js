@@ -9,7 +9,7 @@ const predictRoutes   = require('./predict.routes');
 const modelRoutes     = require('./model.routes');
 const webhookRoutes   = require('./webhook.routes');
 const consentRoutes   = require('./consent.routes');
-const { getPublicPlans } = require('../controllers/admin.controller');
+const { getPublicPlans, getPublicExchangeRate } = require('../controllers/admin.controller');
 
 const router = Router();
 
@@ -25,6 +25,9 @@ router.get('/health', (_req, res) => {
 
 // ── Ruta pública de planes (para la landing) ──────────────────────────────────
 router.get('/plans', getPublicPlans);
+
+// ── Tasa de cambio PYG→USD pública (para mostrar equivalencias en el frontend) ─
+router.get('/exchange-rate', getPublicExchangeRate);
 
 // ── Webhooks (SIN auth — PayPal llama directamente, seguridad via firma) ──────
 router.use('/webhooks', webhookRoutes);

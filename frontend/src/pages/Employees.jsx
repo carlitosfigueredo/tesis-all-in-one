@@ -8,9 +8,6 @@ import api from '../services/api';
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
-// Tasa de cambio referencial GS/USD — se puede mover a una variable de entorno
-const USD_TO_GS = 7500;
-
 // Etiquetas legibles para la escala 1-5 de satisfacción
 const SATISFACTION_LABELS = {
   1: { text: 'Muy baja',  color: 'text-red-600',   bg: 'bg-red-50'    },
@@ -51,18 +48,6 @@ const SatisfactionCell = ({ value }) => {
     </span>
   );
 };
-
-/**
- * Formatea un ingreso mensual en USD o GS según el modo activo.
- */
-const formatIncome = (usdValue, inGs) => {
-  if (inGs) {
-    const gs = Math.round(usdValue * USD_TO_GS);
-    return `Gs. ${gs.toLocaleString('es-PY')}`;
-  }
-  return `$${usdValue.toLocaleString('en-US')}`;
-};
-
 
 // ─── Modal de importación CSV ─────────────────────────────────────────────────
 
