@@ -1,0 +1,134 @@
+@startgantt cronograma-plan-actividades
+' =====================================================================
+'  Diagrama de Gantt - Plan de Actividades de Tesis (Tabla 6)
+'  BI + ML para predicción de fuga de talento
+'  Alineado al Cronograma Académico de Tesis - UNIDA Fac. Ingeniería 2026
+'  Rango: enero -> noviembre 2026 (cierra con la defensa)
+' =====================================================================
+
+language es
+Project starts 2026-01-26
+printscale monthly
+
+' ---------- Estética ----------
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName "Segoe UI"
+skinparam defaultFontSize 12
+
+<style>
+ganttDiagram {
+  task {
+    FontName "Segoe UI"
+    FontColor #0F172A
+    BackGroundColor #1B3A7A
+    LineColor #0D1B3E
+  }
+  milestone {
+    BackGroundColor #E11D48
+    LineColor #881337
+    FontColor #0D1B3E
+    FontStyle bold
+  }
+  separator {
+    BackGroundColor #0D1B3E
+    FontColor #FFFFFF
+    FontStyle bold
+  }
+}
+</style>
+
+' Colores por tipo de actividad:
+'   #2563EB azul  -> hito/gestión académica oficial (UNIDA)
+'   #1B3A7A azul oscuro -> análisis y diseño
+'   #0E7490 teal  -> Backend
+'   #7C3AED violeta -> Servicio ML
+'   #B45309 ámbar -> Frontend
+'   #15803D verde -> integración y pruebas
+'   #64748B gris  -> documentación
+
+-- Gestión académica y anteproyecto --
+[Reunión informativa de tesis 2026] happens 2026-01-26
+[Inscripción a taller y firma de compromiso] starts 2026-01-28 and ends 2026-01-30
+[Taller de Vigilancia · Sesión 1] happens 2026-02-02
+[Definición del problema, justificación y alcance] starts 2026-02-02 and ends 2026-02-20
+[Taller de Vigilancia · Sesiones 2 a 4] starts 2026-02-09 and ends 2026-02-23
+[Revisión bibliográfica y estado del arte] starts 2026-02-16 and ends 2026-03-13
+[Inicio de lecciones] happens 2026-03-02
+[Taller de Vigilancia · Sesiones 5 a 9] starts 2026-03-02 and ends 2026-03-30
+[Especificación de requerimientos (RF/RNF)] starts 2026-03-02 and ends 2026-03-20
+[Especificación de los 26 casos de uso] starts 2026-03-16 and ends 2026-03-31
+[Modelo de datos (DER + diccionario)] starts 2026-03-16 and ends 2026-04-05
+[Taller de Elaboración · Sesión 10] happens 2026-04-06
+[Arquitectura de microservicios y wireframes] starts 2026-04-06 and ends 2026-04-17
+[Entrega Anteproyecto · 1ª Instancia] happens 2026-04-13
+[Entrega Anteproyecto · 2ª Instancia] happens 2026-04-18
+[Exposición de Anteproyectos] starts 2026-04-22 and ends 2026-04-24
+
+[Reunión informativa de tesis 2026] is colored in #2563EB
+[Inscripción a taller y firma de compromiso] is colored in #2563EB
+[Taller de Vigilancia · Sesión 1] is colored in #2563EB
+[Taller de Vigilancia · Sesiones 2 a 4] is colored in #2563EB
+[Inicio de lecciones] is colored in #2563EB
+[Taller de Vigilancia · Sesiones 5 a 9] is colored in #2563EB
+[Taller de Elaboración · Sesión 10] is colored in #2563EB
+[Exposición de Anteproyectos] is colored in #2563EB
+[Definición del problema, justificación y alcance] is colored in #1B3A7A
+[Revisión bibliográfica y estado del arte] is colored in #1B3A7A
+[Especificación de requerimientos (RF/RNF)] is colored in #1B3A7A
+[Especificación de los 26 casos de uso] is colored in #1B3A7A
+[Modelo de datos (DER + diccionario)] is colored in #1B3A7A
+[Arquitectura de microservicios y wireframes] is colored in #1B3A7A
+
+-- Desarrollo (Backend · ML · Frontend en paralelo) --
+[Backend · Docker + autenticación (JWT/RBAC)] starts 2026-04-20 and ends 2026-05-15
+[Backend · CRUD empleados, CSV y auditoría (Ley 7593)] starts 2026-05-11 and ends 2026-06-05
+[Backend · Pagos, suscripciones y panel admin] starts 2026-06-08 and ends 2026-07-03
+[ML · EDA, ETL y entrenamiento Random Forest] starts 2026-04-20 and ends 2026-05-25
+[ML · API de predicción FastAPI (individual + batch)] starts 2026-05-26 and ends 2026-06-20
+[Integración Backend-ML + recomendaciones] starts 2026-06-22 and ends 2026-07-10
+[Frontend · React + Vite + Tailwind y auth UI] starts 2026-04-20 and ends 2026-05-20
+[Frontend · Dashboard BI (KPIs, Recharts) y empleados] starts 2026-05-21 and ends 2026-06-19
+[Frontend · Predicciones, pagos y portal admin] starts 2026-06-22 and ends 2026-07-17
+
+[Backend · Docker + autenticación (JWT/RBAC)] is colored in #0E7490
+[Backend · CRUD empleados, CSV y auditoría (Ley 7593)] is colored in #0E7490
+[Backend · Pagos, suscripciones y panel admin] is colored in #0E7490
+[ML · EDA, ETL y entrenamiento Random Forest] is colored in #7C3AED
+[ML · API de predicción FastAPI (individual + batch)] is colored in #7C3AED
+[Integración Backend-ML + recomendaciones] is colored in #7C3AED
+[Frontend · React + Vite + Tailwind y auth UI] is colored in #B45309
+[Frontend · Dashboard BI (KPIs, Recharts) y empleados] is colored in #B45309
+[Frontend · Predicciones, pagos y portal admin] is colored in #B45309
+
+-- Integración, pruebas y documentación --
+[Integración end-to-end] starts 2026-07-13 and ends 2026-07-24
+[Pruebas funcionales (26 CU) y seguridad (OWASP)] starts 2026-07-27 and ends 2026-08-21
+[Pruebas de rendimiento (batch 5.000 < 90s)] starts 2026-08-10 and ends 2026-08-21
+[Corrección de defectos] starts 2026-08-24 and ends 2026-09-11
+[Redacción del documento de tesis] starts 2026-05-04 and ends 2026-09-30
+[Diagramas UML finales] starts 2026-09-01 and ends 2026-09-18
+
+[Integración end-to-end] is colored in #15803D
+[Pruebas funcionales (26 CU) y seguridad (OWASP)] is colored in #15803D
+[Pruebas de rendimiento (batch 5.000 < 90s)] is colored in #15803D
+[Corrección de defectos] is colored in #15803D
+[Redacción del documento de tesis] is colored in #64748B
+[Diagramas UML finales] is colored in #64748B
+
+-- Revisiones institucionales y defensa --
+[Revisión de Tesis · 1ª Instancia] happens 2026-10-10
+[Correcciones 1ª instancia] starts 2026-10-11 and ends 2026-10-16
+[Revisión de Tesis · 2ª Instancia] happens 2026-10-17
+[Correcciones 2ª instancia] starts 2026-10-18 and ends 2026-10-23
+[Revisión de Tesis · 3ª Instancia] happens 2026-10-24
+[Entrega a SGA de documentos] happens 2026-10-26
+[Devolución Anti-Plagio] happens 2026-11-02
+[Preparación de la presentación de defensa] starts 2026-11-03 and ends 2026-11-08
+[Defensa de tesis] starts 2026-11-09 and ends 2026-11-13
+
+[Correcciones 1ª instancia] is colored in #64748B
+[Correcciones 2ª instancia] is colored in #64748B
+[Preparación de la presentación de defensa] is colored in #64748B
+[Defensa de tesis] is colored in #15803D
+
+@endgantt
