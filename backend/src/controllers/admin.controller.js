@@ -6,6 +6,7 @@
 const prisma = require('../lib/prisma');
 const { logAction } = require('../services/audit.service');
 const { getIp, getUserAgent } = require('../utils/request.utils');
+const { readRecentLogs } = require('../lib/logger');
 const {
   planIdToEnum,
   daysUntil,
@@ -458,21 +459,115 @@ const getAdminAuditLogs = async (req, res, next) => {
         skip: (pg - 1) * size,
         take: size,
         include: {
-          user: { select: { name: true, email: true } },
+          user:    { select: { name: true, email: true } },
+          company: { select: { name: true } },
         },
       }),
       prisma.auditLog.count({ where }),
     ]);
 
+    // ── Enriquecer con el nombre legible del recurso afectado ──
+    // resourceId no tiene relación en el schema (apunta a distintas tablas
+    // segun `resource`), asi que resolvemos los nombres por lotes.
+    const enriched = await attachResourceLabels(data);
+
     const totalPages = Math.ceil(total / size) || 1;
 
     res.json({
       success: true,
-      data,
+      data: enriched,
       total,
       page: pg,
       pageSize: size,
       total_pages: totalPages,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Resuelve el nombre legible del recurso (resourceId) de cada log segun su tipo.
+ * Agrupa los IDs por tabla y hace una sola consulta por tipo para evitar N+1.
+ * Devuelve los logs con un campo extra `resourceLabel`.
+ */
+const attachResourceLabels = async (logs) => {
+  // Agrupar resourceIds por tipo de recurso
+  const idsByResource = {};
+  for (const log of logs) {
+    if (!log.resourceId || !log.resource) continue;
+    const key = log.resource.toLowerCase();
+    (idsByResource[key] ??= new Set()).add(log.resourceId);
+  }
+
+  // Mapa final: `${resource}:${id}` -> label
+  const labelMap = {};
+
+  const loaders = {
+    employees: async (ids) => {
+      const rows = await prisma.employee.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, nombre: true, apellido: true, codigo_empleado: true },
+      });
+      for (const r of rows) {
+        const full = [r.nombre, r.apellido].filter(Boolean).join(' ').trim();
+        labelMap[`employees:${r.id}`] = full || r.codigo_empleado || null;
+      }
+    },
+    users: async (ids) => {
+      const rows = await prisma.user.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, name: true, email: true },
+      });
+      for (const r of rows) {
+        labelMap[`users:${r.id}`] = r.name || r.email || null;
+      }
+    },
+    subscriptions: async (ids) => {
+      const rows = await prisma.subscription.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, company: { select: { name: true } } },
+      });
+      for (const r of rows) {
+        labelMap[`subscriptions:${r.id}`] = r.company?.name ? `Suscripción de ${r.company.name}` : null;
+      }
+    },
+  };
+
+  await Promise.all(
+    Object.entries(idsByResource).map(([resource, idSet]) => {
+      const loader = loaders[resource];
+      if (!loader) return null;
+      return loader([...idSet]).catch(() => {}); // nunca romper la respuesta por un fallo de resolucion
+    })
+  );
+
+  return logs.map((log) => ({
+    ...log,
+    resourceLabel: log.resourceId ? (labelMap[`${log.resource?.toLowerCase()}:${log.resourceId}`] ?? null) : null,
+  }));
+};
+
+// ─── System logs (logs de la aplicacion / contenedor) ──────────────────────────
+
+/**
+ * GET /api/admin/system-logs
+ * Devuelve las ultimas lineas del log de la aplicacion (logs/app.log).
+ * Query: limit (default 200, max 1000), level (INFO|WARN|ERROR|HTTP).
+ * Solo SUPER_ADMIN (protegido a nivel de router).
+ */
+const getSystemLogs = async (req, res, next) => {
+  try {
+    const { limit = '200', level } = req.query;
+    const entries = readRecentLogs({
+      limit: parseInt(limit, 10) || 200,
+      level: level || undefined,
+    });
+
+    res.json({
+      success: true,
+      data: entries,
+      total: entries.length,
     });
   } catch (error) {
     next(error);
@@ -490,4 +585,5 @@ module.exports = {
   updatePlans,
   getPublicPlans,
   getAdminAuditLogs,
+  getSystemLogs,
 };
