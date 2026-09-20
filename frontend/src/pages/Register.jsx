@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import ReCAPTCHA from 'react-google-recaptcha';
 import { useAuth } from '../context/AuthContext';
@@ -15,11 +15,15 @@ const TERMS_VERSION   = '1.0';
 
 const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
 
-const PLANS = [
-  { id: 'BASICO', name: 'Estándar', price: 'Gs. 999.000/mes' },
-  { id: 'PROFESIONAL', name: 'Profesional', price: 'Gs. 1.390.000/mes' },
-  { id: 'CORPORATIVO', name: 'Corporativo', price: 'Gs. 2.590.000/mes' },
-];
+// El plan_config.id de la BD (ESTANDAR/...) se mapea al enum Plan que usa el
+// registro de empresas (BASICO/PROFESIONAL/CORPORATIVO).
+const PLAN_ID_TO_ENUM = {
+  ESTANDAR: 'BASICO',
+  PROFESIONAL: 'PROFESIONAL',
+  CORPORATIVO: 'CORPORATIVO',
+};
+
+const formatGsPerMonth = (priceGs) => `Gs. ${Number(priceGs).toLocaleString('es-PY')}/mes`;
 
 export default function Register() {
   const navigate = useNavigate();
@@ -27,6 +31,22 @@ export default function Register() {
   const { setSession } = useAuth();
   const { policy } = usePasswordPolicy();
   const [step, setStep] = useState(1);
+
+  // Planes cargados desde la BD (precios reales). El radio usa el enum Plan.
+  const [plans, setPlans] = useState([]);
+
+  useEffect(() => {
+    api.get('/plans')
+      .then(({ data }) => {
+        const loaded = (data.data?.plans ?? []).map((p) => ({
+          id:    PLAN_ID_TO_ENUM[p.id] ?? p.id, // enum Plan para el form
+          name:  p.name?.replace(/^Plan\s+/i, '') ?? p.id,
+          price: formatGsPerMonth(p.priceGs),
+        }));
+        setPlans(loaded);
+      })
+      .catch(() => setPlans([])); // sin planes: el paso 1 muestra estado vacio
+  }, []);
 
   // Leer el plan preseleccionado desde la URL (?plan=PROFESIONAL)
   const VALID_PLANS = ['BASICO', 'PROFESIONAL', 'CORPORATIVO'];
@@ -193,29 +213,35 @@ export default function Register() {
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700">Plan</label>
                 <div className="grid gap-2">
-                  {PLANS.map((p) => (
-                    <label
-                      key={p.id}
-                      className={`flex cursor-pointer items-center justify-between rounded-lg border px-4 py-3 transition-colors ${
-                        form.plan === p.id
-                          ? 'border-primary-500 bg-primary-50'
-                          : 'border-gray-200 bg-white hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="radio"
-                          name="plan"
-                          value={p.id}
-                          checked={form.plan === p.id}
-                          onChange={handleChange}
-                          className="text-primary-600 focus:ring-primary-500"
-                        />
-                        <span className="text-sm font-medium text-gray-900">{p.name}</span>
-                      </div>
-                      <span className="text-xs text-gray-500">{p.price}</span>
-                    </label>
-                  ))}
+                  {plans.length === 0 ? (
+                    <p className="rounded-lg border border-dashed border-gray-200 px-4 py-3 text-xs text-gray-400">
+                      Cargando planes…
+                    </p>
+                  ) : (
+                    plans.map((p) => (
+                      <label
+                        key={p.id}
+                        className={`flex cursor-pointer items-center justify-between rounded-lg border px-4 py-3 transition-colors ${
+                          form.plan === p.id
+                            ? 'border-primary-500 bg-primary-50'
+                            : 'border-gray-200 bg-white hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="radio"
+                            name="plan"
+                            value={p.id}
+                            checked={form.plan === p.id}
+                            onChange={handleChange}
+                            className="text-primary-600 focus:ring-primary-500"
+                          />
+                          <span className="text-sm font-medium text-gray-900">{p.name}</span>
+                        </div>
+                        <span className="text-xs text-gray-500">{p.price}</span>
+                      </label>
+                    ))
+                  )}
                 </div>
               </div>
               <button
