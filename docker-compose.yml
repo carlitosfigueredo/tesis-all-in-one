@@ -110,13 +110,19 @@ services:
     container_name: tesis_frontend
     restart: unless-stopped
     environment:
-      VITE_API_URL: http://localhost:${BACKEND_PORT}/api
+      # Vacío a propósito: el frontend usa la ruta relativa "/api" (fallback en
+      # api.js), que el proxy de Vite reenvía al backend. Así funciona tanto en
+      # localhost como detrás del dominio público (retenciontalento.online).
+      VITE_API_URL: ${VITE_API_URL:-}
       VITE_RECAPTCHA_SITE_KEY: ${RECAPTCHA_SITE_KEY}
       VITE_PAYPAL_CLIENT_ID: ${VITE_PAYPAL_CLIENT_ID}
+      # Hosts adicionales permitidos por el dev server de Vite (coma-separados)
+      VITE_ALLOWED_HOSTS: ${VITE_ALLOWED_HOSTS:-}
     ports:
       - "${FRONTEND_PORT}:5173"
     volumes:
       - ./frontend/src:/app/src         # Hot reload en desarrollo
+      - ./frontend/vite.config.js:/app/vite.config.js  # Config del dev server (allowedHosts, proxy)
       - /app/node_modules
     depends_on:
       - backend
