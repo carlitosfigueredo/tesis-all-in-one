@@ -1,8 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
+} from 'recharts';
 import Sidebar from '../components/layout/Sidebar';
 import Navbar from '../components/layout/Navbar';
 import api from '../services/api';
+import {
+  getNivelRiesgo,
+  getRiskMeta,
+  factoresEnRiesgo,
+  generarRecomendaciones,
+  contarVariablesClimaFaltantes,
+} from '../utils/riskInsights';
 
 // ─── Constantes ────────────────────────────────────────────────────────────────
 
@@ -87,6 +97,7 @@ export default function EmployeeDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [emp, setEmp]         = useState(null);
+  const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState('');
 
@@ -95,18 +106,26 @@ export default function EmployeeDetail() {
       .then(({ data }) => setEmp(data.data))
       .catch(() => setError('No se encontró el empleado.'))
       .finally(() => setLoading(false));
+
+    // Historial de riesgo (evolución en el tiempo). No bloquea la vista si falla.
+    api.get(`/employees/${id}/history`)
+      .then(({ data }) => setHistory(data.data ?? []))
+      .catch(() => setHistory([]));
   }, [id]);
 
-  const riskFactors = emp ? [
-    { label: 'Horas extra/mes',         risk: emp.cantidad_horas_extra_mes > 15,     text: `${emp.cantidad_horas_extra_mes}h/mes` },
-    { label: 'Estancamiento carrera',    risk: emp.estancamiento_carrera >= 4,        text: `${emp.estancamiento_carrera}/5` },
-    { label: 'Satisfacción laboral',     risk: emp.satisfaccion_laboral <= 2,         text: `${emp.satisfaccion_laboral}/5` },
-    { label: 'Equilibrio vida-trabajo',  risk: emp.equilibrio_vida_trabajo <= 2,      text: `${emp.equilibrio_vida_trabajo}/5` },
-    { label: 'Capacitación',             risk: !emp.capacitacion_ultimo_anio,         text: emp.capacitacion_ultimo_anio ? 'Si' : 'No' },
-    { label: 'Antigüedad',               risk: emp.antiguedad_meses < 12,            text: `${emp.antiguedad_meses} meses` },
-    { label: 'Tipo contrato',            risk: emp.tipo_contrato === 'Eventual',     text: emp.tipo_contrato },
-    { label: 'Empresas anteriores',      risk: emp.cantidad_empresas_anteriores >= 4, text: `${emp.cantidad_empresas_anteriores} empresas` },
-  ] : [];
+  // Preparar puntos para el gráfico de evolución
+  const historyChart = history.map((s, i) => ({
+    idx: i + 1,
+    fecha: new Date(s.createdAt).toLocaleDateString('es-PY', { day: '2-digit', month: 'short' }),
+    riesgo: Math.round((s.riesgo_desercion ?? 0) * 100),
+  }));
+
+  // ── Análisis explicable (módulo compartido) ──
+  const nivel           = emp ? (emp.nivel_riesgo ?? getNivelRiesgo(emp.riesgo_desercion ?? 0)) : 'BAJO';
+  const nivelMeta       = getRiskMeta(nivel);
+  const factoresRiesgo  = emp ? factoresEnRiesgo(emp) : [];
+  const recomendaciones = emp ? generarRecomendaciones(emp) : [];
+  const climaFaltantes  = emp ? contarVariablesClimaFaltantes(emp) : 0;
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -145,12 +164,14 @@ export default function EmployeeDetail() {
                   <div className="rounded-xl bg-white dark:bg-gray-800 p-5 shadow-sm transition-colors">
                     <div className="flex items-center gap-4">
                       <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-100 text-2xl font-bold text-blue-600">
-                        {emp.rol_tecnologico.charAt(0)}
+                        {(emp.nombre?.charAt(0) ?? emp.rol_tecnologico.charAt(0))}
                       </div>
                       <div>
-                        <p className="font-semibold text-gray-900">{emp.rol_tecnologico}</p>
-                        <p className="text-sm text-gray-500">{emp.seniority} · {emp.modalidad_trabajo}</p>
-                        <p className="text-xs text-gray-400">ID #{emp.id}</p>
+                        <p className="font-semibold text-gray-900">
+                          {emp.nombre ? `${emp.nombre} ${emp.apellido}` : emp.rol_tecnologico}
+                        </p>
+                        <p className="text-sm text-gray-500">{emp.rol_tecnologico} · {emp.seniority} · {emp.modalidad_trabajo}</p>
+                        <p className="text-xs text-gray-400">{emp.codigo_empleado ?? `ID #${emp.id}`}</p>
                       </div>
                     </div>
                     <div className="mt-4 flex flex-wrap gap-2 text-xs">
@@ -167,24 +188,76 @@ export default function EmployeeDetail() {
                   <div className="rounded-xl bg-white dark:bg-gray-800 p-5 shadow-sm text-center transition-colors">
                     <p className="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-200">Probabilidad de Deserción</p>
                     <RiskGauge score={emp.riesgo_desercion} />
+
+                    {/* Explicación del nivel en lenguaje claro */}
+                    <div className={`mt-3 rounded-lg border ${nivelMeta.border} ${nivelMeta.bg} p-3 text-left`}>
+                      <p className={`text-xs font-semibold ${nivelMeta.text}`}>
+                        {nivelMeta.label} — {nivelMeta.resumen}
+                      </p>
+                      <p className="mt-1 text-xs text-gray-600">{nivelMeta.descripcion}</p>
+                    </div>
+
                     {emp.es_modelo_base && (
                       <p className="mt-2 text-xs text-amber-500">Calculado con modelo heuristico base</p>
                     )}
+                    {climaFaltantes > 0 && (
+                      <p className="mt-2 text-xs text-gray-400">
+                        Faltan {climaFaltantes} dato(s) de encuesta de clima. Cargarlos mejora la precisión.
+                      </p>
+                    )}
                   </div>
 
-                  {/* Factores de riesgo */}
+                  {/* Por qué este nivel de riesgo */}
                   <div className="rounded-xl bg-white dark:bg-gray-800 p-5 shadow-sm transition-colors">
-                    <p className="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-200">Factores de Riesgo</p>
+                    <p className="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-200">
+                      ¿Por qué este nivel?
+                    </p>
+                    {factoresRiesgo.length === 0 ? (
+                      <p className="text-xs text-gray-500">
+                        No se detectaron señales de riesgo relevantes. Los indicadores de esta persona
+                        están dentro de lo esperado.
+                      </p>
+                    ) : (
+                      <>
+                        <p className="mb-3 text-xs text-gray-500">
+                          Estas son las señales que elevan su riesgo de irse:
+                        </p>
+                        <ul className="space-y-2.5">
+                          {factoresRiesgo.map((f) => (
+                            <li key={f.key} className="text-sm">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-gray-700 dark:text-gray-200">{f.label}</span>
+                                <span className={`font-medium ${f.critico ? 'text-red-700' : 'text-red-600'}`}>
+                                  ⚠ {f.valorTexto}
+                                </span>
+                              </div>
+                              <p className="mt-0.5 text-xs text-gray-500 leading-snug">{f.motivo}</p>
+                            </li>
+                          ))}
+                        </ul>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Qué hacer para retenerlo */}
+                  <div className="rounded-xl bg-white dark:bg-gray-800 p-5 shadow-sm transition-colors">
+                    <p className="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-200">
+                      Estrategia de retención sugerida
+                    </p>
+                    <p className="mb-3 text-xs text-gray-500">
+                      Acciones concretas que podés tomar para reducir el riesgo:
+                    </p>
                     <ul className="space-y-2">
-                      {riskFactors.map((f) => (
-                        <li key={f.label} className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600">{f.label}</span>
-                          <span className={`font-medium ${f.risk ? 'text-red-600' : 'text-green-600'}`}>
-                            {f.risk ? '⚠ ' : '✓ '}{f.text}
-                          </span>
+                      {recomendaciones.map((r, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
+                          <span className="mt-0.5 text-green-500 flex-shrink-0">→</span>
+                          <span className="leading-snug">{r}</span>
                         </li>
                       ))}
                     </ul>
+                    <p className="mt-3 text-xs text-gray-400 italic">
+                      Sugerencias orientativas. La decisión final siempre es del equipo de RRHH.
+                    </p>
                   </div>
                 </div>
 
@@ -205,6 +278,54 @@ export default function EmployeeDetail() {
                       <Field label="Modalidad" value={emp.modalidad_trabajo} />
                       <Field label="Tipo contrato" value={emp.tipo_contrato} highlight={emp.tipo_contrato === 'Eventual'} />
                     </div>
+                  </div>
+
+                  {/* Evolución del riesgo en el tiempo */}
+                  <div className="rounded-xl bg-white dark:bg-gray-800 p-5 shadow-sm transition-colors">
+                    <p className="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-200">
+                      Evolución del riesgo
+                    </p>
+                    {historyChart.length < 2 ? (
+                      <p className="text-xs text-gray-500">
+                        Todavía no hay suficiente historial para mostrar la evolución. A medida que
+                        vuelvas a importar datos o recalcular las predicciones, acá vas a ver cómo cambia
+                        el riesgo de esta persona a lo largo del tiempo.
+                        {historyChart.length === 1 && (
+                          <span className="mt-2 block text-gray-400">
+                            Última medición: {historyChart[0].riesgo}% ({historyChart[0].fecha}).
+                          </span>
+                        )}
+                      </p>
+                    ) : (
+                      <>
+                        <p className="mb-3 text-xs text-gray-500">
+                          Cómo cambió su probabilidad de deserción en cada medición. La línea gris marca el
+                          umbral de riesgo alto (50%).
+                        </p>
+                        <div className="h-56 w-full">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={historyChart} margin={{ top: 5, right: 10, bottom: 5, left: -10 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                              <XAxis dataKey="fecha" tick={{ fontSize: 11 }} stroke="#9ca3af" />
+                              <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} stroke="#9ca3af" unit="%" />
+                              <Tooltip
+                                formatter={(v) => [`${v}%`, 'Riesgo']}
+                                contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                              />
+                              <ReferenceLine y={50} stroke="#9ca3af" strokeDasharray="4 4" />
+                              <Line
+                                type="monotone"
+                                dataKey="riesgo"
+                                stroke="#2563eb"
+                                strokeWidth={2}
+                                dot={{ r: 3 }}
+                                activeDot={{ r: 5 }}
+                              />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

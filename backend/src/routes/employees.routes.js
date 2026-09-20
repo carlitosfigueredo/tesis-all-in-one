@@ -1,8 +1,8 @@
 const { Router } = require('express');
 const {
-  getAllEmployees, getEmployeeById, getEmployeesStats,
+  getAllEmployees, getEmployeeById, getEmployeeHistory, getEmployeesStats,
   createEmployee, updateEmployee, deleteEmployee, importEmployees,
-  recalculateRisk,
+  recalculateRisk, deactivateAbsentEmployees,
 } = require('../controllers/employees.controller');
 const { protect } = require('../middlewares/auth.middleware');
 const { requireActiveCompany } = require('../middlewares/companyStatus.middleware');
@@ -22,11 +22,17 @@ router.post('/import', requirePermission('employees.import'), importEmployees);
 // POST /api/employees/recalculate — recalcula predicciones ML para todos los empleados
 router.post('/recalculate', requirePermission('predictions.run'), recalculateRisk);
 
+// POST /api/employees/deactivate-absent — aplica bajas confirmadas (2do paso del flujo)
+router.post('/deactivate-absent', requirePermission('employees.import'), deactivateAbsentEmployees);
+
 // GET /api/employees
 router.get('/', requirePermission('employees.read'), getAllEmployees);
 
 // GET /api/employees/:id
 router.get('/:id', requirePermission('employees.read'), getEmployeeById);
+
+// GET /api/employees/:id/history — historial de riesgo (evolucion en el tiempo)
+router.get('/:id/history', requirePermission('employees.read'), getEmployeeHistory);
 
 // POST /api/employees
 router.post('/', requirePermission('employees.write'), createEmployee);

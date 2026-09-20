@@ -92,6 +92,30 @@ export default function PlanChangeModal({ open, currentPlanId, onClose, onSucces
     }
   };
 
+  // UPGRADE vía AdamsPay: crear deuda por la diferencia y redirigir al link de pago.
+  // Al volver, la pantalla de Checkout verifica el docId (mismo flujo que el pago normal).
+  const handleAdamsPay = async () => {
+    setError('');
+    setProcessing(true);
+    try {
+      const { data } = await api.post('/payments/adamspay/create', {
+        planId: selected.id,
+        isPlanChange: true,
+      });
+      if (data.data?.payUrl) {
+        sessionStorage.setItem('adamspay_docId', data.data.docId);
+        sessionStorage.setItem('adamspay_planId', selected.id);
+        window.location.href = data.data.payUrl;
+      } else {
+        setError('AdamsPay no devolvió un link de pago. Intentá de nuevo.');
+        setProcessing(false);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message ?? 'Error al crear el cobro con AdamsPay.');
+      setProcessing(false);
+    }
+  };
+
   // UPGRADE: capturar el pago aprobado → aplica el plan nuevo
   const handleApprove = async (data) => {
     setProcessing(true);
@@ -234,9 +258,10 @@ export default function PlanChangeModal({ open, currentPlanId, onClose, onSucces
                   {processing ? 'Procesando…' : isDowngrade ? 'Programar cambio de plan' : 'Aplicar mejora'}
                 </button>
               ) : (
-                // Upgrade con costo: pago por PayPal de la diferencia
-                <div className="space-y-2">
-                  <p className="text-xs text-gray-500 text-center">Pagá la diferencia de forma segura con PayPal</p>
+                // Upgrade con costo: pago de la diferencia (PayPal o AdamsPay)
+                <div className="space-y-3">
+                  <p className="text-xs text-gray-500 text-center">Pagá la diferencia de forma segura</p>
+
                   {PAYPAL_CLIENT_ID ? (
                     <PayPalButtons
                       style={{ layout: 'vertical', color: 'blue', shape: 'rect' }}
@@ -250,6 +275,23 @@ export default function PlanChangeModal({ open, currentPlanId, onClose, onSucces
                   ) : (
                     <p className="text-xs text-red-500 text-center">PayPal no está configurado.</p>
                   )}
+
+                  {/* Separador */}
+                  <div className="flex items-center gap-3">
+                    <div className="h-px flex-1 bg-gray-200" />
+                    <span className="text-xs text-gray-400">o</span>
+                    <div className="h-px flex-1 bg-gray-200" />
+                  </div>
+
+                  {/* AdamsPay — pasarela local (tarjeta, Tigo Money, Zimple) */}
+                  <button
+                    type="button"
+                    onClick={handleAdamsPay}
+                    disabled={processing}
+                    className="w-full rounded-lg border-2 border-gray-800 bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:opacity-50"
+                  >
+                    {processing ? 'Redirigiendo…' : 'Pagar con AdamsPay (tarjeta · Tigo Money · Zimple)'}
+                  </button>
                 </div>
               )}
             </div>

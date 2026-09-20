@@ -1,0 +1,17 @@
+# Estado de Terraform (puede contener secretos) — nunca subir
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Variables con datos reales
+terraform.tfvars
+*.auto.tfvars
+
+# Planes y crash logs
+*.tfplan
+crash.log
+crash.*.log
+
+# Llaves SSH
+*.pem

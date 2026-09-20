@@ -1,6 +1,6 @@
-edad,nivel_formacion,rol_tecnologico,seniority,antiguedad_meses,modalidad_trabajo,tipo_contrato,salario_mensual,cantidad_horas_extra_mes,capacitacion_ultimo_anio,evaluacion_desempeno,cantidad_empresas_anteriores,satisfaccion_laboral,satisfaccion_ambiente,equilibrio_vida_trabajo,estancamiento_carrera,feedback_lider
-28,Universitario,Backend,Semi-Senior,18,Hibrido,Indefinido,8500000,10,Si,4,2,3,4,3,2,4
-24,Tecnico,Frontend,Junior,6,Remoto,Plazo fijo,5000000,20,No,3,1,2,2,2,4,2
-35,Posgrado,DevOps,Senior,48,Presencial,Indefinido,16000000,5,Si,5,3,4,5,4,1,5
-22,Universitario,QA,Trainee,3,Hibrido,Eventual,3500000,25,No,3,0,1,2,1,3,2
-30,Universitario,Fullstack,Semi-Senior,24,Remoto,Indefinido,10000000,8,Si,4,2,4,4,4,2,4
+codigo_empleado,nombre,apellido,edad,nivel_formacion,rol_tecnologico,seniority,antiguedad_meses,modalidad_trabajo,tipo_contrato,salario_mensual,cantidad_horas_extra_mes,capacitacion_ultimo_anio,evaluacion_desempeno,cantidad_empresas_anteriores,satisfaccion_laboral,satisfaccion_ambiente,equilibrio_vida_trabajo,estancamiento_carrera,feedback_lider
+EMP-001,Carla,Gimenez,28,Universitario,Backend,Semi-Senior,18,Hibrido,Indefinido,8500000,10,Si,4,2,3,4,3,2,4
+EMP-002,Diego,Rojas,24,Tecnico,Frontend,Junior,6,Remoto,Plazo fijo,5000000,20,No,3,1,2,2,2,4,2
+EMP-003,Sofia,Benitez,35,Posgrado,DevOps,Senior,48,Presencial,Indefinido,16000000,5,Si,5,3,4,5,4,1,5
+EMP-004,Matias,Fernandez,22,Universitario,QA,Trainee,3,Hibrido,Eventual,3500000,25,No,3,0,1,2,1,3,2
+EMP-005,Lucia,Ayala,30,Universitario,Fullstack,Semi-Senior,24,Remoto,Indefinido,10000000,8,Si,4,2,4,4,4,2,4

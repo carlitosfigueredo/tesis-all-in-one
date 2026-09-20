@@ -177,7 +177,7 @@ const createAdamsPayDebt = async (req, res, next) => {
   const ua = getUserAgent(req);
 
   try {
-    const { planId } = req.body;
+    const { planId, isPlanChange } = req.body;
     if (!planId) {
       return res.status(400).json({ success: false, message: 'Seleccioná un plan' });
     }
@@ -190,13 +190,35 @@ const createAdamsPayDebt = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Plan no encontrado' });
     }
 
+    // Monto a cobrar: por defecto el precio del plan. Si es un cambio de plan
+    // (upgrade), cobramos la diferencia prorrateada calculada por el servicio.
+    let amountPyg = plan.priceGs;
+    let label     = `Suscripcion plan ${plan.name} — Sistema BI`;
+
+    if (isPlanChange) {
+      const proration = await computeProration(req.user.companyId, planId);
+      if (proration.type !== 'UPGRADE') {
+        return res.status(400).json({
+          success: false,
+          message: 'AdamsPay solo aplica para mejoras de plan con costo. Un downgrade se programa sin pago.',
+        });
+      }
+      if (proration.amountToPayGs <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Tu credito cubre el upgrade. No hace falta pagar.',
+        });
+      }
+      amountPyg = proration.amountToPayGs;
+      label     = `Upgrade a plan ${plan.name} (prorrateo) — Sistema BI`;
+    }
+
     // docId unico: companyId-planId-timestamp (evita duplicados — punto 14 Apuntes)
     const docId = `${req.user.companyId}-${planId}-${Date.now()}`;
-    const label = `Suscripcion plan ${plan.name} — Sistema BI`;
 
     const debt = await createDebt({
       docId,
-      amountPyg: plan.priceGs,
+      amountPyg,
       label,
       companyId: req.user.companyId,
       planId,
@@ -211,7 +233,7 @@ const createAdamsPayDebt = async (req, res, next) => {
       ipAddress:  ip,
       userAgent:  ua,
       status:     'SUCCESS',
-      newValue:   { docId: debt.docId, planId, amountPyg: plan.priceGs, payUrl: debt.payUrl },
+      newValue:   { docId: debt.docId, planId, amountPyg, isPlanChange: !!isPlanChange, payUrl: debt.payUrl },
     });
 
     return res.json({
@@ -219,7 +241,7 @@ const createAdamsPayDebt = async (req, res, next) => {
       data: {
         docId:     debt.docId,
         payUrl:    debt.payUrl,
-        amountPyg: plan.priceGs,
+        amountPyg,
         label,
         expiresAt: debt.expiresAt,
       },
@@ -317,15 +339,25 @@ const verifyAdamsPayDebt = async (req, res, next) => {
         },
       });
 
-      // Activar empresa
+      // Activar empresa y renovar el periodo (1 mes desde hoy).
+      // Consume cualquier downgrade programado que ya no aplique.
       if (planId) {
+        const periodEnd = new Date();
+        periodEnd.setMonth(periodEnd.getMonth() + 1);
+
         await prisma.company.update({
           where: { id: req.user.companyId },
           data:  { status: 'ACTIVE', plan: PLAN_ID_TO_ENUM[planId] || company?.plan || 'BASICO' },
         });
         await prisma.subscription.update({
           where: { id: subscription.id },
-          data:  { status: 'ACTIVE', planId },
+          data:  {
+            status: 'ACTIVE',
+            planId,
+            currentPeriodStart: new Date(),
+            currentPeriodEnd: periodEnd,
+            scheduledPlanId: null,
+          },
         });
       }
 

@@ -8,7 +8,9 @@
     "start": "node src/index.js",
     "prisma:migrate": "npx prisma migrate dev",
     "prisma:studio": "npx prisma studio",
-    "prisma:generate": "npx prisma generate"
+    "prisma:generate": "npx prisma generate",
+    "test": "jest --runInBand",
+    "test:watch": "jest --watch"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
@@ -28,8 +30,10 @@
     "seed": "node prisma/seed.js"
   },
   "devDependencies": {
+    "jest": "^30.5.1",
     "nodemon": "^3.1.4",
-    "prisma": "^6.19.3"
+    "prisma": "^6.19.3",
+    "supertest": "^7.2.2"
   },
   "engines": {
     "node": ">=20.0.0"

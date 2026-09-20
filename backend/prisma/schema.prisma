@@ -21,6 +21,11 @@ model Company {
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 
+  // Ultima vez que se (re)calcularon las predicciones de riesgo de sus empleados.
+  // Se usa para respetar la frecuencia de recalculo segun el plan
+  // (Estandar=mensual, Profesional=semanal, Corporativo=bajo demanda).
+  lastRecalculatedAt DateTime?
+
   users        User[]
   employees    Employee[]
   auditLogs    AuditLog[]
@@ -159,6 +164,13 @@ model Employee {
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
 
+  // ── Identidad del empleado ────────────────────────────────────────────
+  // codigo_empleado es el identificador estable que la empresa usa para
+  // reconocer a la misma persona entre importaciones (legajo interno).
+  codigo_empleado String
+  nombre          String
+  apellido        String
+
   // ── Datos de RRHH (obligatorios) ──────────────────────────────────────
   edad                        Int
   nivel_formacion             String        // Secundaria, Tecnico, Universitario, Posgrado
@@ -189,7 +201,30 @@ model Employee {
   companyId String?
   company   Company? @relation(fields: [companyId], references: [id])
 
+  // ── Historial de riesgo (evolucion en el tiempo) ──────────────────────
+  riskSnapshots RiskSnapshot[]
+
+  // El codigo de empleado es unico DENTRO de cada empresa (no globalmente).
+  @@unique([companyId, codigo_empleado])
   @@map("employees")
+}
+
+// ─────────────────────────────────────────
+// Historial de riesgo — un snapshot por cada vez que se
+// (re)calcula la prediccion de un empleado. Permite ver la
+// evolucion del riesgo a lo largo del tiempo (mes a mes).
+// ─────────────────────────────────────────
+model RiskSnapshot {
+  id               String   @id @default(uuid())
+  riesgo_desercion Float    // 0.0 a 1.0 al momento del snapshot
+  nivel_riesgo     String   // CRITICO, ALTO, MEDIO, BAJO
+  createdAt        DateTime @default(now())
+
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId, createdAt])
+  @@map("risk_snapshots")
 }
 
 // ─────────────────────────────────────────

@@ -3,6 +3,35 @@ import { useState } from 'react';
 // ─── Definicion de campos del CSV ────────────────────────────────────────────
 
 const CSV_FIELDS = [
+  // Identidad del empleado
+  {
+    campo: 'codigo_empleado',
+    tipo: 'Texto',
+    obligatorio: true,
+    descripcion: 'Código o legajo interno. Identifica a la misma persona entre importaciones.',
+    valores: 'Único por empresa. Ej: EMP-001',
+    ejemplo: 'EMP-001',
+    fuente: 'rrhh',
+    importante: true,
+  },
+  {
+    campo: 'nombre',
+    tipo: 'Texto',
+    obligatorio: true,
+    descripcion: 'Nombre del empleado',
+    valores: 'Texto libre',
+    ejemplo: 'Carla',
+    fuente: 'rrhh',
+  },
+  {
+    campo: 'apellido',
+    tipo: 'Texto',
+    obligatorio: true,
+    descripcion: 'Apellido del empleado',
+    valores: 'Texto libre',
+    ejemplo: 'Gimenez',
+    fuente: 'rrhh',
+  },
   // Obligatorios (datos RRHH)
   {
     campo: 'edad',
@@ -354,6 +383,20 @@ export default function CsvImportGuide({ onClose }) {
               <li>Se asigna un nivel: BAJO, MEDIO, ALTO o CRITICO</li>
               <li>Los empleados quedan guardados con su predicción</li>
             </ol>
+          </div>
+
+          <div className="rounded-lg border border-violet-200 bg-violet-50 p-3 text-xs text-violet-700">
+            <p className="font-semibold">Importante — así se actualiza mes a mes:</p>
+            <p className="mt-1">
+              El sistema usa el <code className="rounded bg-violet-100 px-1">codigo_empleado</code> para
+              reconocer a cada persona. Cuando vuelvas a subir un CSV el mes siguiente:
+            </p>
+            <ul className="mt-1 space-y-1">
+              <li>• Si el código <strong>ya existe</strong>, se actualizan sus datos y se recalcula su riesgo (no se duplica).</li>
+              <li>• Si es un código <strong>nuevo</strong>, se crea como empleado nuevo.</li>
+              <li>• Si un empleado <strong>ya no aparece</strong> en el CSV, se marca como inactivo (baja).</li>
+              <li>• Cada cálculo queda guardado, así podés ver cómo evoluciona el riesgo en el tiempo.</li>
+            </ul>
           </div>
 
           <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-700">

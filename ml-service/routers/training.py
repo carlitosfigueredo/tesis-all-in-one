@@ -189,38 +189,57 @@ def model_status():
     )
 
 
-@router.post("/train", response_model=TrainingMetrics)
-def train_model():
+# Minimo de casos de desercion (target=1) necesarios para entrenar con sentido.
+# Con menos de esto, el modelo no aprende a distinguir a quien se va.
+MIN_DESERCION_CASES = 15
+
+
+def _train_from_dataframe(df: pd.DataFrame) -> TrainingMetrics:
     """
-    Entrena el modelo Random Forest con el dataset de desercion
-    para empresas de desarrollo de software de Paraguay.
-    Guarda el modelo en model/model.pkl y los encoders en model/encoders.pkl.
-    Devuelve las metricas completas del entrenamiento.
+    Núcleo de entrenamiento reutilizable. Recibe un DataFrame ya con las columnas
+    FEATURES + TARGET ('desercion' con 'Si'/'No'), lo preprocesa, entrena el
+    Random Forest, evalúa, guarda modelo+encoders y devuelve las métricas.
+
+    Lo usan tanto el entrenamiento por archivo (/train) como el acumulativo
+    por HTTP (/train/dataset).
     """
     global _last_metrics
 
-    if not os.path.exists(DATASET_PATH):
+    # Validar que existan las columnas necesarias
+    faltantes = [c for c in (FEATURES + [TARGET]) if c not in df.columns]
+    if faltantes:
         raise HTTPException(
-            status_code=404,
-            detail=f"Dataset no encontrado en {DATASET_PATH}. "
-                   "Coloca el archivo dataset_desercion_software_py.csv en notebooks/data/"
+            status_code=422,
+            detail=f"Faltan columnas requeridas para entrenar: {', '.join(faltantes)}",
         )
 
     start_time = time.time()
 
-    # 1. Cargar y preprocesar
-    df = pd.read_csv(DATASET_PATH)
     df_model, encoders = _preprocess_dataset(df)
 
     X = df_model[FEATURES_NUMERICAS + FEATURES_CATEGORICAS]
     y = df_model[TARGET]
 
-    # 2. Split estratificado
+    # Chequeo de datos suficientes: necesitamos ejemplos de AMBAS clases y una
+    # cantidad mínima de casos de deserción para que el modelo aprenda algo útil.
+    positivos = int(y.sum())
+    negativos = int((y == 0).sum())
+    if positivos < MIN_DESERCION_CASES or negativos < MIN_DESERCION_CASES:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Datos insuficientes para entrenar. Se necesitan al menos "
+                f"{MIN_DESERCION_CASES} empleados que desertaron y {MIN_DESERCION_CASES} "
+                f"que permanecieron. Recibidos: {positivos} desertaron, {negativos} permanecieron."
+            ),
+        )
+
+    # Split estratificado
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42, stratify=y
     )
 
-    # 3. Entrenar
+    # Entrenar
     model = RandomForestClassifier(
         n_estimators=200,
         max_depth=12,
@@ -231,7 +250,7 @@ def train_model():
     )
     model.fit(X_train, y_train)
 
-    # 4. Evaluar
+    # Evaluar
     y_pred  = model.predict(X_test)
     y_proba = model.predict_proba(X_test)[:, 1]
     auc     = roc_auc_score(y_test, y_proba)
@@ -241,13 +260,13 @@ def train_model():
 
     elapsed = round(time.time() - start_time, 2)
 
-    # 5. Guardar modelo y encoders
+    # Guardar modelo y encoders
     os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
     joblib.dump(model, MODEL_PATH)
     joblib.dump(encoders, ENCODERS_PATH)
     size_kb = os.path.getsize(MODEL_PATH) / 1024
 
-    # 6. Feature importances
+    # Feature importances
     all_features = FEATURES_NUMERICAS + FEATURES_CATEGORICAS
     importances_raw = model.feature_importances_
     total = importances_raw.sum()
@@ -292,3 +311,63 @@ def train_model():
 
     _last_metrics = metrics
     return metrics
+
+
+@router.post("/train", response_model=TrainingMetrics)
+def train_model():
+    """
+    Entrena el modelo Random Forest con el dataset de desercion en disco
+    (notebooks/data/). Se mantiene por compatibilidad y para bootstrap inicial.
+    """
+    if not os.path.exists(DATASET_PATH):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Dataset no encontrado en {DATASET_PATH}. "
+                   "Coloca el archivo dataset_desercion_software_py.csv en notebooks/data/"
+        )
+    df = pd.read_csv(DATASET_PATH)
+    return _train_from_dataframe(df)
+
+
+# ─── Entrenamiento acumulativo por HTTP ──────────────────────────────────────
+
+class TrainingRow(BaseModel):
+    """Una fila de entrenamiento: las 17 features + el target 'desercion'."""
+    edad: int
+    antiguedad_meses: int
+    salario_mensual: int
+    cantidad_horas_extra_mes: int
+    evaluacion_desempeno: int
+    cantidad_empresas_anteriores: int
+    satisfaccion_laboral: int
+    satisfaccion_ambiente: int
+    equilibrio_vida_trabajo: int
+    estancamiento_carrera: int
+    feedback_lider: int
+    nivel_formacion: str
+    rol_tecnologico: str
+    seniority: str
+    modalidad_trabajo: str
+    tipo_contrato: str
+    capacitacion_ultimo_anio: str  # "Si" / "No"
+    desercion: str                 # "Si" / "No" (target real)
+
+
+class TrainDatasetRequest(BaseModel):
+    rows: list[TrainingRow]
+
+
+@router.post("/train/dataset", response_model=TrainingMetrics)
+def train_from_dataset(payload: TrainDatasetRequest):
+    """
+    Entrena el modelo global con un dataset enviado por HTTP (aprendizaje
+    acumulativo). El backend arma estas filas juntando los empleados con
+    deserción real conocida de TODAS las empresas (anonimizados).
+
+    Requiere un mínimo de casos de cada clase (ver MIN_DESERCION_CASES).
+    """
+    if not payload.rows:
+        raise HTTPException(status_code=422, detail="No se recibieron filas de entrenamiento")
+
+    df = pd.DataFrame([r.model_dump() for r in payload.rows])
+    return _train_from_dataframe(df)

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Matriz de Trazabilidad</title>
+<style>
+  :root {
+    --ink: #1f2937;
+    --muted: #6b7280;
+    --grid: #e5e7eb;
+    --head: #0f766e;
+    --head-alt: #115e59;
+    --zebra: #f6fbfa;
+    --chip-obj: #14b8a6;
+    --chip-req: #0ea5e9;
+    --chip-dis: #6366f1;
+    --chip-test: #f59e0b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 32px;
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    background: #f3f4f6;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .card {
+    max-width: 1200px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.08);
+    overflow: hidden;
+  }
+  .title { padding: 24px 28px 6px; }
+  .title h1 { margin: 0; font-size: 24px; }
+  .title p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 16px;
+    padding: 12px 28px 18px; font-size: 12px; color: var(--muted);
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    background: var(--head); color: #fff; text-align: left;
+    padding: 12px 14px; font-weight: 600; letter-spacing: .3px;
+    border-right: 1px solid rgba(255,255,255,.15);
+    vertical-align: top;
+  }
+  thead th:last-child { border-right: none; }
+  tbody td {
+    padding: 11px 14px; border-bottom: 1px solid var(--grid);
+    border-right: 1px solid var(--grid); vertical-align: top;
+  }
+  tbody td:last-child { border-right: none; }
+  tbody tr:nth-child(even) { background: var(--zebra); }
+
+  .chip {
+    display: inline-block; padding: 2px 8px; border-radius: 6px;
+    color: #fff; font-size: 11px; font-weight: 600; margin: 2px 3px 2px 0;
+    white-space: nowrap;
+  }
+  .c-obj { background: var(--chip-obj); }
+  .c-req { background: var(--chip-req); }
+  .c-dis { background: var(--chip-dis); }
+  .c-test { background: var(--chip-test); }
+
+  .prob { font-weight: 600; }
+
+  .footer { padding: 14px 28px 22px; font-size: 12px; color: var(--muted); }
+
+  @media print {
+    body { background: #fff; padding: 0; }
+    .card { box-shadow: none; border-radius: 0; }
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="title">
+      <h1>Matriz de Trazabilidad</h1>
+      <p>Vista general: Problema → Objetivo → Requerimiento → Diseño/UML → Prueba</p>
+    </div>
+
+    <div class="legend">
+      <span><i class="dot c-obj"></i> Objetivo específico</span>
+      <span><i class="dot c-req"></i> Requerimiento</span>
+      <span><i class="dot c-dis"></i> Diseño / UML</span>
+      <span><i class="dot c-test"></i> Prueba / evidencia</span>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width:20%">Problema / Necesidad</th>
+          <th style="width:20%">Objetivo específico</th>
+          <th style="width:22%">Requerimiento</th>
+          <th style="width:20%">Diseño / UML</th>
+          <th style="width:18%">Prueba</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="prob">Datos de RR.HH. dispersos y gestión empírica</td>
+          <td><span class="chip c-obj">OE1</span> Analizar requerimientos y variables de rotación</td>
+          <td><span class="chip c-req">RF importación CSV</span> <span class="chip c-req">RF gestión de empleados</span></td>
+          <td><span class="chip c-dis">CU carga de datos</span> <span class="chip c-dis">Diag. secuencia ETL</span></td>
+          <td><span class="chip c-test">PF-01 Importación</span></td>
+        </tr>
+        <tr>
+          <td class="prob">Proceso manual y reactivo (AS-IS)</td>
+          <td><span class="chip c-obj">OE2</span> Modelar los procesos actuales y propuestos</td>
+          <td><span class="chip c-req">RF clasificación 4 niveles</span></td>
+          <td><span class="chip c-dis">Mapa AS-IS / TO-BE</span> <span class="chip c-dis">Diag. actividad</span></td>
+          <td><span class="chip c-test">PF-02 Clasificación</span></td>
+        </tr>
+        <tr>
+          <td class="prob">Información fragmentada sin integración</td>
+          <td><span class="chip c-obj">OE3</span> Diseñar la arquitectura de datos y el ETL</td>
+          <td><span class="chip c-req">RF aislamiento por empresa</span> <span class="chip c-req">RNF integridad de datos</span></td>
+          <td><span class="chip c-dis">DER (14 tablas)</span> <span class="chip c-dis">Diag. componentes</span></td>
+          <td><span class="chip c-test">PF-03 Aislamiento</span></td>
+        </tr>
+        <tr>
+          <td class="prob">Detección tardía de fuga de talento</td>
+          <td><span class="chip c-obj">OE4</span> Implementar el modelo de Machine Learning</td>
+          <td><span class="chip c-req">RF predicción individual</span> <span class="chip c-req">RF predicción por lotes</span></td>
+          <td><span class="chip c-dis">CU predicción</span> <span class="chip c-dis">Microservicio ML (FastAPI)</span></td>
+          <td><span class="chip c-test">PF-04 Predicción</span> <span class="chip c-test">AUC-ROC 0,87</span></td>
+        </tr>
+        <tr>
+          <td class="prob">Reportes estáticos sin visión anticipada</td>
+          <td><span class="chip c-obj">OE5</span> Desarrollar los dashboards de BI</td>
+          <td><span class="chip c-req">RF recomendaciones</span> <span class="chip c-req">RNF usabilidad</span></td>
+          <td><span class="chip c-dis">CU dashboard</span> <span class="chip c-dis">Diag. despliegue</span></td>
+          <td><span class="chip c-test">PF-05 Dashboard</span></td>
+        </tr>
+        <tr>
+          <td class="prob">Tratamiento de datos sensibles y acceso</td>
+          <td><span class="chip c-obj">OE6</span> Validar desempeño, seguridad y rendimiento</td>
+          <td><span class="chip c-req">RF control de acceso</span> <span class="chip c-req">RNF seguridad</span> <span class="chip c-req">RNF rendimiento</span></td>
+          <td><span class="chip c-dis">Roles y permisos</span> <span class="chip c-dis">JWT / bcrypt / auditoría</span></td>
+          <td><span class="chip c-test">PNF seguridad</span> <span class="chip c-test">Lote 5.000 &lt; 90s</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="footer">
+      Cobertura: 26 casos de uso (96% de requerimientos) · 27 pruebas funcionales (100% RF) · 20 pruebas no funcionales (100% RNF).
+      Vista resumida; el detalle completo se documenta en la matriz extendida de la tesis.
+    </div>
+  </div>
+</body>
+</html>

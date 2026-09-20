@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
 import Navbar from '../components/layout/Navbar';
 import CsvImportGuide from '../components/employees/CsvImportGuide';
+import ImportResults from '../components/employees/ImportResults';
 import api from '../services/api';
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
@@ -71,7 +72,8 @@ const formatIncome = (usdValue, inGs) => {
  */
 const validateCsvRow = (row, lineNum) => {
   const errors = [];
-  const required = ['rol_tecnologico', 'seniority', 'edad', 'salario_mensual',
+  const required = ['codigo_empleado', 'nombre', 'apellido',
+                    'rol_tecnologico', 'seniority', 'edad', 'salario_mensual',
                     'antiguedad_meses', 'modalidad_trabajo', 'tipo_contrato'];
 
   for (const field of required) {
@@ -138,14 +140,14 @@ const parseCsv = (text) => {
 
 // Datos de ejemplo para la plantilla CSV
 const EXAMPLE_ROWS = [
-  { edad: '28', nivel_formacion: 'Universitario', rol_tecnologico: 'Backend', seniority: 'Semi-Senior', antiguedad_meses: '18', modalidad_trabajo: 'Hibrido', tipo_contrato: 'Indefinido', salario_mensual: '8500000', cantidad_horas_extra_mes: '10', capacitacion_ultimo_anio: 'Si', evaluacion_desempeno: '4', cantidad_empresas_anteriores: '2', satisfaccion_laboral: '3', satisfaccion_ambiente: '4', equilibrio_vida_trabajo: '3', estancamiento_carrera: '2', feedback_lider: '4' },
-  { edad: '24', nivel_formacion: 'Tecnico', rol_tecnologico: 'Frontend', seniority: 'Junior', antiguedad_meses: '6', modalidad_trabajo: 'Remoto', tipo_contrato: 'Plazo fijo', salario_mensual: '5000000', cantidad_horas_extra_mes: '20', capacitacion_ultimo_anio: 'No', evaluacion_desempeno: '3', cantidad_empresas_anteriores: '1', satisfaccion_laboral: '2', satisfaccion_ambiente: '2', equilibrio_vida_trabajo: '2', estancamiento_carrera: '4', feedback_lider: '2' },
-  { edad: '35', nivel_formacion: 'Posgrado', rol_tecnologico: 'DevOps', seniority: 'Senior', antiguedad_meses: '48', modalidad_trabajo: 'Presencial', tipo_contrato: 'Indefinido', salario_mensual: '16000000', cantidad_horas_extra_mes: '5', capacitacion_ultimo_anio: 'Si', evaluacion_desempeno: '5', cantidad_empresas_anteriores: '3', satisfaccion_laboral: '4', satisfaccion_ambiente: '5', equilibrio_vida_trabajo: '4', estancamiento_carrera: '1', feedback_lider: '5' },
-  { edad: '22', nivel_formacion: 'Universitario', rol_tecnologico: 'QA', seniority: 'Trainee', antiguedad_meses: '3', modalidad_trabajo: 'Hibrido', tipo_contrato: 'Eventual', salario_mensual: '3500000', cantidad_horas_extra_mes: '25', capacitacion_ultimo_anio: 'No', evaluacion_desempeno: '3', cantidad_empresas_anteriores: '0', satisfaccion_laboral: '1', satisfaccion_ambiente: '2', equilibrio_vida_trabajo: '1', estancamiento_carrera: '3', feedback_lider: '2' },
-  { edad: '30', nivel_formacion: 'Universitario', rol_tecnologico: 'Fullstack', seniority: 'Semi-Senior', antiguedad_meses: '24', modalidad_trabajo: 'Remoto', tipo_contrato: 'Indefinido', salario_mensual: '10000000', cantidad_horas_extra_mes: '8', capacitacion_ultimo_anio: 'Si', evaluacion_desempeno: '4', cantidad_empresas_anteriores: '2', satisfaccion_laboral: '4', satisfaccion_ambiente: '4', equilibrio_vida_trabajo: '4', estancamiento_carrera: '2', feedback_lider: '4' },
+  { codigo_empleado: 'EMP-001', nombre: 'Carla', apellido: 'Gimenez', edad: '28', nivel_formacion: 'Universitario', rol_tecnologico: 'Backend', seniority: 'Semi-Senior', antiguedad_meses: '18', modalidad_trabajo: 'Hibrido', tipo_contrato: 'Indefinido', salario_mensual: '8500000', cantidad_horas_extra_mes: '10', capacitacion_ultimo_anio: 'Si', evaluacion_desempeno: '4', cantidad_empresas_anteriores: '2', satisfaccion_laboral: '3', satisfaccion_ambiente: '4', equilibrio_vida_trabajo: '3', estancamiento_carrera: '2', feedback_lider: '4' },
+  { codigo_empleado: 'EMP-002', nombre: 'Diego', apellido: 'Rojas', edad: '24', nivel_formacion: 'Tecnico', rol_tecnologico: 'Frontend', seniority: 'Junior', antiguedad_meses: '6', modalidad_trabajo: 'Remoto', tipo_contrato: 'Plazo fijo', salario_mensual: '5000000', cantidad_horas_extra_mes: '20', capacitacion_ultimo_anio: 'No', evaluacion_desempeno: '3', cantidad_empresas_anteriores: '1', satisfaccion_laboral: '2', satisfaccion_ambiente: '2', equilibrio_vida_trabajo: '2', estancamiento_carrera: '4', feedback_lider: '2' },
+  { codigo_empleado: 'EMP-003', nombre: 'Sofia', apellido: 'Benitez', edad: '35', nivel_formacion: 'Posgrado', rol_tecnologico: 'DevOps', seniority: 'Senior', antiguedad_meses: '48', modalidad_trabajo: 'Presencial', tipo_contrato: 'Indefinido', salario_mensual: '16000000', cantidad_horas_extra_mes: '5', capacitacion_ultimo_anio: 'Si', evaluacion_desempeno: '5', cantidad_empresas_anteriores: '3', satisfaccion_laboral: '4', satisfaccion_ambiente: '5', equilibrio_vida_trabajo: '4', estancamiento_carrera: '1', feedback_lider: '5' },
+  { codigo_empleado: 'EMP-004', nombre: 'Matias', apellido: 'Fernandez', edad: '22', nivel_formacion: 'Universitario', rol_tecnologico: 'QA', seniority: 'Trainee', antiguedad_meses: '3', modalidad_trabajo: 'Hibrido', tipo_contrato: 'Eventual', salario_mensual: '3500000', cantidad_horas_extra_mes: '25', capacitacion_ultimo_anio: 'No', evaluacion_desempeno: '3', cantidad_empresas_anteriores: '0', satisfaccion_laboral: '1', satisfaccion_ambiente: '2', equilibrio_vida_trabajo: '1', estancamiento_carrera: '3', feedback_lider: '2' },
+  { codigo_empleado: 'EMP-005', nombre: 'Lucia', apellido: 'Ayala', edad: '30', nivel_formacion: 'Universitario', rol_tecnologico: 'Fullstack', seniority: 'Semi-Senior', antiguedad_meses: '24', modalidad_trabajo: 'Remoto', tipo_contrato: 'Indefinido', salario_mensual: '10000000', cantidad_horas_extra_mes: '8', capacitacion_ultimo_anio: 'Si', evaluacion_desempeno: '4', cantidad_empresas_anteriores: '2', satisfaccion_laboral: '4', satisfaccion_ambiente: '4', equilibrio_vida_trabajo: '4', estancamiento_carrera: '2', feedback_lider: '4' },
 ];
 
-const EXAMPLE_COLS = ['rol_tecnologico', 'seniority', 'edad', 'salario_mensual', 'antiguedad_meses', 'modalidad_trabajo', 'satisfaccion_laboral'];
+const EXAMPLE_COLS = ['codigo_empleado', 'nombre', 'apellido', 'rol_tecnologico', 'seniority', 'salario_mensual', 'satisfaccion_laboral'];
 
 const ExampleTable = () => (
   <div className="overflow-x-auto rounded-lg border border-blue-100 bg-blue-50/40">
@@ -173,7 +175,7 @@ const ExampleTable = () => (
   </div>
 );
 
-const ImportModal = ({ onClose, onImported }) => {
+const ImportModal = ({ onClose, onImported, onVerEmpleados }) => {
   const fileRef = useRef(null);
   const [step, setStep]       = useState('idle'); // idle | preview | importing | done | error | guide
   const [parsed, setParsed]   = useState(null);
@@ -181,6 +183,9 @@ const ImportModal = ({ onClose, onImported }) => {
   const [progress, setProgress] = useState('');
   const [showExample, setShowExample] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
+  const [results, setResults] = useState(null); // { summary, employees } tras importar
+  const [deactivateAbsent, setDeactivateAbsent] = useState(false); // checkbox opt-in de bajas
+  const [pendingDeactivation, setPendingDeactivation] = useState(null); // { bajasPendientes, umbralPorcentaje } cuando supera umbral
 
   const handleFile = (e) => {
     const file = e.target.files[0];
@@ -205,14 +210,57 @@ const ImportModal = ({ onClose, onImported }) => {
     setStep('importing');
     setProgress('Enviando datos...');
     try {
-      const { data } = await api.post('/employees/import', { rows: parsed.rows });
-      setProgress(`${data.imported} empleados importados correctamente.`);
-      setStep('done');
+      const { data } = await api.post('/employees/import', {
+        rows: parsed.rows,
+        deactivateAbsent,
+      });
+      const payload = data.data ?? data;
+      setResults({
+        summary: payload.summary ?? null,
+        employees: payload.employees ?? [],
+        creados: payload.creados ?? 0,
+        actualizados: payload.actualizados ?? 0,
+        dadosDeBaja: payload.dadosDeBaja ?? 0,
+        recalculo: payload.recalculo ?? null,
+      });
       onImported?.();
+
+      // Si hay bajas que superan el umbral, primero pedir confirmacion.
+      if (payload.needsConfirmation && (payload.bajasPendientes?.length ?? 0) > 0) {
+        setPendingDeactivation({
+          bajasPendientes: payload.bajasPendientes,
+          umbralPorcentaje: payload.umbralPorcentaje,
+        });
+        setStep('confirmDeactivation');
+      } else {
+        setStep('done');
+      }
     } catch (err) {
       setErrors([err.response?.data?.message ?? 'Error al importar. Intenta de nuevo.']);
       setStep('error');
     }
+  };
+
+  // Aplica las bajas que el usuario confirmo (2do paso, tras superar el umbral).
+  const handleConfirmDeactivation = async () => {
+    const codigos = (pendingDeactivation?.bajasPendientes ?? []).map((e) => e.codigo_empleado);
+    if (codigos.length === 0) { setStep('done'); return; }
+    setStep('importing');
+    setProgress('Aplicando bajas...');
+    try {
+      await api.post('/employees/deactivate-absent', { codigos });
+      onImported?.();
+      setStep('done');
+    } catch (err) {
+      setErrors([err.response?.data?.message ?? 'Error al dar de baja. Intenta de nuevo.']);
+      setStep('error');
+    }
+  };
+
+  // El usuario decide NO dar de baja: los ausentes quedan activos.
+  const handleSkipDeactivation = () => {
+    setPendingDeactivation(null);
+    setStep('done');
   };
 
   return (
@@ -221,14 +269,30 @@ const ImportModal = ({ onClose, onImported }) => {
 
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-          <h2 className="text-base font-semibold text-gray-800">Importar empleados desde CSV</h2>
+          <h2 className="text-base font-semibold text-gray-800">
+            {step === 'done' ? 'Resultados de la importación' : 'Importar empleados desde CSV'}
+          </h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none">✕</button>
         </div>
 
         <div className="px-6 py-5 space-y-4">
 
+          {/* Pantalla de resultados post-importación (guía de lo que pasó) */}
+          {step === 'done' && (
+            <ImportResults
+              summary={results?.summary}
+              employees={results?.employees ?? []}
+              creados={results?.creados}
+              actualizados={results?.actualizados}
+              dadosDeBaja={results?.dadosDeBaja}
+              recalculo={results?.recalculo}
+              onClose={onClose}
+              onVerEmpleados={onVerEmpleados}
+            />
+          )}
+
           {/* Guia paso a paso */}
-          {showGuide && (
+          {step !== 'done' && showGuide && (
             <CsvImportGuide onClose={() => setShowGuide(false)} />
           )}
 
@@ -305,7 +369,7 @@ const ImportModal = ({ onClose, onImported }) => {
                 <table className="w-full text-xs">
                   <thead className="bg-gray-50 text-gray-500">
                     <tr>
-                      {['rol_tecnologico','seniority','edad','salario_mensual','antiguedad_meses','modalidad_trabajo','satisfaccion_laboral'].map((h) => (
+                      {['codigo_empleado','nombre','apellido','rol_tecnologico','seniority','salario_mensual','satisfaccion_laboral'].map((h) => (
                         <th key={h} className="px-3 py-2 text-left font-medium">{h}</th>
                       ))}
                     </tr>
@@ -313,7 +377,7 @@ const ImportModal = ({ onClose, onImported }) => {
                   <tbody className="divide-y divide-gray-50">
                     {parsed.rows.slice(0, 5).map((row, i) => (
                       <tr key={i} className="hover:bg-gray-50">
-                        {['rol_tecnologico','seniority','edad','salario_mensual','antiguedad_meses','modalidad_trabajo','satisfaccion_laboral'].map((h) => (
+                        {['codigo_empleado','nombre','apellido','rol_tecnologico','seniority','salario_mensual','satisfaccion_laboral'].map((h) => (
                           <td key={h} className="px-3 py-1.5 text-gray-700">{row[h]}</td>
                         ))}
                       </tr>
@@ -324,6 +388,61 @@ const ImportModal = ({ onClose, onImported }) => {
               {parsed.rows.length > 5 && (
                 <p className="mt-1 text-xs text-gray-400">... y {parsed.rows.length - 5} filas más</p>
               )}
+
+              {/* Opción de baja de ausentes (desactivada por defecto) */}
+              <label className="mt-4 flex cursor-pointer items-start gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                <input
+                  type="checkbox"
+                  checked={deactivateAbsent}
+                  onChange={(e) => setDeactivateAbsent(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-xs text-gray-600">
+                  <span className="font-medium text-gray-700">Marcar como inactivos a los empleados que no estén en este archivo.</span>
+                  <br />
+                  Actívalo solo si este CSV contiene a <strong>toda</strong> tu plantilla actual. Si subís
+                  una lista parcial, dejalo sin marcar para no dar de baja a quienes faltan.
+                </span>
+              </label>
+            </div>
+          )}
+
+          {/* Confirmación de bajas que superan el umbral de seguridad */}
+          {step === 'confirmDeactivation' && pendingDeactivation && (
+            <div className="space-y-3">
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-amber-500 text-white">
+                    !
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-amber-800">Confirmá antes de dar de baja</h3>
+                    <p className="mt-1 text-xs text-amber-700">
+                      Los datos se importaron correctamente. Pero{' '}
+                      <strong>{pendingDeactivation.bajasPendientes.length} empleado(s)</strong> que estaban
+                      activos no aparecen en este archivo. Eso es más del {pendingDeactivation.umbralPorcentaje}%
+                      de tu plantilla, así que preferimos confirmarlo con vos antes de marcarlos como inactivos.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs font-medium text-gray-500">Se marcarían como inactivos:</p>
+              <div className="max-h-56 space-y-1 overflow-y-auto rounded-lg border border-gray-100 p-2">
+                {pendingDeactivation.bajasPendientes.map((e) => (
+                  <div key={e.id} className="flex items-center justify-between px-2 py-1 text-sm">
+                    <span className="text-gray-700">
+                      {e.nombre} {e.apellido}
+                      <span className="ml-1.5 text-xs text-gray-400">{e.rol_tecnologico} · {e.seniority}</span>
+                    </span>
+                    <span className="text-xs text-gray-400">{e.codigo_empleado}</span>
+                  </div>
+                ))}
+              </div>
+
+              <p className="text-xs text-gray-500">
+                Si fue un archivo parcial y no querés dar de baja a nadie, elegí “No dar de baja”.
+              </p>
             </div>
           )}
 
@@ -335,29 +454,46 @@ const ImportModal = ({ onClose, onImported }) => {
             </div>
           )}
 
-          {/* Resultado final */}
-          {step === 'done' && (
-            <div className="rounded-lg bg-green-50 p-3 text-sm text-green-700">{progress}</div>
-          )}
         </div>
 
-        {/* Footer */}
-        <div className="flex justify-end gap-3 border-t border-gray-100 px-6 py-4">
-          <button
-            onClick={onClose}
-            className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
-          >
-            {step === 'done' ? 'Cerrar' : 'Cancelar'}
-          </button>
-          {step === 'preview' && errors.length === 0 && (
-            <button
-              onClick={handleImport}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-            >
-              Importar {parsed?.rows.length} empleados
-            </button>
-          )}
-        </div>
+        {/* Footer — oculto en la pantalla de resultados (tiene su propia navegación) */}
+        {step !== 'done' && (
+          <div className="flex justify-end gap-3 border-t border-gray-100 px-6 py-4">
+            {step === 'confirmDeactivation' ? (
+              <>
+                <button
+                  onClick={handleSkipDeactivation}
+                  className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                >
+                  No dar de baja
+                </button>
+                <button
+                  onClick={handleConfirmDeactivation}
+                  className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+                >
+                  Sí, dar de baja {pendingDeactivation?.bajasPendientes.length}
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={onClose}
+                  className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+                {step === 'preview' && errors.length === 0 && (
+                  <button
+                    onClick={handleImport}
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                  >
+                    Importar {parsed?.rows.length} empleados
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -511,7 +647,7 @@ export default function Employees() {
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50 dark:bg-gray-700/50 text-xs uppercase text-gray-500 dark:text-gray-400">
                     <tr>
-                      <th className="px-4 py-3 text-left">#</th>
+                      <th className="px-4 py-3 text-left">Empleado</th>
                       <th className="px-4 py-3 text-left">Rol</th>
                       <th className="px-4 py-3 text-left">Seniority</th>
                       <th className="px-4 py-3 text-left">Edad</th>
@@ -537,7 +673,12 @@ export default function Employees() {
                         onClick={() => navigate(`/employees/${emp.id}`)}
                         className="cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-700/50 transition-colors"
                       >
-                        <td className="px-4 py-3 text-gray-400 dark:text-gray-500 text-xs">{emp.id}</td>
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-gray-900 dark:text-gray-100">
+                            {emp.nombre} {emp.apellido}
+                          </div>
+                          <div className="text-xs text-gray-400 dark:text-gray-500">{emp.codigo_empleado}</div>
+                        </td>
                         <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{emp.rol_tecnologico}</td>
                         <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{emp.seniority}</td>
                         <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{emp.edad}</td>
@@ -607,9 +748,11 @@ export default function Employees() {
         <ImportModal
           onClose={() => setShowImport(false)}
           onImported={() => {
-            setShowImport(false);
+            // Refresca la tabla en segundo plano, pero deja el modal abierto
+            // para que se muestre la pantalla de resultados.
             fetchEmployees(filters);
           }}
+          onVerEmpleados={() => setShowImport(false)}
         />
       )}
     </div>

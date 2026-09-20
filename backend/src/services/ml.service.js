@@ -101,6 +101,14 @@ const getModelStatus = () => _fetch('/api/model/status');
 
 const trainModel = () => _fetch('/api/train', { method: 'POST' });
 
+/**
+ * Entrenamiento acumulativo: envia un dataset (filas ya mapeadas al formato del
+ * ML service, con las 17 features + 'desercion' Si/No) para reentrenar el modelo
+ * global. Retorna las metricas del entrenamiento.
+ */
+const trainDataset = (rows) =>
+  _fetch('/api/train/dataset', { method: 'POST', body: JSON.stringify({ rows }) });
+
 module.exports = {
   predictDesercion,
   predictBatch,
@@ -109,4 +117,5 @@ module.exports = {
   calcularRiesgoBatch,
   getModelStatus,
   trainModel,
+  trainDataset,
 };

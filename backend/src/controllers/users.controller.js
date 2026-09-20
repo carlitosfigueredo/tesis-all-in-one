@@ -11,6 +11,7 @@ const { getIp, getUserAgent } = require('../utils/request.utils');
 const { invalidatePermissionCache } = require('../middlewares/permission.middleware');
 const { getPasswordPolicy } = require('../services/systemConfig.service');
 const { validatePasswordPolicy } = require('../utils/password.utils');
+const { sendAccountCreatedEmail } = require('../services/email.service');
 
 // ─── GET /api/users ───────────────────────────────────────────────────────────
 
@@ -159,6 +160,15 @@ const createUser = async (req, res, next) => {
       userAgent:  getUserAgent(req),
       status:     'SUCCESS',
       newValue:   { name: result.name, email: result.email, role: finalRoleName },
+    });
+
+    // Correo con las credenciales de acceso (no bloquea la creacion si falla)
+    await sendAccountCreatedEmail({
+      to:           result.email,
+      name:         result.name,
+      email:        result.email,
+      tempPassword: password,
+      role:         finalRoleName,
     });
 
     res.status(201).json({
