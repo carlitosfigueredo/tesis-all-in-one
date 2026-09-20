@@ -123,9 +123,56 @@ const sendAccountLockedEmail = async ({ to, name, lockedUntil }) => {
   });
 };
 
+// Bienvenida al registrar una empresa (registro publico → COMPANY_ADMIN)
+const sendWelcomeEmail = async ({ to, name, companyName, plan }) => {
+  const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login`;
+  let html = loadTemplate('welcome');
+  if (html) {
+    html = html
+      .replace(/{{name}}/g,        name)
+      .replace(/{{companyName}}/g, companyName)
+      .replace(/{{plan}}/g,        plan || 'BASICO')
+      .replace(/{{loginUrl}}/g,    loginUrl)
+      .replace(/{{year}}/g,        new Date().getFullYear());
+  } else {
+    html = `<p>Hola, ${name}.</p><p>Tu empresa <strong>${companyName}</strong> fue registrada correctamente con el plan ${plan || 'BASICO'}.</p><p>Ingresá desde <a href="${loginUrl}">${loginUrl}</a>.</p>`;
+  }
+  return sendEmail({
+    to,
+    subject: `Bienvenido a Sistema BI, ${name}`,
+    html,
+    text:    `Hola, ${name}.\n\nTu empresa ${companyName} fue registrada con el plan ${plan || 'BASICO'}.\nIngresá desde ${loginUrl}.`,
+  });
+};
+
+// Credenciales de acceso al crear un usuario desde el panel (admin crea usuario)
+const sendAccountCreatedEmail = async ({ to, name, email, tempPassword, role }) => {
+  const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login`;
+  let html = loadTemplate('account-created');
+  if (html) {
+    html = html
+      .replace(/{{name}}/g,         name)
+      .replace(/{{email}}/g,        email)
+      .replace(/{{tempPassword}}/g, tempPassword)
+      .replace(/{{role}}/g,         role || 'VIEWER')
+      .replace(/{{loginUrl}}/g,     loginUrl)
+      .replace(/{{year}}/g,         new Date().getFullYear());
+  } else {
+    html = `<p>Hola, ${name}.</p><p>Se creó una cuenta para vos en Sistema BI.</p><p>Usuario: <strong>${email}</strong><br>Contraseña temporal: <strong>${tempPassword}</strong></p><p>Ingresá desde <a href="${loginUrl}">${loginUrl}</a> y cambiá tu contraseña en el primer acceso.</p>`;
+  }
+  return sendEmail({
+    to,
+    subject: 'Tu cuenta en Sistema BI fue creada',
+    html,
+    text:    `Hola, ${name}.\n\nSe creó una cuenta para vos.\nUsuario: ${email}\nContraseña temporal: ${tempPassword}\n\nIngresá desde ${loginUrl} y cambiá tu contraseña en el primer acceso.`,
+  });
+};
+
 module.exports = {
   sendEmail,
   sendPasswordResetEmail,
   sendPasswordChangedEmail,
   sendAccountLockedEmail,
+  sendWelcomeEmail,
+  sendAccountCreatedEmail,
 };

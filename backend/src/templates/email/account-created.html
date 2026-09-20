@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Recuperación de contraseña</title>
+  <title>Tu cuenta fue creada</title>
 </head>
 <body style="margin:0;padding:0;background-color:#f1f5f9;font-family:Segoe UI,Arial,sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f1f5f9;padding:24px 0;">
@@ -17,22 +17,31 @@
           </tr>
           <tr>
             <td style="padding:32px;">
-              <h2 style="margin:0 0 16px;color:#0f172a;font-size:22px;">Recuperación de contraseña</h2>
+              <h2 style="margin:0 0 16px;color:#0f172a;font-size:22px;">Se creó tu cuenta</h2>
               <p style="margin:0 0 16px;color:#334155;font-size:15px;line-height:1.6;">Hola, <strong>{{name}}</strong>.</p>
               <p style="margin:0 0 24px;color:#334155;font-size:15px;line-height:1.6;">
-                Recibimos una solicitud para restablecer tu contraseña. Hacé clic en el botón para elegir una nueva.
-                Este enlace vence en <strong>5 minutos</strong>.
+                El administrador de tu empresa creó una cuenta para vos en Sistema BI con el rol <strong>{{role}}</strong>.
+                Estas son tus credenciales de acceso:
               </p>
-              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 24px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin:0 0 24px;">
                 <tr>
-                  <td style="border-radius:8px;background-color:#2563eb;">
-                    <a href="{{resetUrl}}" style="display:inline-block;padding:14px 32px;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;border-radius:8px;">Cambiar mi contraseña</a>
+                  <td style="padding:16px 20px;color:#334155;font-size:14px;line-height:1.9;">
+                    <strong>Usuario:</strong> {{email}}<br>
+                    <strong>Contraseña temporal:</strong>
+                    <span style="font-family:Consolas,monospace;background-color:#e2e8f0;padding:2px 8px;border-radius:4px;color:#0f172a;">{{tempPassword}}</span>
                   </td>
                 </tr>
               </table>
-              <p style="margin:0 0 8px;color:#64748b;font-size:13px;line-height:1.6;">Si el botón no funciona, copiá y pegá este enlace en tu navegador:</p>
-              <p style="margin:0 0 24px;color:#2563eb;font-size:13px;word-break:break-all;">{{resetUrl}}</p>
-              <p style="margin:0;color:#94a3b8;font-size:13px;line-height:1.6;">Si no pediste este cambio, ignorá este correo. Tu contraseña seguirá siendo la misma.</p>
+              <p style="margin:0 0 24px;color:#b45309;font-size:14px;line-height:1.6;">
+                Por seguridad, el sistema te pedirá <strong>cambiar esta contraseña</strong> en tu primer inicio de sesión.
+              </p>
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 8px;">
+                <tr>
+                  <td style="border-radius:8px;background-color:#2563eb;">
+                    <a href="{{loginUrl}}" style="display:inline-block;padding:14px 32px;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;border-radius:8px;">Ingresar al sistema</a>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
           <tr>

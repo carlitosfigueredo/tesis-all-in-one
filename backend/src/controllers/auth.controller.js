@@ -8,7 +8,8 @@ const { hasValidMxRecords }                 = require('../utils/emailDomain.util
 const { getPasswordPolicy, getResetTokenConfig } = require('../services/systemConfig.service');
 const { sendPasswordResetEmail,
         sendPasswordChangedEmail,
-        sendAccountLockedEmail }            = require('../services/email.service');
+        sendAccountLockedEmail,
+        sendWelcomeEmail }                  = require('../services/email.service');
 const { logAction }                         = require('../services/audit.service');
 const { getIp, getUserAgent }              = require('../utils/request.utils');
 const { getUserPermissions, invalidatePermissionCache } = require('../middlewares/permission.middleware');
@@ -581,6 +582,14 @@ const register = async (req, res, next) => {
         },
         acceptedAt: now.toISOString(),
       },
+    });
+
+    // Correo de bienvenida (no bloquea el registro si el envio falla)
+    await sendWelcomeEmail({
+      to:          result.user.email,
+      name:        result.user.name,
+      companyName: result.company.name,
+      plan:        result.company.plan,
     });
 
     // Cargar permisos del nuevo usuario

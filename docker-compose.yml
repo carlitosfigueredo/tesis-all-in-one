@@ -49,6 +49,14 @@ services:
       ADAMSPAY_API_KEY: ${ADAMSPAY_API_KEY}
       ADAMSPAY_API_SECRET: ${ADAMSPAY_API_SECRET}
       ADAMSPAY_ENVIRONMENT: ${ADAMSPAY_ENVIRONMENT}
+      # SMTP — envío de correos (Mailhog en dev, Gmail en prod vía .env)
+      SMTP_HOST: ${SMTP_HOST:-mailhog}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-"Sistema BI <noreply@sistemabi.edu.py>"}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
     ports:
       - "${BACKEND_PORT}:4000"
     volumes:
