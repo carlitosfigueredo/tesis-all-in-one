@@ -1,7 +1,7 @@
 {
   "name": "tesis-bi-frontend",
   "version": "1.0.0",
-  "description": "Dashboard BI para predicción de fuga de talento - Sector Retail",
+  "description": "Dashboard BI para predicción de fuga de talento",
   "type": "module",
   "scripts": {
     "dev": "vite",
