@@ -39,6 +39,8 @@ import AdminPayments from './pages/admin/AdminPayments';
 import Dashboard     from './pages/Dashboard';
 import Employees     from './pages/Employees';
 import EmployeeDetail from './pages/EmployeeDetail';
+import Retention     from './pages/Retention';
+import Reports       from './pages/Reports';
 import Users         from './pages/Users';
 import ModelML       from './pages/ModelML';
 import Company       from './pages/Company';
@@ -87,6 +89,8 @@ export default function App() {
               <Route path="/dashboard"      element={<Dashboard />} />
               <Route path="/employees"      element={<Employees />} />
               <Route path="/employees/:id"  element={<EmployeeDetail />} />
+              <Route path="/retention"      element={<Retention />} />
+              <Route path="/reports"        element={<Reports />} />
               <Route path="/users"          element={<Users />} />
               <Route path="/model"          element={<ModelML />} />
               <Route path="/company"        element={<Company />} />

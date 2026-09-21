@@ -5,12 +5,13 @@ import {
 } from 'recharts';
 import Sidebar from '../components/layout/Sidebar';
 import Navbar from '../components/layout/Navbar';
+import RetentionPanel from '../components/retention/RetentionPanel';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import {
   getNivelRiesgo,
   getRiskMeta,
   factoresEnRiesgo,
-  generarRecomendaciones,
   contarVariablesClimaFaltantes,
 } from '../utils/riskInsights';
 
@@ -96,6 +97,10 @@ const SatisfactionBar = ({ label, value, max = 5, hint }) => {
 export default function EmployeeDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const canManageRetention = !!user?.permissions?.includes('retention.manage')
+    || !!user?.roles?.includes('SUPER_ADMIN')
+    || !!user?.roles?.includes('COMPANY_ADMIN');
   const [emp, setEmp]         = useState(null);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -124,7 +129,6 @@ export default function EmployeeDetail() {
   const nivel           = emp ? (emp.nivel_riesgo ?? getNivelRiesgo(emp.riesgo_desercion ?? 0)) : 'BAJO';
   const nivelMeta       = getRiskMeta(nivel);
   const factoresRiesgo  = emp ? factoresEnRiesgo(emp) : [];
-  const recomendaciones = emp ? generarRecomendaciones(emp) : [];
   const climaFaltantes  = emp ? contarVariablesClimaFaltantes(emp) : 0;
 
   return (
@@ -239,26 +243,8 @@ export default function EmployeeDetail() {
                     )}
                   </div>
 
-                  {/* Qué hacer para retenerlo */}
-                  <div className="rounded-xl bg-white dark:bg-gray-800 p-5 shadow-sm transition-colors">
-                    <p className="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-200">
-                      Estrategia de retención sugerida
-                    </p>
-                    <p className="mb-3 text-xs text-gray-500">
-                      Acciones concretas que podés tomar para reducir el riesgo:
-                    </p>
-                    <ul className="space-y-2">
-                      {recomendaciones.map((r, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
-                          <span className="mt-0.5 text-green-500 flex-shrink-0">→</span>
-                          <span className="leading-snug">{r}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <p className="mt-3 text-xs text-gray-400 italic">
-                      Sugerencias orientativas. La decisión final siempre es del equipo de RRHH.
-                    </p>
-                  </div>
+                  {/* Qué hacer para retenerlo — estrategias persistidas con seguimiento */}
+                  <RetentionPanel employeeId={id} canManage={canManageRetention} />
                 </div>
 
                 {/* ── Col derecha: métricas detalladas ── */}

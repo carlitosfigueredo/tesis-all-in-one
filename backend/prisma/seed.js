@@ -19,6 +19,12 @@ const PERMISSIONS = [
   { code: 'predictions.batch', name: 'Prediccion en batch',     module: 'predictions' },
   // Dashboard
   { code: 'dashboard.view',    name: 'Ver dashboard',           module: 'dashboard' },
+  { code: 'dashboard.config',  name: 'Personalizar dashboard',  module: 'dashboard' },
+  // Estrategias de retencion
+  { code: 'retention.read',    name: 'Ver estrategias de retencion',    module: 'retention' },
+  { code: 'retention.manage',  name: 'Gestionar estrategias de retencion', module: 'retention' },
+  // Reportes
+  { code: 'reports.view',      name: 'Ver y exportar reportes', module: 'reports' },
   // Modelo ML
   { code: 'model.view',        name: 'Ver estado del modelo',   module: 'model' },
   { code: 'model.train',       name: 'Entrenar modelo',         module: 'model' },
@@ -51,7 +57,9 @@ const SYSTEM_ROLES = [
     permissions: [
       'employees.read', 'employees.write', 'employees.delete', 'employees.import',
       'predictions.run', 'predictions.batch',
-      'dashboard.view',
+      'dashboard.view', 'dashboard.config',
+      'retention.read', 'retention.manage',
+      'reports.view',
       'model.view', 'model.train',
       'users.read', 'users.write', 'users.toggle',
       'payments.view', 'payments.process',
@@ -63,7 +71,9 @@ const SYSTEM_ROLES = [
     permissions: [
       'employees.read',
       'predictions.run', 'predictions.batch',
-      'dashboard.view',
+      'dashboard.view', 'dashboard.config',
+      'retention.read', 'retention.manage',
+      'reports.view',
       'model.view',
     ],
   },
@@ -73,6 +83,8 @@ const SYSTEM_ROLES = [
     permissions: [
       'employees.read',
       'dashboard.view',
+      'retention.read',
+      'reports.view',
     ],
   },
 ];
