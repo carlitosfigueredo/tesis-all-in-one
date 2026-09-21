@@ -1,8 +1,9 @@
 const { Router } = require('express');
 const { protect } = require('../middlewares/auth.middleware');
 const { requireActiveCompany } = require('../middlewares/companyStatus.middleware');
-const { getModelStatus, trainModel } = require('../services/ml.service');
+const { getModelStatus } = require('../services/ml.service');
 const { retrainGlobalModel } = require('../services/globalTraining.service');
+const { trainCompanyModel } = require('../services/companyTraining.service');
 const { logAction } = require('../services/audit.service');
 const { getIp, getUserAgent } = require('../utils/request.utils');
 
@@ -25,7 +26,8 @@ router.get('/status', async (req, res, next) => {
 
 /**
  * POST /api/model/train
- * Dispara el entrenamiento del modelo y devuelve las metricas completas.
+ * Entrena el modelo con los EMPLEADOS DE LA EMPRESA del usuario y devuelve las
+ * metricas completas. El target es la desercion real historica de esos empleados.
  * Solo disponible para plan CORPORATIVO o SUPER_ADMIN (bajo demanda).
  */
 router.post('/train', async (req, res, next) => {
@@ -41,9 +43,41 @@ router.post('/train', async (req, res, next) => {
       return res.status(403).json({ success: false, message: msg });
     }
 
-    const metrics = await trainModel();
-    res.json({ success: true, data: metrics });
+    const result = await trainCompanyModel(req.user.companyId);
+
+    await logAction({
+      userId:    req.user.id,
+      action:    'COMPANY_MODEL_TRAINED',
+      resource:  'model',
+      ipAddress: getIp(req),
+      userAgent: getUserAgent(req),
+      status:    'SUCCESS',
+      newValue:  {
+        datasetSize: result.datasetSize,
+        positivos:   result.positivos,
+        negativos:   result.negativos,
+        auc_roc:     result.metrics?.auc_roc,
+      },
+    });
+
+    res.json({
+      success: true,
+      message: `Modelo entrenado con ${result.datasetSize} empleados de tu empresa ` +
+               `(${result.positivos} con deserción, ${result.negativos} que permanecen).`,
+      data: result.metrics,
+    });
   } catch (error) {
+    // Datos insuficientes de la empresa → 422 con mensaje claro para el usuario.
+    if (error.statusCode === 422) {
+      return res.status(422).json({ success: false, message: error.message });
+    }
+    // El ML service tambien puede responder 422 (minimo de casos por clase).
+    const mlMatch = /ML service error \((\d{3})\): (.+)/s.exec(error.message || '');
+    if (mlMatch && mlMatch[1] === '422') {
+      let detail = mlMatch[2];
+      try { detail = JSON.parse(detail).detail ?? detail; } catch { /* texto plano */ }
+      return res.status(422).json({ success: false, message: detail });
+    }
     next(error);
   }
 });

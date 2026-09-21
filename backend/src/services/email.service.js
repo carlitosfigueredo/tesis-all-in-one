@@ -168,6 +168,47 @@ const sendAccountCreatedEmail = async ({ to, name, email, tempPassword, role }) 
   });
 };
 
+// Alerta de retención: resumen de empleados en riesgo con estrategias nuevas.
+// empleados = [{ nombre, rol, seniority, nivel, riesgo_pct, estrategiasNuevas }]
+const sendRetentionAlertEmail = async ({ to, name, companyName, empleados = [], totalEnRiesgo = 0 }) => {
+  const retentionUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/retention`;
+  const countConNuevas = empleados.length;
+
+  // Fila HTML por empleado (para el template con tabla).
+  const nivelColor = (n) => (n === 'CRITICO' ? '#b91c1c' : '#ea580c');
+  const rowsHtml = empleados
+    .map((e) => `
+      <tr>
+        <td style="padding:10px 12px;color:#0f172a;font-size:14px;border-bottom:1px solid #f1f5f9;">${e.nombre}</td>
+        <td style="padding:10px 12px;color:#475569;font-size:14px;border-bottom:1px solid #f1f5f9;">${e.rol} · ${e.seniority}</td>
+        <td align="right" style="padding:10px 12px;color:${nivelColor(e.nivel)};font-weight:600;font-size:14px;border-bottom:1px solid #f1f5f9;">${e.riesgo_pct}% (${e.nivel})</td>
+      </tr>`)
+    .join('');
+
+  let html = loadTemplate('retention-alert');
+  if (html) {
+    html = html
+      .replace(/{{name}}/g,           name)
+      .replace(/{{companyName}}/g,    companyName)
+      .replace(/{{countConNuevas}}/g, String(countConNuevas))
+      .replace(/{{totalEnRiesgo}}/g,  String(totalEnRiesgo))
+      .replace(/{{empleadosRows}}/g,  rowsHtml)
+      .replace(/{{retentionUrl}}/g,   retentionUrl)
+      .replace(/{{year}}/g,           new Date().getFullYear());
+  } else {
+    const lista = empleados.map((e) => `- ${e.nombre} (${e.rol}): ${e.riesgo_pct}% ${e.nivel}`).join('\n');
+    html = `<p>Hola, ${name}.</p><p>En ${companyName} hay ${countConNuevas} empleado(s) con nuevas estrategias de retención sugeridas (${totalEnRiesgo} en riesgo alto/crítico).</p><pre>${lista}</pre><p>Revisalas en ${retentionUrl}</p>`;
+  }
+
+  const textoLista = empleados.map((e) => `- ${e.nombre} (${e.rol}): ${e.riesgo_pct}% ${e.nivel}`).join('\n');
+  return sendEmail({
+    to,
+    subject: `⚠ ${countConNuevas} empleado(s) en riesgo — estrategias de retención sugeridas`,
+    html,
+    text: `Hola, ${name}.\n\nEn ${companyName} se detectaron ${countConNuevas} empleado(s) con nuevas estrategias de retención sugeridas (${totalEnRiesgo} en riesgo alto/crítico):\n\n${textoLista}\n\nRevisalas en ${retentionUrl}`,
+  });
+};
+
 module.exports = {
   sendEmail,
   sendPasswordResetEmail,
@@ -175,4 +216,5 @@ module.exports = {
   sendAccountLockedEmail,
   sendWelcomeEmail,
   sendAccountCreatedEmail,
+  sendRetentionAlertEmail,
 };

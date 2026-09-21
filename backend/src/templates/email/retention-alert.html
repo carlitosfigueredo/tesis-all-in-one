@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Empleados en riesgo — Sistema BI</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f1f5f9;font-family:Segoe UI,Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f1f5f9;padding:24px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(15,23,42,0.08);">
+          <tr>
+            <td style="background-color:#b91c1c;padding:28px 32px;">
+              <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:600;">Sistema BI · Alerta de retención</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px;">
+              <h2 style="margin:0 0 16px;color:#0f172a;font-size:22px;">Hola, {{name}}</h2>
+              <p style="margin:0 0 16px;color:#334155;font-size:15px;line-height:1.6;">
+                En <strong>{{companyName}}</strong> se detectaron empleados con riesgo alto o crítico de
+                deserción y se generaron estrategias de retención sugeridas para actuar a tiempo.
+              </p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#fef2f2;border:1px solid #fecaca;border-radius:8px;margin:0 0 24px;">
+                <tr>
+                  <td style="padding:16px 20px;color:#991b1b;font-size:14px;line-height:1.8;">
+                    <strong>{{countConNuevas}}</strong> empleado(s) con nuevas estrategias sugeridas ·
+                    <strong>{{totalEnRiesgo}}</strong> en riesgo alto/crítico en total.
+                  </td>
+                </tr>
+              </table>
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 24px;">
+                <tr style="background-color:#f8fafc;">
+                  <th align="left" style="padding:10px 12px;color:#64748b;font-size:12px;text-transform:uppercase;border-bottom:1px solid #e2e8f0;">Empleado</th>
+                  <th align="left" style="padding:10px 12px;color:#64748b;font-size:12px;text-transform:uppercase;border-bottom:1px solid #e2e8f0;">Rol</th>
+                  <th align="right" style="padding:10px 12px;color:#64748b;font-size:12px;text-transform:uppercase;border-bottom:1px solid #e2e8f0;">Riesgo</th>
+                </tr>
+                {{empleadosRows}}
+              </table>
+
+              <p style="margin:0 0 24px;color:#334155;font-size:15px;line-height:1.6;">
+                Revisá las estrategias sugeridas, asignalas y hacé seguimiento desde el panel de Retención.
+              </p>
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 8px;">
+                <tr>
+                  <td style="border-radius:8px;background-color:#b91c1c;">
+                    <a href="{{retentionUrl}}" style="display:inline-block;padding:14px 32px;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;border-radius:8px;">Ver estrategias de retención</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#f8fafc;padding:20px 32px;border-top:1px solid #e2e8f0;">
+              <p style="margin:0;color:#94a3b8;font-size:12px;text-align:center;">© {{year}} Sistema BI · Este es un correo automático, no respondas a este mensaje.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

@@ -378,7 +378,9 @@ export default function ModelML() {
           <div className="mb-6 flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold text-gray-800">Random Forest — Predicción de Deserción Laboral</h2>
-              <p className="text-sm text-gray-500">Dataset custom: Software PY · 1.000 empleados · 17 variables</p>
+              <p className="text-sm text-gray-500">
+                Entrenado con los empleados de tu empresa · 17 variables
+              </p>
             </div>
             <div className="flex items-center gap-3">
               {status && <StatusBadge ready={status.model_ready} />}
@@ -387,7 +389,7 @@ export default function ModelML() {
                 /* Plan CORPORATIVO o Super Admin: puede entrenar ahora */
                 <button
                   onClick={handleTrain}
-                  disabled={training || !status?.dataset_available}
+                  disabled={training}
                   className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {training ? (
@@ -421,12 +423,13 @@ export default function ModelML() {
             </div>
           </div>
 
-          {/* ── Estado del dataset ── */}
-          {status && !status.dataset_available && (
-            <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              El dataset no esta disponible en el servidor. Coloca el archivo
-              <code className="mx-1 rounded bg-amber-100 px-1">dataset_desercion_software_py.csv</code>
-              en <code className="rounded bg-amber-100 px-1">ml-service/notebooks/data/</code>
+          {/* ── Cómo entrena el modelo ── */}
+          {canTrainNow && (
+            <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+              El modelo se entrena con los empleados de tu empresa. Para aprender necesita
+              historial: empleados marcados con <strong>deserción real</strong> (que se fueron) y
+              empleados que permanecen. Sin suficientes casos de ambos tipos, el entrenamiento
+              te avisará qué falta.
             </div>
           )}
 

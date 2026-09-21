@@ -9,6 +9,7 @@ const { logAction }  = require('../services/audit.service');
 const { getIp, getUserAgent } = require('../utils/request.utils');
 const mlService = require('../services/ml.service');
 const { evaluateRecalcPolicy } = require('../services/recalcPolicy.service');
+const { processCompany } = require('../services/autoRetention.service');
 
 // ─── Constantes de validacion ────────────────────────────────────────────────
 
@@ -625,6 +626,14 @@ const importEmployees = async (req, res, next) => {
       }
     });
 
+    // ── Generación automática de estrategias + alerta por correo ──────────────
+    // Solo si hubo recálculo real (los niveles de riesgo están actualizados).
+    // No bloquea la respuesta al usuario si algo falla.
+    if (policy.canRecalculate && companyId) {
+      processCompany(companyId, { assignedToUserId: req.user.id, notify: true })
+        .catch((e) => console.error('[AutoRetention] Error tras importación:', e.message));
+    }
+
     // ── Manejo de bajas (empleados activos que NO vinieron en el CSV) ──
     let dadosDeBaja = 0;
     let bajasPendientes = [];          // lista para preview (cuando no se aplican todavia)
@@ -793,6 +802,13 @@ const recalculateRisk = async (req, res, next) => {
         where: { id: companyId },
         data: { lastRecalculatedAt: new Date() },
       });
+    }
+
+    // ── Generación automática de estrategias + alerta por correo ──────────────
+    // Con los niveles de riesgo ya actualizados. No bloquea la respuesta.
+    if (companyId) {
+      processCompany(companyId, { assignedToUserId: req.user.id, notify: true })
+        .catch((e) => console.error('[AutoRetention] Error tras recálculo:', e.message));
     }
 
     await logAction({

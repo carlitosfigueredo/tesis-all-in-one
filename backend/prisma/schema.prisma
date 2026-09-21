@@ -33,6 +33,8 @@ model Company {
   subscription Subscription?
   roles        Role[]
   consentRecords ConsentRecord[]
+  retentionStrategies RetentionStrategy[]
+  dashboardConfigs    DashboardConfig[]
 
   @@map("companies")
 }
@@ -61,6 +63,7 @@ model User {
   auditLogs      AuditLog[]
   resetTokens    PasswordResetToken[]
   consentRecords ConsentRecord[]
+  dashboardConfig DashboardConfig?
 
   @@map("users")
 }
@@ -204,9 +207,101 @@ model Employee {
   // ── Historial de riesgo (evolucion en el tiempo) ──────────────────────
   riskSnapshots RiskSnapshot[]
 
+  // ── Estrategias de retencion asignadas a este empleado ────────────────
+  retentionStrategies RetentionStrategy[]
+
   // El codigo de empleado es unico DENTRO de cada empresa (no globalmente).
   @@unique([companyId, codigo_empleado])
   @@map("employees")
+}
+
+// ─────────────────────────────────────────
+// Estrategias de retencion
+// Acciones concretas sugeridas para retener a un empleado en riesgo.
+// Se generan a partir de los FACTORES DE RIESGO reales del empleado
+// (carga horaria, satisfaccion, estancamiento, etc.) y luego RRHH las
+// gestiona: las asigna, marca en curso, completa o descarta, dejando
+// trazabilidad de que se hizo para retener a cada persona.
+// ─────────────────────────────────────────
+model RetentionStrategy {
+  id          String   @id @default(uuid())
+
+  // Factor de riesgo que origino la estrategia (ej: "horas_extra",
+  // "estancamiento_carrera"). "general" cuando es una accion de mantenimiento.
+  factorKey   String
+  // Titulo corto de la accion sugerida.
+  titulo      String
+  // Descripcion / detalle de la accion de retencion.
+  descripcion String
+  // Por que se sugiere (el motivo del factor en lenguaje claro).
+  motivo      String?
+
+  // CRITICA | ALTA | MEDIA | BAJA — para ordenar que atender primero.
+  prioridad   String   @default("MEDIA")
+
+  // SUGERIDA | EN_CURSO | COMPLETADA | DESCARTADA
+  estado      RetentionStatus @default(SUGERIDA)
+
+  // Nivel de riesgo del empleado al momento de generar la estrategia
+  // (foto historica: para saber en que contexto se sugirio).
+  nivelRiesgoAlGenerar String?
+
+  // Notas de seguimiento que agrega RRHH (que se hizo, resultado, etc.).
+  notas       String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  completedAt DateTime?
+
+  // Empleado destinatario de la estrategia.
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  // Tenant (empresa) — para aislar por cliente.
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+
+  // Usuario que gestiona/creo la estrategia (opcional).
+  assignedToUserId String?
+
+  @@index([companyId])
+  @@index([employeeId])
+  @@index([estado])
+  @@map("retention_strategies")
+}
+
+enum RetentionStatus {
+  SUGERIDA
+  EN_CURSO
+  COMPLETADA
+  DESCARTADA
+}
+
+// ─────────────────────────────────────────
+// Configuracion del dashboard (personalizacion)
+// Guarda que widgets muestra cada usuario y en que orden, para que cada
+// persona arme su propio tablero. Un registro por (usuario, empresa).
+// ─────────────────────────────────────────
+model DashboardConfig {
+  id        String   @id @default(uuid())
+
+  // Lista ordenada de widgets visibles. Cada item: { key, visible, orden }.
+  // Se guarda como JSON para poder evolucionar los widgets sin migrar.
+  widgets   Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Dueño de la configuracion.
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Tenant (para aislar y para reportes por empresa).
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+
+  @@index([companyId])
+  @@map("dashboard_configs")
 }
 
 // ─────────────────────────────────────────

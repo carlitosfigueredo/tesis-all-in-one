@@ -2,7 +2,7 @@
 
 ## ¿Qué es?
 
-Sistema de Inteligencia de Negocios (BI) orientado a la **predicción de fuga de talento** y la optimización de estrategias de retención de empleados en el **sector retail de la Zona Metropolitana de Asunción, Paraguay**.
+Sistema de Inteligencia de Negocios (BI) orientado a la **predicción de fuga de talento** y la optimización de estrategias de retención de empleados en **empresas de desarrollo de software de la Zona Metropolitana de Asunción, Paraguay**.
 
 El sistema integra análisis de datos históricos de empleados con un modelo de Machine Learning que calcula la probabilidad de que cada empleado renuncie (denominada `flightRisk`), permitiendo al área de Recursos Humanos anticiparse y tomar acciones de retención.
 
@@ -10,7 +10,7 @@ El sistema integra análisis de datos históricos de empleados con un modelo de 
 
 ## Problema que resuelve
 
-La rotación de personal en el sector retail es uno de los costos operativos más altos y menos controlados. Reemplazar a un empleado puede costar entre 50% y 200% de su salario anual considerando reclutamiento, capacitación y pérdida de productividad.
+La rotación de personal en las empresas de desarrollo de software es uno de los costos operativos más altos y menos controlados. Reemplazar a un empleado puede costar entre 50% y 200% de su salario anual considerando reclutamiento, capacitación y pérdida de productividad.
 
 El sistema responde las preguntas:
 - ¿Qué empleados tienen mayor probabilidad de renunciar en los próximos meses?
