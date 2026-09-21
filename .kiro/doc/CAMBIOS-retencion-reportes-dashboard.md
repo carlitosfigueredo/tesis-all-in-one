@@ -255,3 +255,48 @@ docker exec tesis_backend npx prisma db seed   # registra permisos nuevos y role
 - `frontend/src/pages/EmployeeDetail.jsx` (panel de retención)
 - `frontend/src/pages/ModelML.jsx` (entrenamiento con empleados de la empresa)
 - `ml-service/routers/training.py` (soporte de entrenamiento por dataset enviado)
+
+---
+
+## 5. Generación automática de estrategias + notificación por correo
+
+Agregado posterior a los pilares. Automatiza la generación de estrategias y avisa
+al equipo de RRHH cuando hay empleados en riesgo.
+
+### Comportamiento
+- **Umbral:** solo empleados en riesgo **ALTO** o **CRÍTICO** (activos).
+- **Sin duplicar:** no vuelve a crear estrategias para factores que ya tienen una
+  activa (SUGERIDA / EN_CURSO).
+- **Notificación:** un único correo resumen por empresa (no uno por empleado) a
+  los usuarios con rol **COMPANY_ADMIN**. Solo se envía si hubo estrategias nuevas.
+- **No bloqueante:** si el correo o la generación fallan, se loguea pero no rompe
+  el flujo de importación/recálculo.
+
+### Disparadores
+1. **En cada recálculo de riesgo** (import y recálculo manual), cuando la política
+   del plan permitió recalcular. — `backend/src/controllers/employees.controller.js`
+2. **Job programado semanal** que recorre todas las empresas activas.
+   — `backend/src/jobs/retentionScan.job.js` (intervalo configurable con
+   `RETENTION_SCAN_INTERVAL_MIN`, default 10080 min = 7 días).
+
+### Archivos
+Nuevos:
+- `backend/src/services/autoRetention.service.js` — `processCompany(companyId, opts)`:
+  genera estrategias para los empleados en riesgo y notifica a los admins.
+- `backend/src/jobs/retentionScan.job.js` — scheduler semanal (patrón `setInterval`
+  nativo, idempotente), registrado en `backend/src/index.js`.
+- `backend/src/templates/email/retention-alert.html` — template del correo de alerta.
+
+Modificados:
+- `backend/src/services/email.service.js` — nueva `sendRetentionAlertEmail(...)`.
+- `backend/src/controllers/employees.controller.js` — llama a `processCompany` tras
+  el recálculo en `importEmployees` y `recalculateRisk`.
+- `backend/src/index.js` — arranca el job semanal (`startRetentionScanJob`).
+
+### Verificación
+- `node --check` OK en todos los archivos.
+- Job confirmado en logs: `[RetentionScan] Job iniciado (cada 10080 min)` + pasada
+  inicial sobre 6 empresas sin errores.
+- Prueba forzada (un empleado a CRÍTICO con factores reales): 9 estrategias
+  generadas y correo efectivamente enviado al COMPANY_ADMIN (messageId real vía
+  SMTP/Brevo), `notificado: true`.

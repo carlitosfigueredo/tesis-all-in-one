@@ -3,6 +3,7 @@ require('dotenv').config();
 require('./lib/logger').installConsoleCapture();
 const app = require('./app');
 const { startSubscriptionExpiryJob } = require('./jobs/subscriptionExpiry.job');
+const { startRetentionScanJob } = require('./jobs/retentionScan.job');
 
 const PORT = process.env.PORT || 4000;
 
@@ -13,4 +14,8 @@ app.listen(PORT, () => {
 
   // Scheduler: expira suscripciones vencidas y suspende empresas
   startSubscriptionExpiryJob();
+
+  // Scheduler semanal: genera estrategias de retención para empleados en riesgo
+  // ALTO/CRÍTICO y notifica por correo a los admins de cada empresa.
+  startRetentionScanJob();
 });
