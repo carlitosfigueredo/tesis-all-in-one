@@ -97,9 +97,9 @@ Clientes pioneros: software factories medianas con una rotación de personal vis
 
 Suscripción mensual por planes (modelo SaaS), en guaraníes (valores tomados del archivo de datos iniciales del sistema):
 
-- Plan Estándar — Gs. 999.000 por mes. Hasta 100 colaboradores, predicción mensual y panel básico.
-- Plan Profesional — Gs. 1.390.000 por mes. Hasta 500 colaboradores, predicción semanal y panel avanzado.
-- Plan Corporativo — Gs. 2.590.000 por mes. Hasta 1.500 colaboradores, predicción bajo demanda y panel personalizado.
+- Plan Estándar — Gs. 449.000 por mes. Hasta 100 colaboradores, predicción mensual y panel básico.
+- Plan Profesional — Gs. 899.000 por mes. Hasta 500 colaboradores, predicción semanal y panel avanzado.
+- Plan Corporativo — Gs. 1.790.000 por mes. Hasta 1.500 colaboradores, predicción bajo demanda y panel personalizado.
 
 El cobro de las suscripciones se realiza mediante dos pasarelas de pago integradas y activas: PayPal y AdamsPay.
 
