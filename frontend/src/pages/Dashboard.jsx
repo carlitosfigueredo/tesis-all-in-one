@@ -12,12 +12,14 @@ import { useExchangeRate } from '../hooks/useExchangeRate';
 
 const RISK_COLORS = ['#22c55e', '#f59e0b', '#ef4444'];
 
-const formatIncome = (usdValue, inGs, usdToGs) => {
+// El valor base viene del backend EN GUARANIES. Si se pide en USD, se convierte
+// dividiendo por el tipo de cambio (Gs por USD).
+const formatIncome = (gsValue, inGs, usdToGs) => {
   if (inGs) {
-    const gs = Math.round(usdValue * usdToGs);
-    return `Gs. ${gs.toLocaleString('es-PY')}`;
+    return `Gs. ${Math.round(gsValue).toLocaleString('es-PY')}`;
   }
-  return `$${usdValue.toLocaleString('en-US')}`;
+  const usd = usdToGs ? gsValue / usdToGs : gsValue;
+  return `$${usd.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
 };
 
 const KpiCard = ({ label, value, sub, color = 'blue', onClick }) => {
@@ -49,7 +51,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { user, hasPermission } = useAuth();
   const [stats, setStats]       = useState(null);
-  const [currency, setCurrency] = useState('USD');
+  const [currency, setCurrency] = useState('GS'); // los datos están en guaraníes
   const [trend, setTrend]       = useState([]);
   const [trendHasData, setTrendHasData] = useState(false);
   const [topRisk, setTopRisk]   = useState([]);
