@@ -1,11 +1,11 @@
 import os
 import joblib
 import pandas as pd
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 from schemas import EmployeeFeatures, PredictionResult
-from model.dummy_model import predict_desercion_dummy
 from routers.training import (
-    FEATURES_NUMERICAS, FEATURES_CATEGORICAS, MODEL_PATH, ENCODERS_PATH
+    FEATURES_NUMERICAS, FEATURES_CATEGORICAS, model_path, encoders_path
 )
 
 router = APIRouter(tags=["Prediccion"])
@@ -55,18 +55,37 @@ def _get_recomendacion(nivel: str) -> str:
     return recomendaciones.get(nivel, "")
 
 
-def _load_model():
-    """Carga el modelo entrenado si existe."""
-    if os.path.exists(MODEL_PATH):
-        return joblib.load(MODEL_PATH)
-    return None
+# ─── Caché de modelo y encoders ───────────────────────────────────────────────
+# Cargar el .pkl del disco es caro. Antes se hacía en CADA predicción, lo que
+# volvía lentísima la importación masiva (2 loads de disco por empleado).
+# Ahora se cachea en memoria y solo se recarga si el archivo cambió (mtime),
+# de modo que un reentrenamiento se toma automáticamente sin reiniciar el servicio.
+
+# Caché POR PATH (cada empresa tiene su propio modelo/encoders).
+_artifact_cache = {}  # path -> {"mtime", "obj"}
 
 
-def _load_encoders():
-    """Carga los LabelEncoders guardados durante el entrenamiento."""
-    if os.path.exists(ENCODERS_PATH):
-        return joblib.load(ENCODERS_PATH)
-    return None
+def _load_cached(path: str):
+    """Carga un artefacto joblib con caché invalidada por mtime del archivo."""
+    if not os.path.exists(path):
+        _artifact_cache.pop(path, None)
+        return None
+    mtime = os.path.getmtime(path)
+    entry = _artifact_cache.get(path)
+    if entry is None or entry["mtime"] != mtime:
+        entry = {"mtime": mtime, "obj": joblib.load(path)}
+        _artifact_cache[path] = entry
+    return entry["obj"]
+
+
+def _load_model(company_id: str):
+    """Carga el modelo entrenado de una empresa (cacheado)."""
+    return _load_cached(model_path(company_id))
+
+
+def _load_encoders(company_id: str):
+    """Carga los LabelEncoders de una empresa (cacheado)."""
+    return _load_cached(encoders_path(company_id))
 
 
 def _prepare_features(employee: EmployeeFeatures) -> tuple[pd.DataFrame, list[str]]:
@@ -123,38 +142,29 @@ def _encode_categoricas(df: pd.DataFrame, encoders: dict) -> pd.DataFrame:
 
 
 @router.post("/predict", response_model=PredictionResult)
-def predict(employee: EmployeeFeatures):
+def predict(employee: EmployeeFeatures, company_id: str):
     """
-    Predice la probabilidad de desercion de un empleado.
+    Predice la probabilidad de desercion de un empleado usando el modelo
+    PROPIO de la empresa. Si la empresa aún no entrenó su modelo, devuelve 409
+    (no se usa el modelo de otra empresa ni un heurístico global).
+    """
+    model = _load_model(company_id)
+    encoders = _load_encoders(company_id)
 
-    - Si el modelo entrenado existe, lo usa con las features codificadas.
-    - Si no, usa el modelo heuristico base para desarrollo.
-    - Variables opcionales no proporcionadas se rellenan con valores neutros (3)
-      y se reportan en 'variables_faltantes'.
-    """
-    model = _load_model()
-    encoders = _load_encoders()
+    if model is None or encoders is None:
+        raise HTTPException(
+            status_code=409,
+            detail="La empresa no tiene un modelo entrenado. Entrená el modelo antes de predecir.",
+        )
 
     df_features, variables_faltantes = _prepare_features(employee)
+    df_encoded = _encode_categoricas(df_features, encoders)
+    proba_row = model.predict_proba(df_encoded)[0]
+    riesgo = float(proba_row[1])
+    confianza = float(max(proba_row))
 
-    if model is not None and encoders is not None:
-        # ── Modelo real entrenado ──────────────────────────────────────────
-        df_encoded = _encode_categoricas(df_features, encoders)
-        proba = model.predict_proba(df_encoded)[0][1]
-        riesgo = float(proba)
-        confianza = float(max(model.predict_proba(df_encoded)[0]))
-        es_modelo_base = False
-        version = "2.0.0-desercion-py"
-    else:
-        # ── Modelo heuristico base ────────────────────────────────────────
-        riesgo, confianza = predict_desercion_dummy(df_features.iloc[0].to_dict())
-        es_modelo_base = True
-        version = "0.2.0-heuristico"
-
-    # Penalizar confianza si faltan variables
     if variables_faltantes:
-        penalizacion = len(variables_faltantes) * 0.05
-        confianza = max(0.3, confianza - penalizacion)
+        confianza = max(0.3, confianza - len(variables_faltantes) * 0.05)
 
     nivel = _get_nivel_riesgo(riesgo)
 
@@ -162,14 +172,66 @@ def predict(employee: EmployeeFeatures):
         riesgo_desercion=round(riesgo, 4),
         nivel_riesgo=nivel,
         confianza=round(confianza, 4),
-        version_modelo=version,
-        es_modelo_base=es_modelo_base,
+        version_modelo="2.0.0-desercion-py",
+        es_modelo_base=False,
         variables_faltantes=variables_faltantes,
         recomendacion=_get_recomendacion(nivel),
     )
 
 
+class BatchPredictRequest(BaseModel):
+    company_id: str
+    employees: list[EmployeeFeatures]
+
+
 @router.post("/predict/batch", response_model=list[PredictionResult])
-def predict_batch(employees: list[EmployeeFeatures]):
-    """Predice el riesgo de desercion para una lista de empleados."""
-    return [predict(emp) for emp in employees]
+def predict_batch(payload: BatchPredictRequest):
+    """
+    Predice el riesgo para una lista de empleados usando el modelo PROPIO de la
+    empresa, de forma VECTORIZADA (un solo predict_proba sobre un DataFrame de N
+    filas). Si la empresa no tiene modelo entrenado, devuelve 409.
+    """
+    employees = payload.employees
+    if not employees:
+        return []
+
+    model = _load_model(payload.company_id)
+    encoders = _load_encoders(payload.company_id)
+    if model is None or encoders is None:
+        raise HTTPException(
+            status_code=409,
+            detail="La empresa no tiene un modelo entrenado. Entrená el modelo antes de predecir.",
+        )
+
+    # Preparar todas las filas: un DataFrame de N filas + faltantes por empleado.
+    frames = []
+    faltantes_por_emp = []
+    for emp in employees:
+        df_emp, faltantes = _prepare_features(emp)
+        frames.append(df_emp)
+        faltantes_por_emp.append(faltantes)
+
+    df_all = pd.concat(frames, ignore_index=True)
+    df_encoded = _encode_categoricas(df_all, encoders)
+    proba_matrix = model.predict_proba(df_encoded)   # una sola llamada, N filas
+    riesgos = proba_matrix[:, 1]
+    confianzas = proba_matrix.max(axis=1)
+
+    resultados = []
+    for i in range(len(employees)):
+        riesgo = float(riesgos[i])
+        confianza = float(confianzas[i])
+        faltantes = faltantes_por_emp[i]
+        if faltantes:
+            confianza = max(0.3, confianza - len(faltantes) * 0.05)
+        nivel = _get_nivel_riesgo(riesgo)
+        resultados.append(PredictionResult(
+            riesgo_desercion=round(riesgo, 4),
+            nivel_riesgo=nivel,
+            confianza=round(confianza, 4),
+            version_modelo="2.0.0-desercion-py",
+            es_modelo_base=False,
+            variables_faltantes=faltantes,
+            recomendacion=_get_recomendacion(nivel),
+        ))
+    return resultados

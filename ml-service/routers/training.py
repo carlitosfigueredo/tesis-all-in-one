@@ -4,7 +4,7 @@ import joblib
 import pandas as pd
 import numpy as np
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.ensemble import RandomForestClassifier
@@ -16,8 +16,38 @@ from sklearn.metrics import (
 router = APIRouter(tags=["Entrenamiento"])
 
 DATASET_PATH = "notebooks/data/dataset_desercion_software_py.csv"
-MODEL_PATH   = "model/model.pkl"
-ENCODERS_PATH = "model/encoders.pkl"
+
+# ─── Modelo POR EMPRESA ───────────────────────────────────────────────────────
+# Cada empresa (tenant) entrena y usa su PROPIO modelo. Los artefactos se guardan
+# en model/company_<companyId>/. Así una empresa nueva NO ve el modelo de otra:
+# si no entrenó, simplemente no tiene modelo (status = sin entrenar).
+import os as _os
+import json as _json
+
+MODELS_DIR = "model/companies"
+
+
+def _safe_company_id(company_id: str) -> str:
+    """Sanitiza el companyId para usarlo como nombre de carpeta."""
+    if not company_id:
+        return "_default"
+    return "".join(c for c in str(company_id) if c.isalnum() or c in ("-", "_"))
+
+
+def _company_dir(company_id: str) -> str:
+    return _os.path.join(MODELS_DIR, _safe_company_id(company_id))
+
+
+def model_path(company_id: str) -> str:
+    return _os.path.join(_company_dir(company_id), "model.pkl")
+
+
+def encoders_path(company_id: str) -> str:
+    return _os.path.join(_company_dir(company_id), "encoders.pkl")
+
+
+def metrics_path(company_id: str) -> str:
+    return _os.path.join(_company_dir(company_id), "metrics.json")
 
 # ─── Definicion de features ──────────────────────────────────────────────────
 # Todas las columnas que usa el modelo (sin el target)
@@ -109,6 +139,10 @@ class ConfusionMatrixResult(BaseModel):
 
 
 class TrainingMetrics(BaseModel):
+    # Los campos model_* chocan con el namespace protegido de Pydantic v2;
+    # lo desactivamos porque aca "model" se refiere al modelo de ML.
+    model_config = ConfigDict(protected_namespaces=())
+
     accuracy: float
     auc_roc: float
     auc_roc_cv_mean: float
@@ -128,16 +162,15 @@ class TrainingMetrics(BaseModel):
 
 
 class ModelStatus(BaseModel):
+    # Ver nota en TrainingMetrics: desactivamos el namespace protegido "model_".
+    model_config = ConfigDict(protected_namespaces=())
+
     model_ready: bool
     model_version: Optional[str]
     dataset_available: bool
     dataset_records: Optional[int]
     model_size_kb: Optional[float]
     last_metrics: Optional[TrainingMetrics]
-
-
-# ─── Estado en memoria ───────────────────────────────────────────────────────
-_last_metrics: Optional[TrainingMetrics] = None
 
 
 # ─── Funciones auxiliares ────────────────────────────────────────────────────
@@ -164,28 +197,36 @@ def _preprocess_dataset(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
 
 # ─── Endpoints ───────────────────────────────────────────────────────────────
 
-@router.get("/model/status", response_model=ModelStatus)
-def model_status():
-    """Devuelve el estado actual del modelo y si el dataset esta disponible."""
-    model_ready = os.path.exists(MODEL_PATH)
-    dataset_ok  = os.path.exists(DATASET_PATH)
-    size_kb     = os.path.getsize(MODEL_PATH) / 1024 if model_ready else None
+def _load_metrics(company_id: str) -> Optional[TrainingMetrics]:
+    """Lee las métricas persistidas del modelo de una empresa (si existe)."""
+    mp = metrics_path(company_id)
+    if not _os.path.exists(mp):
+        return None
+    try:
+        with open(mp, "r", encoding="utf-8") as f:
+            return TrainingMetrics(**_json.load(f))
+    except Exception:
+        return None
 
-    dataset_records = None
-    if dataset_ok:
-        try:
-            df = pd.read_csv(DATASET_PATH)
-            dataset_records = len(df)
-        except Exception:
-            pass
+
+@router.get("/model/status", response_model=ModelStatus)
+def model_status(company_id: str):
+    """
+    Estado del modelo DE UNA EMPRESA. Si la empresa no entrenó su propio modelo,
+    devuelve model_ready=False y sin métricas (no muestra el de otra empresa).
+    """
+    mp = model_path(company_id)
+    model_ready = _os.path.exists(mp)
+    size_kb = _os.path.getsize(mp) / 1024 if model_ready else None
+    metrics = _load_metrics(company_id) if model_ready else None
 
     return ModelStatus(
         model_ready=model_ready,
         model_version="2.0.0-desercion-py" if model_ready else None,
-        dataset_available=dataset_ok,
-        dataset_records=dataset_records,
+        dataset_available=model_ready,   # "dataset propio" = tiene modelo entrenado
+        dataset_records=(metrics.training_samples + metrics.test_samples) if metrics else None,
         model_size_kb=round(size_kb, 1) if size_kb else None,
-        last_metrics=_last_metrics,
+        last_metrics=metrics,
     )
 
 
@@ -194,17 +235,13 @@ def model_status():
 MIN_DESERCION_CASES = 15
 
 
-def _train_from_dataframe(df: pd.DataFrame) -> TrainingMetrics:
+def _train_from_dataframe(df: pd.DataFrame, company_id: str) -> TrainingMetrics:
     """
     Núcleo de entrenamiento reutilizable. Recibe un DataFrame ya con las columnas
-    FEATURES + TARGET ('desercion' con 'Si'/'No'), lo preprocesa, entrena el
-    Random Forest, evalúa, guarda modelo+encoders y devuelve las métricas.
-
-    Lo usan tanto el entrenamiento por archivo (/train) como el acumulativo
-    por HTTP (/train/dataset).
+    FEATURES + TARGET ('desercion' con 'Si'/'No') y el companyId, lo preprocesa,
+    entrena el Random Forest, evalúa, guarda modelo+encoders+metrics EN LA CARPETA
+    DE LA EMPRESA y devuelve las métricas.
     """
-    global _last_metrics
-
     # Validar que existan las columnas necesarias
     faltantes = [c for c in (FEATURES + [TARGET]) if c not in df.columns]
     if faltantes:
@@ -260,11 +297,13 @@ def _train_from_dataframe(df: pd.DataFrame) -> TrainingMetrics:
 
     elapsed = round(time.time() - start_time, 2)
 
-    # Guardar modelo y encoders
-    os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
-    joblib.dump(model, MODEL_PATH)
-    joblib.dump(encoders, ENCODERS_PATH)
-    size_kb = os.path.getsize(MODEL_PATH) / 1024
+    # Guardar modelo y encoders EN LA CARPETA DE LA EMPRESA
+    mp = model_path(company_id)
+    ep = encoders_path(company_id)
+    _os.makedirs(_os.path.dirname(mp), exist_ok=True)
+    joblib.dump(model, mp)
+    joblib.dump(encoders, ep)
+    size_kb = _os.path.getsize(mp) / 1024
 
     # Feature importances
     all_features = FEATURES_NUMERICAS + FEATURES_CATEGORICAS
@@ -309,24 +348,14 @@ def _train_from_dataframe(df: pd.DataFrame) -> TrainingMetrics:
         model_version="2.0.0-desercion-py",
     )
 
-    _last_metrics = metrics
+    # Persistir métricas junto al modelo de la empresa (no en memoria global).
+    try:
+        with open(metrics_path(company_id), "w", encoding="utf-8") as f:
+            _json.dump(metrics.model_dump(), f)
+    except Exception:
+        pass
+
     return metrics
-
-
-@router.post("/train", response_model=TrainingMetrics)
-def train_model():
-    """
-    Entrena el modelo Random Forest con el dataset de desercion en disco
-    (notebooks/data/). Se mantiene por compatibilidad y para bootstrap inicial.
-    """
-    if not os.path.exists(DATASET_PATH):
-        raise HTTPException(
-            status_code=404,
-            detail=f"Dataset no encontrado en {DATASET_PATH}. "
-                   "Coloca el archivo dataset_desercion_software_py.csv en notebooks/data/"
-        )
-    df = pd.read_csv(DATASET_PATH)
-    return _train_from_dataframe(df)
 
 
 # ─── Entrenamiento acumulativo por HTTP ──────────────────────────────────────
@@ -354,20 +383,21 @@ class TrainingRow(BaseModel):
 
 
 class TrainDatasetRequest(BaseModel):
+    company_id: str
     rows: list[TrainingRow]
 
 
 @router.post("/train/dataset", response_model=TrainingMetrics)
 def train_from_dataset(payload: TrainDatasetRequest):
     """
-    Entrena el modelo global con un dataset enviado por HTTP (aprendizaje
-    acumulativo). El backend arma estas filas juntando los empleados con
-    deserción real conocida de TODAS las empresas (anonimizados).
-
-    Requiere un mínimo de casos de cada clase (ver MIN_DESERCION_CASES).
+    Entrena el modelo DE UNA EMPRESA con los empleados que envía el backend
+    (las 17 features + 'desercion' real). Guarda el modelo en la carpeta de esa
+    empresa. Requiere un mínimo de casos de cada clase (ver MIN_DESERCION_CASES).
     """
+    if not payload.company_id:
+        raise HTTPException(status_code=422, detail="Falta company_id")
     if not payload.rows:
         raise HTTPException(status_code=422, detail="No se recibieron filas de entrenamiento")
 
     df = pd.DataFrame([r.model_dump() for r in payload.rows])
-    return _train_from_dataframe(df)
+    return _train_from_dataframe(df, payload.company_id)
