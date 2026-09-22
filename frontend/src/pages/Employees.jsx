@@ -198,6 +198,11 @@ const ImportModal = ({ onClose, onImported, onVerEmpleados }) => {
       const { data } = await api.post('/employees/import', {
         rows: parsed.rows,
         deactivateAbsent,
+      }, {
+        // La importación predice el riesgo de cada empleado con el ML y genera
+        // estrategias: con muchos registros puede tardar más que el timeout
+        // global (30s). Le damos hasta 5 minutos a esta operación.
+        timeout: 5 * 60 * 1000,
       });
       const payload = data.data ?? data;
       setResults({
@@ -270,7 +275,6 @@ const ImportModal = ({ onClose, onImported, onVerEmpleados }) => {
               creados={results?.creados}
               actualizados={results?.actualizados}
               dadosDeBaja={results?.dadosDeBaja}
-              recalculo={results?.recalculo}
               onClose={onClose}
               onVerEmpleados={onVerEmpleados}
             />
@@ -495,6 +499,8 @@ export default function Employees() {
   const [loading, setLoading]     = useState(true);
   const [currency, setCurrency]   = useState('USD'); // 'USD' | 'GS'
   const [showImport, setShowImport] = useState(false);
+  const [predicting, setPredicting] = useState(false);
+  const [predictMsg, setPredictMsg] = useState(null); // { type: 'ok'|'error'|'warn', text }
 
   const initialRiskLevel = new URLSearchParams(location.search).get('risk_level') ?? '';
 
@@ -534,6 +540,33 @@ export default function Employees() {
     setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
 
   const setPage = (p) => setFilters((prev) => ({ ...prev, page: p }));
+
+  // ── Predecir riesgo (paso aparte de la importación) ──
+  // Llama a /employees/recalculate, que usa el modelo entrenado de la empresa.
+  const handlePredecir = async () => {
+    setPredicting(true);
+    setPredictMsg(null);
+    try {
+      const { data } = await api.post('/employees/recalculate', {}, { timeout: 5 * 60 * 1000 });
+      setPredictMsg({ type: 'ok', text: data.message ?? 'Predicción completada.' });
+      fetchEmployees(filters); // refrescar la lista con el riesgo nuevo
+    } catch (e) {
+      const status = e.response?.status;
+      const code = e.response?.data?.code;
+      if (status === 409 || code === 'MODEL_NOT_TRAINED') {
+        setPredictMsg({
+          type: 'warn',
+          text: 'Tu empresa todavía no tiene un modelo entrenado. Entrená el modelo en "Modelo ML" antes de predecir.',
+        });
+      } else if (status === 429) {
+        setPredictMsg({ type: 'warn', text: e.response?.data?.message ?? 'Todavía no podés recalcular según tu plan.' });
+      } else {
+        setPredictMsg({ type: 'error', text: e.response?.data?.message ?? 'No se pudo completar la predicción.' });
+      }
+    } finally {
+      setPredicting(false);
+    }
+  };
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -616,9 +649,42 @@ export default function Employees() {
                 Importar CSV
               </button>
 
+              {/* Botón predecir */}
+              <button
+                onClick={handlePredecir}
+                disabled={predicting || meta.total === 0}
+                title={meta.total === 0 ? 'Primero importá empleados' : 'Calcular el riesgo con el modelo de tu empresa'}
+                className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-medium text-white hover:bg-indigo-700 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {predicting ? (
+                  <>
+                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    Prediciendo...
+                  </>
+                ) : (
+                  <>
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Predecir
+                  </>
+                )}
+              </button>
+
               <span className="text-sm text-gray-400 dark:text-gray-500">{meta.total} empleados</span>
             </div>
           </div>
+
+          {/* Mensaje de resultado de la predicción */}
+          {predictMsg && (
+            <div className={`mb-4 rounded-lg px-4 py-3 text-sm ${
+              predictMsg.type === 'ok' ? 'border border-green-200 bg-green-50 text-green-700'
+              : predictMsg.type === 'warn' ? 'border border-amber-200 bg-amber-50 text-amber-700'
+              : 'border border-red-200 bg-red-50 text-red-700'
+            }`}>
+              {predictMsg.text}
+            </div>
+          )}
 
 
           {/* ── Tabla ── */}
@@ -632,6 +698,7 @@ export default function Employees() {
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50 dark:bg-gray-700/50 text-xs uppercase text-gray-500 dark:text-gray-400">
                     <tr>
+                      <th className="px-4 py-3 text-left">#</th>
                       <th className="px-4 py-3 text-left">Empleado</th>
                       <th className="px-4 py-3 text-left">Rol</th>
                       <th className="px-4 py-3 text-left">Seniority</th>
@@ -652,12 +719,15 @@ export default function Employees() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                    {employees.map((emp) => (
+                    {employees.map((emp, idx) => (
                       <tr
                         key={emp.id}
                         onClick={() => navigate(`/employees/${emp.id}`)}
                         className="cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-700/50 transition-colors"
                       >
+                        <td className="px-4 py-3 text-gray-400 dark:text-gray-500 tabular-nums">
+                          {(meta.page - 1) * filters.page_size + idx + 1}
+                        </td>
                         <td className="px-4 py-3">
                           <div className="font-medium text-gray-900 dark:text-gray-100">
                             {emp.nombre} {emp.apellido}

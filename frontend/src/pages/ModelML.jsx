@@ -41,9 +41,9 @@ const StatusBadge = ({ ready }) =>
       Modelo entrenado
     </span>
   ) : (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
-      <span className="h-2 w-2 rounded-full bg-amber-500" />
-      Modelo dummy (sin entrenar)
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">
+      <span className="h-2 w-2 rounded-full bg-gray-400" />
+      Sin entrenar
     </span>
   );
 
@@ -153,7 +153,7 @@ const TRAINING_FEATURES = [
   },
   {
     feature: 'capacitacion_ultimo_anio',
-    label: 'Capacitación (último anio)',
+    label: 'Capacitación (último año)',
     type: 'Binaria',
     scale: 'Si / No',
     source: 'Datos RRHH',
@@ -227,7 +227,7 @@ const TRAINING_FEATURES = [
     feature: 'edad',
     label: 'Edad',
     type: 'Numerica',
-    scale: '20 — 55 anios',
+    scale: '20 — 55 años',
     source: 'Datos RRHH',
     tier: 'baja',
     description: 'Edad del empleado. Empleados más jóvenes tienen mayor movilidad.',
@@ -379,7 +379,9 @@ export default function ModelML() {
             <div>
               <h2 className="text-lg font-semibold text-gray-800">Random Forest — Predicción de Deserción Laboral</h2>
               <p className="text-sm text-gray-500">
-                Entrenado con los empleados de tu empresa · 17 variables
+                {status?.model_ready
+                  ? 'Modelo entrenado con los empleados de tu empresa · 17 variables'
+                  : 'Tu empresa todavía no tiene un modelo entrenado · 17 variables'}
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -557,19 +559,15 @@ export default function ModelML() {
             </>
           )}
 
-          {/* Estado inicial sin métricas */}
-          {!metrics && !loading && status?.model_ready === false && (
+          {/* Estado inicial sin métricas: empresa sin modelo entrenado */}
+          {!metrics && !loading && !status?.model_ready && (
             <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-white py-20 text-center">
               <p className="text-4xl">🤖</p>
-              <p className="mt-3 text-base font-semibold text-gray-700">El modelo aun no fue entrenado</p>
-              <p className="mt-1 text-sm text-gray-400">
-                Hace click en "Entrenar modelo" para iniciar el proceso con el dataset de deserción
+              <p className="mt-3 text-base font-semibold text-gray-700">Tu empresa todavía no tiene un modelo entrenado</p>
+              <p className="mt-1 text-sm text-gray-400 max-w-md">
+                El modelo se entrena con los empleados de tu empresa. Importá tus empleados (con su
+                historial de deserción real) y luego entrená el modelo para poder predecir el riesgo.
               </p>
-              {status?.dataset_records && (
-                <p className="mt-2 text-xs text-gray-400">
-                  Dataset disponible: {status.dataset_records} registros
-                </p>
-              )}
             </div>
           )}
 
