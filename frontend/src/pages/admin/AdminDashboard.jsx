@@ -75,7 +75,7 @@ export default function AdminDashboard() {
                   <KpiCard label="Empresas totales"  value={stats?.totalCompanies ?? 0}  color="blue"   />
                   <KpiCard label="Empresas activas"  value={stats?.activeCompanies ?? 0} sub={`${stats?.totalCompanies - stats?.activeCompanies} inactivas`} color="green" />
                   <KpiCard label="Empleados en sistema" value={stats?.totalEmployees ?? 0} color="purple" />
-                  <KpiCard label="Plan Empresarial"  value={stats?.byPlan?.EMPRESARIAL ?? 0} sub="clientes premium" color="gray" />
+                  <KpiCard label="Plan Corporativo"  value={stats?.byPlan?.CORPORATIVO ?? 0} sub="clientes premium" color="gray" />
                 </div>
               </section>
 
@@ -85,7 +85,7 @@ export default function AdminDashboard() {
                   Distribución por plan
                 </h2>
                 <div className="grid grid-cols-3 gap-4">
-                  {['BASICO', 'PROFESIONAL', 'EMPRESARIAL'].map((plan) => (
+                  {['BASICO', 'PROFESIONAL', 'CORPORATIVO'].map((plan) => (
                     <div key={plan} className="rounded-xl bg-white border border-gray-100 p-5 shadow-sm text-center">
                       <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold mb-3 ${PLAN_COLORS[plan]}`}>
                         {plan}
