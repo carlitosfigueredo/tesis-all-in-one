@@ -179,7 +179,7 @@ export default function EmployeeDetail() {
                       </div>
                     </div>
                     <div className="mt-4 flex flex-wrap gap-2 text-xs">
-                      <span className="rounded-full bg-gray-100 px-2 py-1 text-gray-600">{emp.edad} anios</span>
+                      <span className="rounded-full bg-gray-100 px-2 py-1 text-gray-600">{emp.edad} años</span>
                       <span className="rounded-full bg-gray-100 px-2 py-1 text-gray-600">{emp.nivel_formacion}</span>
                       <span className="rounded-full bg-gray-100 px-2 py-1 text-gray-600">{emp.tipo_contrato}</span>
                       {emp.desercion_real && (
@@ -254,12 +254,12 @@ export default function EmployeeDetail() {
                   <div className="rounded-xl bg-white dark:bg-gray-800 p-5 shadow-sm transition-colors">
                     <p className="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-200">Datos Laborales</p>
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                      <Field label="Edad" value={`${emp.edad} anios`} />
+                      <Field label="Edad" value={`${emp.edad} años`} />
                       <Field label="Salario Mensual" value={`Gs. ${emp.salario_mensual?.toLocaleString('es-PY')}`} />
                       <Field label="Antigüedad" value={`${emp.antiguedad_meses} meses`} />
                       <Field label="Horas extra/mes" value={`${emp.cantidad_horas_extra_mes}h`} highlight={emp.cantidad_horas_extra_mes > 15} />
                       <Field label="Empresas anteriores" value={emp.cantidad_empresas_anteriores} highlight={emp.cantidad_empresas_anteriores >= 4} />
-                      <Field label="Evaluacion desempeno" value={`${emp.evaluacion_desempeno}/5`} />
+                      <Field label="Evaluación desempeño" value={`${emp.evaluacion_desempeno}/5`} />
                       <Field label="Capacitación" value={emp.capacitacion_ultimo_anio ? 'Si' : 'No'} highlight={!emp.capacitacion_ultimo_anio} />
                       <Field label="Modalidad" value={emp.modalidad_trabajo} />
                       <Field label="Tipo contrato" value={emp.tipo_contrato} highlight={emp.tipo_contrato === 'Eventual'} />

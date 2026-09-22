@@ -66,7 +66,7 @@ const FIELD_EXPLANATIONS = [
     campos: [
       { nombre: 'Rol', descripcion: 'Rol principal del empleado: Frontend, Backend, Fullstack, Mobile, DevOps, QA, Data' },
       { nombre: 'Seniority', descripcion: 'Nivel de experiencia: Trainee, Junior, Semi-Senior, Senior, Lead' },
-      { nombre: 'Edad', descripcion: 'Edad del empleado en anios' },
+      { nombre: 'Edad', descripcion: 'Edad del empleado en años' },
       { nombre: 'Modalidad', descripcion: 'Modalidad de trabajo: Presencial, Hibrido, Remoto' },
       { nombre: 'Contrato', descripcion: 'Tipo de contrato: Indefinido, Plazo fijo, Eventual' },
       { nombre: 'Antigüedad', descripcion: 'Meses que lleva en la empresa' },
