@@ -103,22 +103,57 @@ const processCompany = async (companyId, opts = {}) => {
 
   if (enRiesgo.length === 0) return resultado;
 
-  // Empleados que efectivamente recibieron estrategias nuevas (para el correo).
+  // ── En LOTES (no query por empleado) ──────────────────────────────────────
+  // 1. Traer TODAS las estrategias activas de esos empleados en un solo query.
+  const empIds = enRiesgo.map((e) => e.id);
+  const activas = await prisma.retentionStrategy.findMany({
+    where: { employeeId: { in: empIds }, estado: { in: ['SUGERIDA', 'EN_CURSO'] } },
+    select: { employeeId: true, factorKey: true },
+  });
+  // Mapa: employeeId -> Set de factores ya activos.
+  const activasPorEmp = new Map();
+  for (const a of activas) {
+    if (!activasPorEmp.has(a.employeeId)) activasPorEmp.set(a.employeeId, new Set());
+    activasPorEmp.get(a.employeeId).add(a.factorKey);
+  }
+
+  // 2. Generar en memoria todas las estrategias nuevas (sin duplicar) + resumen.
   const conNuevas = [];
+  const nuevasData = [];
   for (const emp of enRiesgo) {
-    const creadas = await generarParaEmpleado(prisma, emp, assignedToUserId);
-    if (creadas > 0) {
-      resultado.estrategiasCreadas += creadas;
-      resultado.empleadosConNuevas += 1;
-      conNuevas.push({
-        nombre: `${emp.nombre} ${emp.apellido}`,
-        rol: emp.rol_tecnologico,
-        seniority: emp.seniority,
-        nivel: emp.nivel_riesgo,
-        riesgo_pct: Math.round((emp.riesgo_desercion ?? 0) * 100),
-        estrategiasNuevas: creadas,
+    const yaActivos = activasPorEmp.get(emp.id) ?? new Set();
+    const sugeridas = generarEstrategias(emp).filter((s) => !yaActivos.has(s.factorKey));
+    if (sugeridas.length === 0) continue;
+
+    for (const s of sugeridas) {
+      nuevasData.push({
+        factorKey: s.factorKey,
+        titulo: s.titulo,
+        descripcion: s.descripcion,
+        motivo: s.motivo,
+        prioridad: s.prioridad,
+        estado: 'SUGERIDA',
+        nivelRiesgoAlGenerar: emp.nivel_riesgo,
+        employeeId: emp.id,
+        companyId: emp.companyId,
+        assignedToUserId,
       });
     }
+    resultado.estrategiasCreadas += sugeridas.length;
+    resultado.empleadosConNuevas += 1;
+    conNuevas.push({
+      nombre: `${emp.nombre} ${emp.apellido}`,
+      rol: emp.rol_tecnologico,
+      seniority: emp.seniority,
+      nivel: emp.nivel_riesgo,
+      riesgo_pct: Math.round((emp.riesgo_desercion ?? 0) * 100),
+      estrategiasNuevas: sugeridas.length,
+    });
+  }
+
+  // 3. Un solo createMany con todas las estrategias nuevas.
+  if (nuevasData.length > 0) {
+    await prisma.retentionStrategy.createMany({ data: nuevasData });
   }
 
   // Notificar solo si hubo estrategias nuevas (evita correos vacíos).

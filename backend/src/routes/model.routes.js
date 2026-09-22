@@ -17,10 +17,16 @@ router.use(protect, requireActiveCompany);
  */
 router.get('/status', async (req, res, next) => {
   try {
-    const status = await getModelStatus();
+    const companyId = req.user.companyId;
+    if (!companyId) {
+      // SUPER_ADMIN u otros sin empresa: no hay modelo por empresa que mostrar.
+      return res.json({ success: true, data: { model_ready: false, last_metrics: null } });
+    }
+    const status = await getModelStatus(companyId);
     res.json({ success: true, data: status });
   } catch (error) {
-    next(error);
+    // Si el ML service falla, devolver estado "sin modelo" en vez de romper la página.
+    res.json({ success: true, data: { model_ready: false, last_metrics: null } });
   }
 });
 

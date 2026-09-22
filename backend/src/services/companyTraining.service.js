@@ -93,7 +93,7 @@ const trainCompanyModel = async (companyId) => {
     throw err;
   }
 
-  const metrics = await mlService.trainDataset(rows);
+  const metrics = await mlService.trainDataset(companyId, rows);
 
   return {
     metrics,
