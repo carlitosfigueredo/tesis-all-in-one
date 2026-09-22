@@ -143,7 +143,7 @@ async function main() {
     {
       id: 'ESTANDAR',
       name: 'Plan Estandar',
-      priceGs: 999000,
+      priceGs: 449000,
       highlight: false,
       employeeLimit: 100,
       predictionFrequency: 'Mensual',
@@ -160,7 +160,7 @@ async function main() {
     {
       id: 'PROFESIONAL',
       name: 'Plan Profesional',
-      priceGs: 1390000,
+      priceGs: 899000,
       highlight: true,
       employeeLimit: 500,
       predictionFrequency: 'Semanal',
@@ -178,7 +178,7 @@ async function main() {
     {
       id: 'CORPORATIVO',
       name: 'Plan Corporativo',
-      priceGs: 2590000,
+      priceGs: 1790000,
       highlight: false,
       employeeLimit: 1500,
       predictionFrequency: 'Bajo demanda',

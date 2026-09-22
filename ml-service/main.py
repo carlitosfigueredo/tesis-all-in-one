@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import predict, training, employees
-import os
+from routers import predict, training
 
 app = FastAPI(
     title="ML Service - Predicción de Fuga de Talento",
@@ -18,13 +17,8 @@ app.add_middleware(
 
 app.include_router(predict.router, prefix="/api")
 app.include_router(training.router, prefix="/api")
-app.include_router(employees.router, prefix="/api")
 
 
 @app.get("/")
 def health():
-    return {
-        "status": "ok",
-        "service": "ml-service",
-        "model_ready": os.path.exists("model/model.pkl"),
-    }
+    return {"status": "ok", "service": "ml-service"}

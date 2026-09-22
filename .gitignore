@@ -41,7 +41,11 @@ prisma/migrations/dev.db
 # ml-service/notebooks/data/*.csv
 # ml-service/notebooks/data/*.zip
 
-# Modelo entrenado (se genera con el notebook)
+# Modelos entrenados (se generan al entrenar; uno por empresa)
 ml-service/model/model.pkl
 ml-service/model/encoders.pkl
+ml-service/model/companies/
 ml-service/venv/
+
+# CSVs de prueba de importacion (datos sinteticos, no van al repo)
+empleados_prueba_*.csv

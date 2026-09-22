@@ -38,6 +38,20 @@ const getCompanyFilter = (user) => {
 };
 
 /**
+ * Predice el riesgo de un empleado de forma TOLERANTE: usa el modelo de la
+ * empresa si existe; si aún no entrenó su modelo (409) o el ML no responde,
+ * devuelve riesgo pendiente (0/BAJO) sin romper el alta/edición.
+ */
+const predecirTolerante = async (companyId, emp) => {
+  if (!companyId) return { riesgo_desercion: 0, nivel_riesgo: 'BAJO' };
+  try {
+    return await mlService.calcularRiesgoEmpleado(companyId, emp);
+  } catch {
+    return { riesgo_desercion: 0, nivel_riesgo: 'BAJO' };
+  }
+};
+
+/**
  * Parsea y valida una fila de datos de empleado.
  * Retorna { data, errors } donde data es el objeto listo para Prisma.
  */
@@ -328,8 +342,8 @@ const createEmployee = async (req, res, next) => {
       ? (req.body.companyId || null)
       : req.user.companyId;
 
-    // Calcular prediccion ML
-    const prediction = await mlService.calcularRiesgoEmpleado({ ...data });
+    // Predicción tolerante: si la empresa no entrenó su modelo, queda pendiente.
+    const prediction = await predecirTolerante(companyId, { ...data });
 
     const employee = await prisma.employee.create({
       data: {
@@ -411,8 +425,8 @@ const updateEmployee = async (req, res, next) => {
       data: updateData,
     });
 
-    // Recalcular prediccion con los datos actualizados
-    const prediction = await mlService.calcularRiesgoEmpleado(updated);
+    // Recalcular predicción con los datos actualizados (tolerante si no hay modelo).
+    const prediction = await predecirTolerante(req.user.companyId, updated);
     const final = await prisma.employee.update({
       where: { id: updated.id },
       data: {
@@ -531,31 +545,6 @@ const importEmployees = async (req, res, next) => {
       });
     }
 
-    // ── Política de recálculo según el plan ───────────────────────────────────
-    // Los datos SIEMPRE se importan y se acumula historial. Pero el RIESGO solo se
-    // recalcula con la frecuencia del plan (Estándar mensual / Profesional semanal /
-    // Corporativo bajo demanda). Si no toca recalcular, se importan los datos pero
-    // se conserva el riesgo previo del empleado (los nuevos quedan "pendientes").
-    const isSuperAdmin = req.user.roleNames?.includes('SUPER_ADMIN');
-    const company = companyId
-      ? await prisma.company.findUnique({
-          where: { id: companyId },
-          select: { plan: true, lastRecalculatedAt: true },
-        })
-      : null;
-
-    const policy = evaluateRecalcPolicy({
-      plan: company?.plan ?? 'BASICO',
-      lastRecalculatedAt: company?.lastRecalculatedAt ?? null,
-      isSuperAdmin,
-    });
-
-    // Solo llamamos al modelo ML si la ventana del plan lo permite.
-    let predictions = null;
-    if (policy.canRecalculate) {
-      predictions = await mlService.calcularRiesgoBatch(validRows);
-    }
-
     const codigosDelCsv = validRows.map((r) => r.codigo_empleado);
 
     // Opciones de baja (llegan del frontend):
@@ -564,75 +553,62 @@ const importEmployees = async (req, res, next) => {
     const deactivateAbsent   = req.body.deactivateAbsent === true;
     const confirmDeactivation = req.body.confirmDeactivation === true;
 
-    // ── Upsert por (companyId, codigo_empleado) + snapshots ──
-    // El upsert de datos SIEMPRE se aplica. El riesgo solo se actualiza (y se crea
-    // snapshot) si la política del plan permitió recalcular en esta importación.
+    // ── La importación SOLO carga datos ───────────────────────────────────────
+    // NO predice riesgo. La predicción es un paso aparte ("Predecir") que usa el
+    // modelo entrenado de la empresa. Los empleados nuevos quedan pendientes
+    // (riesgo 0/BAJO por default); los existentes conservan su riesgo previo.
     let creados = 0;
     let actualizados = 0;
-    const savedEmployees = [];
+    let savedEmployees = [];
 
-    await prisma.$transaction(async (tx) => {
-      for (let i = 0; i < validRows.length; i++) {
-        const { codigo_empleado, ...rest } = validRows[i];
-        const pred = predictions ? predictions[i] : null;
-
-        const existing = await tx.employee.findFirst({
-          where: { companyId, codigo_empleado },
-          select: { id: true },
-        });
-
-        // Campos de riesgo a escribir:
-        //  - si recalculamos → usamos la predicción nueva
-        //  - si NO recalculamos → conservamos el riesgo previo (empleado existente)
-        //    o dejamos el default (0/BAJO) para uno nuevo, que quedará "pendiente".
-        const riskData = pred
-          ? { riesgo_desercion: pred.riesgo_desercion, nivel_riesgo: pred.nivel_riesgo }
-          : {};
-
-        let saved;
-        if (existing) {
-          saved = await tx.employee.update({
-            where: { id: existing.id },
-            data: { ...rest, codigo_empleado, status: 'ACTIVE', ...riskData },
-          });
-          actualizados += 1;
-        } else {
-          saved = await tx.employee.create({
-            data: { ...rest, codigo_empleado, companyId, status: 'ACTIVE', ...riskData },
-          });
-          creados += 1;
-        }
-
-        // Snapshot solo cuando hubo recálculo real (evita puntos falsos en el historial).
-        if (pred) {
-          await tx.riskSnapshot.create({
-            data: {
-              employeeId: saved.id,
-              riesgo_desercion: saved.riesgo_desercion,
-              nivel_riesgo: saved.nivel_riesgo,
-            },
-          });
-        }
-
-        savedEmployees.push(saved);
-      }
-
-      // Si recalculamos, registrar el momento para respetar la ventana del plan.
-      if (policy.canRecalculate && companyId) {
-        await tx.company.update({
-          where: { id: companyId },
-          data: { lastRecalculatedAt: new Date() },
-        });
-      }
+    // 1. ¿Cuáles ya existen? Un solo query con todos los códigos.
+    const existentes = await prisma.employee.findMany({
+      where: { companyId, codigo_empleado: { in: codigosDelCsv } },
+      select: { id: true, codigo_empleado: true },
     });
+    const idPorCodigo = new Map(existentes.map((e) => [e.codigo_empleado, e.id]));
 
-    // ── Generación automática de estrategias + alerta por correo ──────────────
-    // Solo si hubo recálculo real (los niveles de riesgo están actualizados).
-    // No bloquea la respuesta al usuario si algo falla.
-    if (policy.canRecalculate && companyId) {
-      processCompany(companyId, { assignedToUserId: req.user.id, notify: true })
-        .catch((e) => console.error('[AutoRetention] Error tras importación:', e.message));
+    // 2. Separar nuevos vs a actualizar (sin tocar campos de riesgo).
+    const nuevos = [];
+    const aActualizar = [];
+    for (let i = 0; i < validRows.length; i++) {
+      const { companyId: _c, ...rest } = validRows[i];
+      if (idPorCodigo.has(rest.codigo_empleado)) {
+        aActualizar.push({ id: idPorCodigo.get(rest.codigo_empleado), rest });
+      } else {
+        nuevos.push({ ...rest, companyId, status: 'ACTIVE' });
+      }
     }
+    creados = nuevos.length;
+    actualizados = aActualizar.length;
+
+    // 3. Crear nuevos en un solo createMany.
+    if (nuevos.length > 0) {
+      await prisma.employee.createMany({ data: nuevos });
+    }
+
+    // 4. Actualizar existentes en paralelo, por lotes acotados. NO se toca el
+    //    riesgo previo (solo los datos de RRHH/encuesta).
+    const CHUNK = 50;
+    for (let i = 0; i < aActualizar.length; i += CHUNK) {
+      const lote = aActualizar.slice(i, i + CHUNK);
+      await Promise.all(lote.map((u) =>
+        prisma.employee.update({
+          where: { id: u.id },
+          data: { ...u.rest, status: 'ACTIVE' },
+        })
+      ));
+    }
+
+    // 5. Releer los empleados afectados (para summary) en un solo query.
+    savedEmployees = await prisma.employee.findMany({
+      where: { companyId, codigo_empleado: { in: codigosDelCsv } },
+      select: {
+        id: true, codigo_empleado: true, nombre: true, apellido: true,
+        rol_tecnologico: true, seniority: true,
+        riesgo_desercion: true, nivel_riesgo: true,
+      },
+    });
 
     // ── Manejo de bajas (empleados activos que NO vinieron en el CSV) ──
     let dadosDeBaja = 0;
@@ -703,7 +679,7 @@ const importEmployees = async (req, res, next) => {
 
     res.status(201).json({
       success: true,
-      message: `Importación completada: ${resumenTexto}.`,
+      message: `Importación completada: ${resumenTexto}. Ahora podés predecir el riesgo.`,
       data: {
         creados,
         actualizados,
@@ -714,14 +690,8 @@ const importEmployees = async (req, res, next) => {
         needsConfirmation,
         bajasPendientes,
         umbralPorcentaje: Math.round(BULK_DEACTIVATION_THRESHOLD * 100),
-        // Estado del recálculo según el plan (para que el frontend lo explique).
-        recalculo: {
-          aplicado: policy.canRecalculate,
-          frecuencia: policy.frecuencia,
-          proximaFecha: policy.nextAvailableAt,
-          diasParaProxima: policy.daysUntilNext,
-          motivo: policy.reason,
-        },
+        // La predicción es un paso aparte: hay que apretar "Predecir".
+        prediccionPendiente: true,
       },
     });
   } catch (error) {
@@ -770,31 +740,54 @@ const recalculateRisk = async (req, res, next) => {
     const employees = await prisma.employee.findMany({ where: companyFilter });
 
     if (employees.length === 0) {
-      return res.json({ success: true, message: 'No hay empleados para recalcular', data: { updated: 0 } });
+      return res.json({ success: true, message: 'No hay empleados para predecir', data: { updated: 0 } });
     }
 
-    // Predecir en batch
-    const predictions = await mlService.calcularRiesgoBatch(employees);
-
-    // Actualizar cada empleado con su nueva prediccion + snapshot al historial
-    let updated = 0;
-    for (let i = 0; i < employees.length; i++) {
-      const emp = await prisma.employee.update({
-        where: { id: employees[i].id },
-        data: {
-          riesgo_desercion: predictions[i].riesgo_desercion,
-          nivel_riesgo: predictions[i].nivel_riesgo,
-        },
-      });
-      await prisma.riskSnapshot.create({
-        data: {
-          employeeId: emp.id,
-          riesgo_desercion: emp.riesgo_desercion,
-          nivel_riesgo: emp.nivel_riesgo,
-        },
-      });
-      updated++;
+    // El modelo es POR EMPRESA. Sin companyId no hay modelo propio que usar.
+    if (!companyId) {
+      return res.status(400).json({ success: false, message: 'No se pudo determinar la empresa.' });
     }
+
+    // ── Predecir en batch con el modelo de la empresa ─────────────────────────
+    // Si la empresa aún no entrenó su modelo, el ML service responde 409:
+    // lo traducimos a un mensaje claro (hay que entrenar primero).
+    let predictions;
+    try {
+      predictions = await mlService.calcularRiesgoBatch(companyId, employees);
+    } catch (err) {
+      if (err.statusCode === 409) {
+        return res.status(409).json({
+          success: false,
+          code: 'MODEL_NOT_TRAINED',
+          message: 'Tu empresa todavía no tiene un modelo entrenado. Entrená el modelo antes de predecir.',
+        });
+      }
+      throw err;
+    }
+
+    // ── Persistencia en LOTES ─────────────────────────────────────────────────
+    // Updates en paralelo por lotes + snapshots en un solo createMany.
+    const CHUNK = 50;
+    for (let i = 0; i < employees.length; i += CHUNK) {
+      const lote = employees.slice(i, i + CHUNK);
+      await Promise.all(lote.map((emp, j) =>
+        prisma.employee.update({
+          where: { id: emp.id },
+          data: {
+            riesgo_desercion: predictions[i + j].riesgo_desercion,
+            nivel_riesgo: predictions[i + j].nivel_riesgo,
+          },
+        })
+      ));
+    }
+    await prisma.riskSnapshot.createMany({
+      data: employees.map((emp, i) => ({
+        employeeId: emp.id,
+        riesgo_desercion: predictions[i].riesgo_desercion,
+        nivel_riesgo: predictions[i].nivel_riesgo,
+      })),
+    });
+    const updated = employees.length;
 
     // Registrar el momento del recálculo para respetar la ventana del plan.
     if (companyId) {
@@ -824,7 +817,7 @@ const recalculateRisk = async (req, res, next) => {
 
     res.json({
       success: true,
-      message: `Predicciones recalculadas para ${updated} empleado(s)`,
+      message: `Predicción completada para ${updated} empleado(s)`,
       data: { updated },
     });
   } catch (error) {

@@ -58,7 +58,7 @@ export default function TermsAndConditions() {
           <p>
             El sistema fue desarrollado como trabajo de tesis académica en la República del Paraguay
             y se ofrece bajo los planes de acceso descritos en la página principal:
-            <strong> Básico</strong>, <strong>Profesional</strong> y <strong>Empresarial</strong>.
+            <strong> Estándar</strong>, <strong>Profesional</strong> y <strong>Corporativo</strong>.
           </p>
         </Section>
 
@@ -112,7 +112,7 @@ export default function TermsAndConditions() {
 
         <Section title="6. Planes y facturación">
           <p>
-            Todos los planes <strong>Básico</strong>, <strong>Profesional</strong> y <strong>Empresarial</strong> son de pago y se
+            Todos los planes <strong>Estándar</strong>, <strong>Profesional</strong> y <strong>Corporativo</strong> son de pago y se
             facturan mensualmente según el precio vigente al momento de la contratación.
           </p>
           <p>
@@ -129,7 +129,7 @@ export default function TermsAndConditions() {
             mantenimiento programado, fuerza mayor o causas ajenas al control de los responsables.
           </p>
           <p>
-            El plan Empresarial incluye un acuerdo de nivel de servicio (SLA) del 99,9 % según
+            El plan Corporativo incluye un acuerdo de nivel de servicio (SLA) del 99,9 % según
             las condiciones específicas pactadas.
           </p>
         </Section>

@@ -37,7 +37,7 @@ const CSV_FIELDS = [
     campo: 'edad',
     tipo: 'Número',
     obligatorio: true,
-    descripcion: 'Edad del empleado en anios',
+    descripcion: 'Edad del empleado en años',
     valores: '18 a 65',
     ejemplo: '28',
     fuente: 'rrhh',
