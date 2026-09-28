@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
+import { useTheme } from '../context/ThemeContext';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -73,9 +74,9 @@ const PlanCard = ({ plan, dark }) => (
   </article>
 );
 
-const ThemeToggle = ({ dark, setDark }) => (
+const ThemeToggle = ({ dark, onToggle }) => (
   <button
-    onClick={() => setDark(!dark)}
+    onClick={onToggle}
     className={`rounded-lg p-2 transition-colors ${dark ? 'bg-gray-700 text-yellow-400 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
     aria-label={dark ? 'Modo claro' : 'Modo oscuro'}
   >
@@ -97,14 +98,10 @@ export default function Landing() {
   const [plans, setPlans]         = useState([]);
   const [loading, setLoading]     = useState(true);
   const [plansError, setPlansError] = useState(false);
-  const [dark, setDark]           = useState(false);
 
-  useEffect(() => {
-    // Detectar preferencia del sistema
-    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      setDark(true);
-    }
-  }, []);
+  // Usamos el tema global (ThemeContext) para que la preferencia se persista
+  // en localStorage y quede sincronizada con el resto de la aplicacion.
+  const { isDark: dark, toggleTheme } = useTheme();
 
   useEffect(() => {
     // Los planes (precios, limites, features) son la fuente de verdad de la BD.
@@ -144,7 +141,7 @@ export default function Landing() {
             <Link to="/terms" className={`transition-colors ${dark ? 'hover:text-white' : 'hover:text-primary-600'}`}>Legal</Link>
           </nav>
           <div className="flex items-center gap-3">
-            <ThemeToggle dark={dark} setDark={setDark} />
+            <ThemeToggle dark={dark} onToggle={toggleTheme} />
             <Link to="/login" className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${dark ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}>
               Iniciar sesión
             </Link>
