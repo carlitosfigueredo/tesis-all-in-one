@@ -1,0 +1,171 @@
+name: Pruebas y evidencia (RF/RNF)
+
+# Ejecuta las pruebas funcionales y no funcionales contra el sistema real
+# (backend Node/Express + servicio ML FastAPI + PostgreSQL) levantado en el
+# runner, y publica:
+#   - un resumen PASS/FAIL en la pagina del run (Job Summary)
+#   - los archivos de evidencia como artifact descargable
+#
+# Se puede disparar a mano (workflow_dispatch) o en push/PR a main.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+      - 'ml-service/**'
+      - 'docs/evidencias-pruebas/scripts/**'
+      - '.github/workflows/pruebas-evidencia.yml'
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  evidencia:
+    runs-on: ubuntu-latest
+
+    # PostgreSQL como servicio del job. La BD es efimera (se destruye al terminar
+    # el job); su usuario/clave los tomamos de Secrets con fallback a valores de CI.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ${{ secrets.CI_PG_USER || 'ci_user' }}
+          POSTGRES_PASSWORD: ${{ secrets.CI_PG_PASSWORD || 'ci_pass_ephemeral' }}
+          POSTGRES_DB: ${{ secrets.CI_PG_DB || 'tesis_bi_db' }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # ── Infra de la BD efimera del runner ────────────────────────────────
+      PGHOST: localhost
+      PGPORT: '5432'
+      PGUSER: ${{ secrets.CI_PG_USER || 'ci_user' }}
+      PGPASSWORD: ${{ secrets.CI_PG_PASSWORD || 'ci_pass_ephemeral' }}
+      PGDATABASE: ${{ secrets.CI_PG_DB || 'tesis_bi_db' }}
+      DATABASE_URL: postgresql://${{ secrets.CI_PG_USER || 'ci_user' }}:${{ secrets.CI_PG_PASSWORD || 'ci_pass_ephemeral' }}@localhost:5432/${{ secrets.CI_PG_DB || 'tesis_bi_db' }}
+      # ── Secretos de la app (definir en Settings > Secrets > Actions) ──────
+      JWT_SECRET: ${{ secrets.CI_JWT_SECRET }}
+      ML_SERVICE_URL: http://localhost:8000
+      # Sin RECAPTCHA_SECRET_KEY -> el middleware hace pass-through (modo dev),
+      # lo que permite automatizar logins. El rate limiting queda ACTIVO
+      # (no seteamos DISABLE_RATE_LIMIT) para poder evidenciar RNF-020.
+      NODE_ENV: development
+      PORT: '4000'
+      BACKEND_URL: http://localhost:4000
+      ML_URL: http://localhost:8000
+      # ── Credenciales de las cuentas demo (seed) ──────────────────────────
+      SEED_SUPERADMIN_EMAIL: ${{ secrets.SEED_SUPERADMIN_EMAIL }}
+      SEED_SUPERADMIN_PASSWORD: ${{ secrets.SEED_SUPERADMIN_PASSWORD }}
+      SEED_COMPANY_PASSWORD: ${{ secrets.SEED_COMPANY_PASSWORD }}
+      SEED_ADMIN_EMAIL: ${{ secrets.SEED_ADMIN_EMAIL || 'admin@empresa.com' }}
+      SEED_ANALYST_EMAIL: ${{ secrets.SEED_ANALYST_EMAIL || 'analista@empresa.com' }}
+      SEED_VIEWER_EMAIL: ${{ secrets.SEED_VIEWER_EMAIL || 'viewer@empresa.com' }}
+      TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verificar que los Secrets requeridos estan definidos
+        run: |
+          missing=0
+          for v in CI_JWT_SECRET SEED_SUPERADMIN_EMAIL SEED_SUPERADMIN_PASSWORD SEED_COMPANY_PASSWORD TEST_USER_PASSWORD; do
+            if [ -z "${!v}" ]; then echo "::error::Falta el secret $v"; missing=1; fi
+          done
+          [ $missing -eq 0 ] || (echo "Define los Secrets en Settings > Secrets and variables > Actions"; exit 1)
+        env:
+          CI_JWT_SECRET: ${{ secrets.CI_JWT_SECRET }}
+          SEED_SUPERADMIN_EMAIL: ${{ secrets.SEED_SUPERADMIN_EMAIL }}
+          SEED_SUPERADMIN_PASSWORD: ${{ secrets.SEED_SUPERADMIN_PASSWORD }}
+          SEED_COMPANY_PASSWORD: ${{ secrets.SEED_COMPANY_PASSWORD }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+
+      - name: Instalar cliente de PostgreSQL (psql)
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # ── Servicio ML ──────────────────────────────────────────────────────
+      - name: Instalar dependencias del ML service
+        working-directory: ml-service
+        run: pip install -r requirements.txt
+
+      - name: Arrancar ML service (background)
+        working-directory: ml-service
+        run: |
+          nohup uvicorn main:app --host 0.0.0.0 --port 8000 > "$GITHUB_WORKSPACE/ml.log" 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/docs > /dev/null; then echo "ML arriba"; break; fi
+            sleep 1
+          done
+          curl -sf http://localhost:8000/docs > /dev/null || (echo "ML no arranco"; cat "$GITHUB_WORKSPACE/ml.log"; exit 1)
+
+      # ── Backend ──────────────────────────────────────────────────────────
+      - name: Instalar dependencias del backend
+        working-directory: backend
+        run: npm install
+
+      - name: Prisma generate + migrate + seed
+        working-directory: backend
+        run: |
+          npx prisma generate
+          npx prisma migrate deploy
+          node prisma/seed.js
+
+      - name: Arrancar backend (background)
+        working-directory: backend
+        run: |
+          nohup npm start > "$GITHUB_WORKSPACE/backend.log" 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:4000/api/health > /dev/null; then echo "backend arriba"; break; fi
+            sleep 1
+          done
+          curl -sf http://localhost:4000/api/health > /dev/null || (echo "backend no arranco"; cat "$GITHUB_WORKSPACE/backend.log"; exit 1)
+
+      # ── Entrenar el modelo de la empresa demo (para predict/estado) ──────
+      - name: Entrenar modelo ML de la empresa demo
+        run: python3 docs/evidencias-pruebas/scripts/train_demo.py
+
+      # ── Ejecutar pruebas y generar evidencia ─────────────────────────────
+      - name: Ejecutar pruebas RF/RNF y generar evidencia
+        id: pruebas
+        env:
+          OUTDIR: ${{ github.workspace }}/evidencia-out
+        run: python3 docs/evidencias-pruebas/scripts/ci_evidencia.py
+
+      # ── Publicar evidencia como artifact (siempre, aunque falle) ─────────
+      - name: Subir artifact de evidencia
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencia-pruebas
+          path: |
+            evidencia-out/evidencia.html
+            evidencia-out/EVIDENCIA.txt
+            evidencia-out/RESUMEN.md
+            evidencia-out/resultados.json
+          if-no-files-found: warn
+
+      - name: Subir logs de servicios (si algo falla)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-servicios
+          path: |
+            backend.log
+            ml.log
+          if-no-files-found: ignore

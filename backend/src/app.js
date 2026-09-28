@@ -9,12 +9,20 @@ const logger = require('./lib/logger');
 
 const app = express();
 
+// Confia en el primer proxy (nginx/docker) para que req.ip refleje la IP real
+// del cliente (X-Forwarded-For). Necesario para que el rate limiting por IP
+// no agrupe a todos los usuarios bajo la IP del proxy.
+app.set('trust proxy', 1);
+
 // ─────────────────────────────────────────
 // Middlewares globales
 // ─────────────────────────────────────────
 
-// Seguridad HTTP headers
-app.use(helmet());
+// Seguridad HTTP headers.
+// HSTS explicito: fuerza HTTPS en el navegador por 1 anio (RNF de cifrado en transito).
+app.use(helmet({
+  hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
+}));
 
 // CORS: permite peticiones desde el frontend
 app.use(

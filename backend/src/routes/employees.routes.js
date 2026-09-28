@@ -2,7 +2,7 @@ const { Router } = require('express');
 const {
   getAllEmployees, getEmployeeById, getEmployeeHistory, getEmployeesStats,
   createEmployee, updateEmployee, deleteEmployee, importEmployees,
-  recalculateRisk, deactivateAbsentEmployees,
+  recalculateRisk, deactivateAbsentEmployees, exportEmployeesCsv,
 } = require('../controllers/employees.controller');
 const { protect } = require('../middlewares/auth.middleware');
 const { requireActiveCompany } = require('../middlewares/companyStatus.middleware');
@@ -24,6 +24,10 @@ router.post('/recalculate', requirePermission('predictions.run'), recalculateRis
 
 // POST /api/employees/deactivate-absent — aplica bajas confirmadas (2do paso del flujo)
 router.post('/deactivate-absent', requirePermission('employees.import'), deactivateAbsentEmployees);
+
+// GET /api/employees/export/csv — exporta empleados filtrados a CSV
+// (debe declararse antes de /:id para no ser capturada como un id)
+router.get('/export/csv', requirePermission('employees.read'), exportEmployeesCsv);
 
 // GET /api/employees
 router.get('/', requirePermission('employees.read'), getAllEmployees);
