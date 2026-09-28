@@ -437,6 +437,13 @@ export default function Register() {
             Iniciá sesión
           </Link>
         </div>
+
+        {/* Volver a landing */}
+        <div className="mt-8 text-center">
+          <Link to="/" className="text-xs text-gray-400 hover:text-gray-500 transition-colors">
+            ← Volver al inicio
+          </Link>
+        </div>
       </div>
     </div>
   );
