@@ -11,14 +11,14 @@ name: Pruebas y evidencia (RF/RNF)
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [ master ]
     paths:
       - 'backend/**'
       - 'ml-service/**'
       - 'docs/evidencias-pruebas/scripts/**'
       - '.github/workflows/pruebas-evidencia.yml'
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
 
 jobs:
   evidencia:
