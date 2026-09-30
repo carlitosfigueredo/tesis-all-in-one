@@ -2,6 +2,7 @@ const { Router } = require('express');
 const { login, me, forgotPassword, resetPassword, changePassword, forceChangePassword, register } = require('../controllers/auth.controller');
 const { protect, requirePortal }  = require('../middlewares/auth.middleware');
 const { verifyRecaptcha }         = require('../middlewares/recaptcha.middleware');
+const { authLimiter }             = require('../middlewares/rateLimit.middleware');
 const { validate, forgotPasswordSchema,
         resetPasswordSchema, loginSchema,
         registerSchema }          = require('../schemas/auth.schema');
@@ -19,17 +20,17 @@ router.get('/password-policy', async (_req, res, next) => {
   }
 });
 
-// POST /api/auth/login
-router.post('/login', verifyRecaptcha, validate(loginSchema), login);
+// POST /api/auth/login — rate limit (5/15min) antes del captcha para frenar fuerza bruta
+router.post('/login', authLimiter, verifyRecaptcha, validate(loginSchema), login);
 
 // POST /api/auth/register — registro publico de empresa
-router.post('/register', verifyRecaptcha, validate(registerSchema), register);
+router.post('/register', authLimiter, verifyRecaptcha, validate(registerSchema), register);
 
 // GET  /api/auth/me
 router.get('/me', protect, requirePortal('company'), me);
 
 // POST /api/auth/forgot-password
-router.post('/forgot-password', verifyRecaptcha, validate(forgotPasswordSchema), forgotPassword);
+router.post('/forgot-password', authLimiter, verifyRecaptcha, validate(forgotPasswordSchema), forgotPassword);
 
 // POST /api/auth/reset-password
 router.post('/reset-password', validate(resetPasswordSchema), resetPassword);

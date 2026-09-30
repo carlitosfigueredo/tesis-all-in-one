@@ -205,14 +205,19 @@ async function main() {
   console.log(`  ✓ ${planes.length} planes creados`);
 
   // ─── Super Admin ────────────────────────────────────────────────────────────
-  const superAdminPassword = await bcrypt.hash('Admin2025!', 12);
+  // Credenciales tomadas de variables de entorno (o .env). Definir en local o
+  // via GitHub Secrets en CI. Se usan defaults solo para arranque de desarrollo.
+  const SUPERADMIN_EMAIL = process.env.SEED_SUPERADMIN_EMAIL || 'superadmin@sistemabi.local';
+  const SUPERADMIN_NAME  = process.env.SEED_SUPERADMIN_NAME  || 'Super Admin';
+  const SUPERADMIN_PW    = process.env.SEED_SUPERADMIN_PASSWORD || 'ChangeMe2025!';
+  const superAdminPassword = await bcrypt.hash(SUPERADMIN_PW, 12);
 
   const superAdmin = await prisma.user.upsert({
-    where: { email: 'carlosalberto.figueredoquevedo@gmail.com' },
+    where: { email: SUPERADMIN_EMAIL },
     update: {},
     create: {
-      name: 'Carlos Figueredo',
-      email: 'carlosalberto.figueredoquevedo@gmail.com',
+      name: SUPERADMIN_NAME,
+      email: SUPERADMIN_EMAIL,
       password: superAdminPassword,
       companyId: null,
     },
@@ -244,12 +249,14 @@ async function main() {
   console.log(`  ✓ Empresa demo creada (${demoCompany.id})`);
 
   // ─── Usuarios de la empresa demo ───────────────────────────────────────────
-  const userPassword = await bcrypt.hash('Demo2025!', 12);
+  // Password unico para las 3 cuentas demo, tomado de env (o .env).
+  const DEMO_PW = process.env.SEED_COMPANY_PASSWORD || 'ChangeMe2025!';
+  const userPassword = await bcrypt.hash(DEMO_PW, 12);
 
   const demoUsers = [
-    { name: 'Ana Garcia',   email: 'admin@empresa.com',    roleName: 'COMPANY_ADMIN' },
-    { name: 'Carlos Lopez', email: 'analista@empresa.com', roleName: 'ANALYST' },
-    { name: 'Maria Torres', email: 'viewer@empresa.com',   roleName: 'VIEWER' },
+    { name: 'Ana Garcia',   email: process.env.SEED_ADMIN_EMAIL   || 'admin@empresa.com',    roleName: 'COMPANY_ADMIN' },
+    { name: 'Carlos Lopez', email: process.env.SEED_ANALYST_EMAIL || 'analista@empresa.com', roleName: 'ANALYST' },
+    { name: 'Maria Torres', email: process.env.SEED_VIEWER_EMAIL  || 'viewer@empresa.com',   roleName: 'VIEWER' },
   ];
 
   for (const u of demoUsers) {
@@ -377,11 +384,12 @@ async function main() {
     });
   }
   console.log(`  ✓ ${systemConfigs.length} configuraciones del sistema inicializadas`);
-  console.log('\n── Credenciales de acceso ──');
-  console.log('Super Admin:   carlosalberto.figueredoquevedo@gmail.com / Admin2025!');
-  console.log('Admin Empresa: admin@empresa.com / Demo2025!');
-  console.log('Analista:      analista@empresa.com / Demo2025!');
-  console.log('Viewer:        viewer@empresa.com / Demo2025!');
+  console.log('\n── Cuentas creadas (contraseñas definidas por variables de entorno) ──');
+  console.log(`Super Admin:   ${SUPERADMIN_EMAIL}`);
+  console.log(`Admin Empresa: ${process.env.SEED_ADMIN_EMAIL   || 'admin@empresa.com'}`);
+  console.log(`Analista:      ${process.env.SEED_ANALYST_EMAIL || 'analista@empresa.com'}`);
+  console.log(`Viewer:        ${process.env.SEED_VIEWER_EMAIL  || 'viewer@empresa.com'}`);
+  console.log('Contraseñas: ver SEED_SUPERADMIN_PASSWORD / SEED_COMPANY_PASSWORD en tu entorno.');
 }
 
 main()

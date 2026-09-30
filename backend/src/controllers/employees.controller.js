@@ -10,6 +10,7 @@ const { getIp, getUserAgent } = require('../utils/request.utils');
 const mlService = require('../services/ml.service');
 const { evaluateRecalcPolicy } = require('../services/recalcPolicy.service');
 const { processCompany } = require('../services/autoRetention.service');
+const { checkEmployeeLimit } = require('../services/planLimit.service');
 
 // ─── Constantes de validacion ────────────────────────────────────────────────
 
@@ -342,6 +343,21 @@ const createEmployee = async (req, res, next) => {
       ? (req.body.companyId || null)
       : req.user.companyId;
 
+    // Limite de empleados segun el plan de la empresa (no aplica a SUPER_ADMIN
+    // operando sin empresa).
+    if (companyId) {
+      const cupo = await checkEmployeeLimit(companyId, 1);
+      if (!cupo.allowed) {
+        return res.status(403).json({
+          success: false,
+          message: `Alcanzaste el límite de empleados de tu plan (${cupo.limit})`,
+          code: 'EMPLOYEE_LIMIT_REACHED',
+          limit: cupo.limit,
+          current: cupo.current,
+        });
+      }
+    }
+
     // Predicción tolerante: si la empresa no entrenó su modelo, queda pendiente.
     const prediction = await predecirTolerante(companyId, { ...data });
 
@@ -581,6 +597,23 @@ const importEmployees = async (req, res, next) => {
     }
     creados = nuevos.length;
     actualizados = aActualizar.length;
+
+    // Limite de empleados por plan: solo los NUEVOS cuentan contra el cupo
+    // (los existentes se actualizan). No aplica a SUPER_ADMIN sin empresa.
+    if (companyId && nuevos.length > 0) {
+      const cupo = await checkEmployeeLimit(companyId, nuevos.length);
+      if (!cupo.allowed) {
+        return res.status(403).json({
+          success: false,
+          message: `La importación supera el límite de empleados de tu plan (${cupo.limit}). `
+            + `Tenés ${cupo.current} y estás intentando agregar ${nuevos.length} nuevos.`,
+          code: 'EMPLOYEE_LIMIT_REACHED',
+          limit: cupo.limit,
+          current: cupo.current,
+          nuevos: nuevos.length,
+        });
+      }
+    }
 
     // 3. Crear nuevos en un solo createMany.
     if (nuevos.length > 0) {
@@ -875,6 +908,82 @@ const deactivateAbsentEmployees = async (req, res, next) => {
   }
 };
 
+// ─── GET /api/employees/export/csv ────────────────────────────────────────────
+
+// Escapa un valor para CSV (comillas dobles y separadores).
+const csvEscape = (val) => {
+  if (val === null || val === undefined) return '';
+  const s = String(val);
+  if (/[",\n;]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+};
+
+/**
+ * Exporta los empleados de la empresa a un archivo CSV, respetando los mismos
+ * filtros que el listado (nivel_riesgo, rol_tecnologico, seniority, modalidad,
+ * desercion, status, search). Registra la exportacion en el audit log.
+ */
+const exportEmployeesCsv = async (req, res, next) => {
+  try {
+    const { rol_tecnologico, seniority, modalidad, nivel_riesgo, search, desercion, status } = req.query;
+
+    const where = { ...getCompanyFilter(req.user) };
+    if (rol_tecnologico) where.rol_tecnologico = rol_tecnologico;
+    if (seniority)       where.seniority = seniority;
+    if (modalidad)       where.modalidad_trabajo = modalidad;
+    if (nivel_riesgo)    where.nivel_riesgo = nivel_riesgo.toUpperCase();
+    if (status)          where.status = status.toUpperCase();
+    if (desercion !== undefined && desercion !== '') {
+      where.desercion_real = desercion === 'true';
+    }
+    if (search) {
+      where.OR = [
+        { rol_tecnologico: { contains: search, mode: 'insensitive' } },
+        { seniority: { contains: search, mode: 'insensitive' } },
+        { nivel_formacion: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const employees = await prisma.employee.findMany({
+      where,
+      orderBy: { riesgo_desercion: 'desc' },
+    });
+
+    const columns = [
+      'codigo_empleado', 'nombre', 'apellido', 'edad', 'nivel_formacion',
+      'rol_tecnologico', 'seniority', 'antiguedad_meses', 'modalidad_trabajo',
+      'tipo_contrato', 'salario_mensual', 'cantidad_horas_extra_mes',
+      'capacitacion_ultimo_anio', 'evaluacion_desempeno', 'cantidad_empresas_anteriores',
+      'satisfaccion_laboral', 'satisfaccion_ambiente', 'equilibrio_vida_trabajo',
+      'estancamiento_carrera', 'feedback_lider',
+      'riesgo_desercion', 'nivel_riesgo', 'status',
+    ];
+
+    const header = columns.join(',');
+    const rows = employees.map((e) => columns.map((c) => csvEscape(e[c])).join(','));
+    const csv = [header, ...rows].join('\n');
+
+    await logAction({
+      tenantId:  req.user.companyId ?? null,
+      userId:    req.user.id,
+      action:    'EMPLOYEES_EXPORTED',
+      resource:  'employees',
+      ipAddress: getIp(req),
+      userAgent: getUserAgent(req),
+      status:    'SUCCESS',
+      newValue:  { total: employees.length, filtros: { nivel_riesgo, rol_tecnologico, seniority, modalidad, status } },
+    });
+
+    const fecha = new Date().toISOString().slice(0, 10);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="empleados_${fecha}.csv"`);
+    // BOM para que Excel abra los acentos correctamente.
+    res.status(200).send('\uFEFF' + csv);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getAllEmployees,
   getEmployeeById,
@@ -886,4 +995,5 @@ module.exports = {
   importEmployees,
   recalculateRisk,
   deactivateAbsentEmployees,
+  exportEmployeesCsv,
 };

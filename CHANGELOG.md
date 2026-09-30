@@ -1,5 +1,43 @@
 # Registro de cambios
 
+## 2026-09-28
+
+### Implementación de pendientes + evidencia de pruebas (RF/RNF)
+
+Se implementaron tres funcionalidades declaradas en las tablas de pruebas de la
+tesis que aún no estaban en el código, y se generó evidencia real de las 47
+pruebas (27 RF + 20 RNF) contra el sistema desplegado.
+
+**Rate limiting (RNF-020):**
+- Nuevo `backend/src/middlewares/rateLimit.middleware.js` con `express-rate-limit`.
+- `authLimiter` (5 req/15 min) en `/api/auth/login`, `/register` y `/forgot-password`.
+  Respuesta 429 con `RateLimit-*` / `X-RateLimit-*` y `Retry-After: 900`.
+- `app.set('trust proxy', 1)` para IP real detrás del proxy.
+- HSTS explícito en Helmet (`max-age=31536000; includeSubDomains; preload`).
+
+**Límite de empleados por plan (RF-020):**
+- Nuevo `backend/src/services/planLimit.service.js` (`checkEmployeeLimit`).
+- Enforcement en `createEmployee` e `importEmployees`: 403 `EMPLOYEE_LIMIT_REACHED`
+  al superar el cupo del plan (Estandar 100 / Profesional 500 / Corporativo 1500).
+
+**Exportación CSV (RF-026):**
+- Nuevo endpoint `GET /api/employees/export/csv` con los mismos filtros del
+  listado, BOM para Excel, `Content-Disposition` y registro en audit_log.
+
+**Evidencia:**
+- `docs/evidencias-pruebas/` con el log de ejecución (request+response reales),
+  scripts reproducibles y un README con la tabla de resultados y aclaraciones.
+
+**Archivos modificados:**
+- `backend/src/middlewares/rateLimit.middleware.js` (nuevo)
+- `backend/src/services/planLimit.service.js` (nuevo)
+- `backend/src/controllers/employees.controller.js` (límite + export CSV)
+- `backend/src/routes/employees.routes.js` (ruta export)
+- `backend/src/routes/auth.routes.js` (rate limit)
+- `backend/src/app.js` (trust proxy + HSTS)
+
+---
+
 ## 2026-08-10
 
 ### Rediseño de Checkout y pantalla de comprobante
