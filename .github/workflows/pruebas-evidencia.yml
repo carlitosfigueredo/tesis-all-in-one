@@ -190,12 +190,23 @@ jobs:
           out_dir  = pathlib.Path(os.environ["OUTDIR"])
           html_url = "file://" + str(out_dir / "evidencia.html")
 
+          def safe_clip(page, y_start, height, width=1400):
+              """Recorta el clip para que nunca se salga de la pagina renderizada."""
+              page_h = page.evaluate("() => document.body.scrollHeight")
+              y = max(0, y_start)
+              h = min(height, page_h - y)
+              return {"x": 0, "y": y, "width": width, "height": max(1, h)}
+
           with sync_playwright() as p:
               browser = p.chromium.launch()
-              page = browser.new_page(viewport={"width": 1400, "height": 900})
+              # Viewport alto para que la pagina completa quede renderizada
+              page = browser.new_page(viewport={"width": 1400, "height": 1080})
               page.goto(html_url, wait_until="networkidle")
 
-              # 1) Pagina completa (fullPage)
+              # Esperar a que los estilos terminen de aplicarse
+              page.wait_for_timeout(500)
+
+              # 1) Pagina completa (fullPage=True ignora el clip, nunca falla)
               page.screenshot(
                   path=str(out_dir / "screenshot-completo.png"),
                   full_page=True,
@@ -208,43 +219,43 @@ jobs:
               if hero.count() and cards.count():
                   hbox = hero.bounding_box()
                   cbox = cards.bounding_box()
-                  page.screenshot(
-                      path=str(out_dir / "screenshot-resumen.png"),
-                      clip={
-                          "x": 0, "y": hbox["y"],
-                          "width": 1400,
-                          "height": cbox["y"] + cbox["height"] + 48 - hbox["y"],
-                      },
+                  clip = safe_clip(page,
+                      y_start=hbox["y"],
+                      height=cbox["y"] + cbox["height"] + 48 - hbox["y"],
                   )
+                  page.screenshot(path=str(out_dir / "screenshot-resumen.png"), clip=clip)
                   print("screenshot-resumen.png OK")
 
-              # 3) Seccion RF (desde h2 "Funcionales" hasta h2 "No Funcionales")
-              rf_h2  = page.get_by_role("heading", name="Pruebas Funcionales").first
-              rnf_h2 = page.get_by_role("heading", name="Pruebas No Funcionales").first
-              if rf_h2.count() and rnf_h2.count():
+              # 3) Seccion RF + 4) Seccion RNF
+              # Buscar los h2 por texto exacto contenido en el elemento
+              rf_h2  = page.locator("h2", has_text="Pruebas Funcionales").first
+              rnf_h2 = page.locator("h2", has_text="Pruebas No Funcionales").first
+
+              rf_ok  = rf_h2.count() > 0
+              rnf_ok = rnf_h2.count() > 0
+
+              if rf_ok and rnf_ok:
                   rf_box  = rf_h2.bounding_box()
                   rnf_box = rnf_h2.bounding_box()
-                  page.screenshot(
-                      path=str(out_dir / "screenshot-rf.png"),
-                      clip={
-                          "x": 0, "y": max(0, rf_box["y"] - 12),
-                          "width": 1400,
-                          "height": rnf_box["y"] - rf_box["y"] + 12,
-                      },
+
+                  # RF: desde el h2 "Funcionales" hasta justo antes del h2 "No Funcionales"
+                  clip_rf = safe_clip(page,
+                      y_start=rf_box["y"] - 12,
+                      height=rnf_box["y"] - rf_box["y"] + 12,
                   )
+                  page.screenshot(path=str(out_dir / "screenshot-rf.png"), clip=clip_rf)
                   print("screenshot-rf.png OK")
 
-                  # 4) Seccion RNF (desde h2 "No Funcionales" hasta el final)
+                  # RNF: desde el h2 "No Funcionales" hasta el final de la pagina
                   page_h = page.evaluate("() => document.body.scrollHeight")
-                  page.screenshot(
-                      path=str(out_dir / "screenshot-rnf.png"),
-                      clip={
-                          "x": 0, "y": max(0, rnf_box["y"] - 12),
-                          "width": 1400,
-                          "height": page_h - rnf_box["y"] + 12,
-                      },
+                  clip_rnf = safe_clip(page,
+                      y_start=rnf_box["y"] - 12,
+                      height=page_h - (rnf_box["y"] - 12),
                   )
+                  page.screenshot(path=str(out_dir / "screenshot-rnf.png"), clip=clip_rnf)
                   print("screenshot-rnf.png OK")
+              else:
+                  print(f"AVISO: h2 RF encontrado={rf_ok}, h2 RNF encontrado={rnf_ok}. Saltando clips parciales.")
 
               browser.close()
           print("Todos los screenshots generados en", out_dir)
