@@ -167,96 +167,88 @@ jobs:
           OUTDIR: ${{ github.workspace }}/evidencia-out
         run: python3 docs/evidencias-pruebas/scripts/ci_evidencia.py
 
-      # ── Screenshots con Playwright ────────────────────────────────────────
-      # Instala Playwright + Chromium headless y toma capturas del HTML
-      # generado. Produce:
+      # ── Screenshots con Playwright (Python) ──────────────────────────────
+      # Usa playwright-python (mismo entorno Python ya configurado).
+      # Produce:
       #   - screenshot-completo.png  : pagina entera (scroll) — para el documento
+      #   - screenshot-resumen.png   : cabecera con KPIs (total/pass/fail/%)
       #   - screenshot-rf.png        : seccion de pruebas funcionales
       #   - screenshot-rnf.png       : seccion de pruebas no funcionales
-      #   - screenshot-resumen.png   : cabecera con KPIs (total/pass/fail/%)
-      - name: Instalar Playwright + Chromium
+      - name: Instalar Playwright Python + Chromium
         run: |
-          npm install -g playwright@1.49.1
-          npx playwright install --with-deps chromium
+          pip install playwright==1.49.0
+          python -m playwright install --with-deps chromium
 
       - name: Tomar screenshots del reporte de evidencia
         env:
           OUTDIR: ${{ github.workspace }}/evidencia-out
         run: |
-          node - <<'EOF'
-          const { chromium } = require('playwright');
-          const path = require('path');
+          python3 - <<'PYEOF'
+          import os, pathlib
+          from playwright.sync_api import sync_playwright
 
-          (async () => {
-            const outDir = process.env.OUTDIR;
-            const htmlPath = `file://${path.join(outDir, 'evidencia.html')}`;
-            const browser = await chromium.launch();
-            const page = await browser.newPage();
+          out_dir  = pathlib.Path(os.environ["OUTDIR"])
+          html_url = "file://" + str(out_dir / "evidencia.html")
 
-            // Viewport ancho para que la tabla no se corte
-            await page.setViewportSize({ width: 1400, height: 900 });
-            await page.goto(htmlPath, { waitUntil: 'networkidle' });
+          with sync_playwright() as p:
+              browser = p.chromium.launch()
+              page = browser.new_page(viewport={"width": 1400, "height": 900})
+              page.goto(html_url, wait_until="networkidle")
 
-            // 1) Captura completa (pagina entera, scroll)
-            await page.screenshot({
-              path: path.join(outDir, 'screenshot-completo.png'),
-              fullPage: true,
-            });
+              # 1) Pagina completa (fullPage)
+              page.screenshot(
+                  path=str(out_dir / "screenshot-completo.png"),
+                  full_page=True,
+              )
+              print("screenshot-completo.png OK")
 
-            // 2) Solo la cabecera con KPIs (hero + cards)
-            const hero = await page.$('.cards');
-            if (hero) {
-              // Incluye el hero + las cards de KPIs
-              const heroEl = await page.$('.hero');
-              const box = await heroEl.boundingBox();
-              const cardsBox = await hero.boundingBox();
-              await page.screenshot({
-                path: path.join(outDir, 'screenshot-resumen.png'),
-                clip: {
-                  x: 0,
-                  y: box.y,
-                  width: 1400,
-                  height: cardsBox.y + cardsBox.height + 40,
-                },
-              });
-            }
+              # 2) Cabecera + KPIs (hero + cards)
+              hero  = page.locator(".hero").first
+              cards = page.locator(".cards").first
+              if hero.count() and cards.count():
+                  hbox = hero.bounding_box()
+                  cbox = cards.bounding_box()
+                  page.screenshot(
+                      path=str(out_dir / "screenshot-resumen.png"),
+                      clip={
+                          "x": 0, "y": hbox["y"],
+                          "width": 1400,
+                          "height": cbox["y"] + cbox["height"] + 48 - hbox["y"],
+                      },
+                  )
+                  print("screenshot-resumen.png OK")
 
-            // 3) Seccion de pruebas funcionales (RF)
-            const rfH2 = await page.$('h2:has-text("Funcionales")');
-            const rnfH2 = await page.$('h2:has-text("No Funcionales")');
-            if (rfH2 && rnfH2) {
-              const rfBox  = await rfH2.boundingBox();
-              const rnfBox = await rnfH2.boundingBox();
-              await page.screenshot({
-                path: path.join(outDir, 'screenshot-rf.png'),
-                clip: {
-                  x: 0,
-                  y: rfBox.y - 10,
-                  width: 1400,
-                  height: rnfBox.y - rfBox.y - 10,
-                },
-              });
-            }
+              # 3) Seccion RF (desde h2 "Funcionales" hasta h2 "No Funcionales")
+              rf_h2  = page.get_by_role("heading", name="Pruebas Funcionales").first
+              rnf_h2 = page.get_by_role("heading", name="Pruebas No Funcionales").first
+              if rf_h2.count() and rnf_h2.count():
+                  rf_box  = rf_h2.bounding_box()
+                  rnf_box = rnf_h2.bounding_box()
+                  page.screenshot(
+                      path=str(out_dir / "screenshot-rf.png"),
+                      clip={
+                          "x": 0, "y": max(0, rf_box["y"] - 12),
+                          "width": 1400,
+                          "height": rnf_box["y"] - rf_box["y"] + 12,
+                      },
+                  )
+                  print("screenshot-rf.png OK")
 
-            // 4) Seccion de pruebas no funcionales (RNF)
-            if (rnfH2) {
-              const rnfBox = await rnfH2.boundingBox();
-              const pageH  = await page.evaluate(() => document.body.scrollHeight);
-              await page.screenshot({
-                path: path.join(outDir, 'screenshot-rnf.png'),
-                clip: {
-                  x: 0,
-                  y: rnfBox.y - 10,
-                  width: 1400,
-                  height: pageH - rnfBox.y,
-                },
-              });
-            }
+                  # 4) Seccion RNF (desde h2 "No Funcionales" hasta el final)
+                  page_h = page.evaluate("() => document.body.scrollHeight")
+                  page.screenshot(
+                      path=str(out_dir / "screenshot-rnf.png"),
+                      clip={
+                          "x": 0, "y": max(0, rnf_box["y"] - 12),
+                          "width": 1400,
+                          "height": page_h - rnf_box["y"] + 12,
+                      },
+                  )
+                  print("screenshot-rnf.png OK")
 
-            await browser.close();
-            console.log('Screenshots generados en', outDir);
-          })();
-          EOF
+              browser.close()
+          print("Todos los screenshots generados en", out_dir)
+          PYEOF
 
       # Inyectar metadatos de la corrida en el HTML (run number, commit, fecha)
       # para que la pagina de Pages muestre de que corrida son los resultados.
