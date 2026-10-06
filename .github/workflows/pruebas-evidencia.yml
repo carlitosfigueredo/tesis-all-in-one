@@ -5,6 +5,8 @@ name: Pruebas y evidencia (RF/RNF)
 # runner, y publica:
 #   - un resumen PASS/FAIL en la pagina del run (Job Summary)
 #   - los archivos de evidencia como artifact descargable
+#   - screenshots PNG de la evidencia (para pegar en documentos)
+#   - el reporte publicado en GitHub Pages (URL publica permanente)
 #
 # Se puede disparar a mano (workflow_dispatch) o en push/PR a main.
 
@@ -20,7 +22,21 @@ on:
   pull_request:
     branches: [ master ]
 
+# Permisos necesarios para publicar en GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Solo una publicacion de Pages a la vez (cancelar runs concurrentes de deploy)
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
 jobs:
+  # ════════════════════════════════════════════════════════════════════════════
+  # JOB 1: Ejecutar pruebas y generar evidencia + screenshots
+  # ════════════════════════════════════════════════════════════════════════════
   evidencia:
     runs-on: ubuntu-latest
 
@@ -67,6 +83,10 @@ jobs:
       SEED_ANALYST_EMAIL: ${{ secrets.SEED_ANALYST_EMAIL || 'analista@empresa.com' }}
       SEED_VIEWER_EMAIL: ${{ secrets.SEED_VIEWER_EMAIL || 'viewer@empresa.com' }}
       TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+
+    outputs:
+      # Pasa la carpeta de salida al job de Pages
+      pages_path: ${{ steps.set-output.outputs.pages_path }}
 
     steps:
       - name: Checkout
@@ -147,8 +167,144 @@ jobs:
           OUTDIR: ${{ github.workspace }}/evidencia-out
         run: python3 docs/evidencias-pruebas/scripts/ci_evidencia.py
 
-      # ── Publicar evidencia como artifact (siempre, aunque falle) ─────────
-      - name: Subir artifact de evidencia
+      # ── Screenshots con Playwright ────────────────────────────────────────
+      # Instala Playwright + Chromium headless y toma capturas del HTML
+      # generado. Produce:
+      #   - screenshot-completo.png  : pagina entera (scroll) — para el documento
+      #   - screenshot-rf.png        : seccion de pruebas funcionales
+      #   - screenshot-rnf.png       : seccion de pruebas no funcionales
+      #   - screenshot-resumen.png   : cabecera con KPIs (total/pass/fail/%)
+      - name: Instalar Playwright + Chromium
+        run: |
+          npm install -g playwright@1.49.1
+          npx playwright install --with-deps chromium
+
+      - name: Tomar screenshots del reporte de evidencia
+        env:
+          OUTDIR: ${{ github.workspace }}/evidencia-out
+        run: |
+          node - <<'EOF'
+          const { chromium } = require('playwright');
+          const path = require('path');
+
+          (async () => {
+            const outDir = process.env.OUTDIR;
+            const htmlPath = `file://${path.join(outDir, 'evidencia.html')}`;
+            const browser = await chromium.launch();
+            const page = await browser.newPage();
+
+            // Viewport ancho para que la tabla no se corte
+            await page.setViewportSize({ width: 1400, height: 900 });
+            await page.goto(htmlPath, { waitUntil: 'networkidle' });
+
+            // 1) Captura completa (pagina entera, scroll)
+            await page.screenshot({
+              path: path.join(outDir, 'screenshot-completo.png'),
+              fullPage: true,
+            });
+
+            // 2) Solo la cabecera con KPIs (hero + cards)
+            const hero = await page.$('.cards');
+            if (hero) {
+              // Incluye el hero + las cards de KPIs
+              const heroEl = await page.$('.hero');
+              const box = await heroEl.boundingBox();
+              const cardsBox = await hero.boundingBox();
+              await page.screenshot({
+                path: path.join(outDir, 'screenshot-resumen.png'),
+                clip: {
+                  x: 0,
+                  y: box.y,
+                  width: 1400,
+                  height: cardsBox.y + cardsBox.height + 40,
+                },
+              });
+            }
+
+            // 3) Seccion de pruebas funcionales (RF)
+            const rfH2 = await page.$('h2:has-text("Funcionales")');
+            const rnfH2 = await page.$('h2:has-text("No Funcionales")');
+            if (rfH2 && rnfH2) {
+              const rfBox  = await rfH2.boundingBox();
+              const rnfBox = await rnfH2.boundingBox();
+              await page.screenshot({
+                path: path.join(outDir, 'screenshot-rf.png'),
+                clip: {
+                  x: 0,
+                  y: rfBox.y - 10,
+                  width: 1400,
+                  height: rnfBox.y - rfBox.y - 10,
+                },
+              });
+            }
+
+            // 4) Seccion de pruebas no funcionales (RNF)
+            if (rnfH2) {
+              const rnfBox = await rnfH2.boundingBox();
+              const pageH  = await page.evaluate(() => document.body.scrollHeight);
+              await page.screenshot({
+                path: path.join(outDir, 'screenshot-rnf.png'),
+                clip: {
+                  x: 0,
+                  y: rnfBox.y - 10,
+                  width: 1400,
+                  height: pageH - rnfBox.y,
+                },
+              });
+            }
+
+            await browser.close();
+            console.log('Screenshots generados en', outDir);
+          })();
+          EOF
+
+      # Inyectar metadatos de la corrida en el HTML (run number, commit, fecha)
+      # para que la pagina de Pages muestre de que corrida son los resultados.
+      - name: Anotar HTML con metadatos de la corrida
+        env:
+          OUTDIR: ${{ github.workspace }}/evidencia-out
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RUN_NUMBER: ${{ github.run_number }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          python3 - <<'EOF'
+          import os, re
+
+          outdir   = os.environ["OUTDIR"]
+          run_url  = os.environ["RUN_URL"]
+          run_num  = os.environ["RUN_NUMBER"]
+          sha      = os.environ["COMMIT_SHA"][:7]
+
+          badge = (
+            f'<div style="text-align:center;padding:8px 0 4px;font-size:12px;color:#64748b;">'
+            f'Corrida <a href="{run_url}" style="color:#4f46e5;">#{run_num}</a> &nbsp;·&nbsp; '
+            f'commit <code>{sha}</code></div>'
+          )
+
+          html_path = os.path.join(outdir, "evidencia.html")
+          with open(html_path, encoding="utf-8") as f:
+              content = f.read()
+
+          # Insertar el badge justo antes del cierre del <footer>
+          content = content.replace("</footer>", badge + "\n</footer>")
+          with open(html_path, "w", encoding="utf-8") as f:
+              f.write(content)
+
+          print(f"HTML anotado con run #{run_num} ({sha})")
+          EOF
+
+      # Marcar la carpeta de salida como artefacto de Pages
+      - name: Preparar carpeta para GitHub Pages
+        id: set-output
+        run: echo "pages_path=${{ github.workspace }}/evidencia-out" >> "$GITHUB_OUTPUT"
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: evidencia-out
+
+      # ── Publicar todo como artifact descargable ───────────────────────────
+      - name: Subir artifact de evidencia (HTML + TXT + MD + JSON + PNGs)
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -158,6 +314,10 @@ jobs:
             evidencia-out/EVIDENCIA.txt
             evidencia-out/RESUMEN.md
             evidencia-out/resultados.json
+            evidencia-out/screenshot-completo.png
+            evidencia-out/screenshot-resumen.png
+            evidencia-out/screenshot-rf.png
+            evidencia-out/screenshot-rnf.png
           if-no-files-found: warn
 
       - name: Subir logs de servicios (si algo falla)
@@ -169,3 +329,23 @@ jobs:
             backend.log
             ml.log
           if-no-files-found: ignore
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # JOB 2: Publicar en GitHub Pages
+  # Solo corre en push/dispatch a master (no en PRs, para no publicar resultados
+  # parciales de ramas de trabajo).
+  # ════════════════════════════════════════════════════════════════════════════
+  deploy-pages:
+    needs: evidencia
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+
+    environment:
+      name: github-pages
+      # GitHub rellena esta URL automaticamente con la URL real de Pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

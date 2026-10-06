@@ -12,11 +12,27 @@ Las pruebas corren en **GitHub Actions** (workflow `Pruebas y evidencia (RF/RNF)
 Cada ejecución produce:
 
 - Un **resumen PASS/FAIL** en la página del run (pestaña *Actions* → *Summary*).
+- Una **página pública en GitHub Pages** que se actualiza automáticamente con cada corrida.
+  La URL tiene el formato `https://<usuario>.github.io/<repositorio>/`.
 - Un **artifact descargable** `evidencia-pruebas` con:
   - `evidencia.html` — reporte visual (abrir en el navegador o imprimir a PDF).
   - `EVIDENCIA.txt` — log detallado (request/response), con credenciales enmascaradas.
   - `RESUMEN.md` — tabla de resultados en Markdown.
   - `resultados.json` — veredictos por prueba (para procesar).
+  - `screenshot-completo.png` — captura completa del reporte (para documentos).
+  - `screenshot-resumen.png` — sección de KPIs (total/pass/fail/%).
+  - `screenshot-rf.png` — tabla de pruebas funcionales (RF).
+  - `screenshot-rnf.png` — tabla de pruebas no funcionales (RNF).
+
+### Habilitar GitHub Pages (primera vez)
+
+Antes de la primera corrida hay que activar Pages en el repositorio:
+
+1. Ir a **Settings → Pages** en el repositorio.
+2. En *Source*, seleccionar **GitHub Actions** (no una rama).
+3. Guardar. La URL de Pages aparecerá ahí mismo.
+
+A partir de ese momento, cada corrida del workflow publica automáticamente.
 
 ## Archivos del repo
 
