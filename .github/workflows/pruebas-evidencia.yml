@@ -160,157 +160,18 @@ jobs:
       - name: Entrenar modelo ML de la empresa demo
         run: python3 docs/evidencias-pruebas/scripts/train_demo.py
 
-      # ── Ejecutar pruebas y generar evidencia ─────────────────────────────
+      # ── Ejecutar pruebas y generar evidencia + capturas PNG ──────────────
+      - name: Instalar Pillow (para capturas PNG por prueba)
+        run: pip install Pillow==11.0.0
+
       - name: Ejecutar pruebas RF/RNF y generar evidencia
         id: pruebas
         env:
           OUTDIR: ${{ github.workspace }}/evidencia-out
         run: python3 docs/evidencias-pruebas/scripts/ci_evidencia.py
 
-      # ── Screenshots con Playwright (Python) ──────────────────────────────
-      # Usa playwright-python (mismo entorno Python ya configurado).
-      # Produce:
-      #   - screenshot-completo.png  : pagina entera (scroll) — para el documento
-      #   - screenshot-resumen.png   : cabecera con KPIs (total/pass/fail/%)
-      #   - screenshot-rf.png        : seccion de pruebas funcionales
-      #   - screenshot-rnf.png       : seccion de pruebas no funcionales
-      - name: Instalar Playwright Python + Chromium y Pillow
-        run: |
-          pip install playwright==1.49.0 Pillow==11.0.0
-          python -m playwright install --with-deps chromium
-
-      - name: Tomar screenshots del reporte de evidencia
-        env:
-          OUTDIR: ${{ github.workspace }}/evidencia-out
-        run: |
-          python3 - <<'PYEOF'
-          import os, pathlib
-          from playwright.sync_api import sync_playwright
-          from PIL import Image
-          import io
-
-          out_dir  = pathlib.Path(os.environ["OUTDIR"])
-          html_url = "file://" + str(out_dir / "evidencia.html")
-
-          with sync_playwright() as p:
-              browser = p.chromium.launch()
-              page = browser.new_page(viewport={"width": 1400, "height": 900})
-              page.goto(html_url, wait_until="networkidle")
-              page.wait_for_timeout(800)
-
-              # Capturar la pagina entera como bytes una sola vez
-              full_bytes = page.screenshot(full_page=True)
-              img = Image.open(io.BytesIO(full_bytes))
-              W, H = img.size
-
-              # Guardar la imagen completa directamente
-              img.save(str(out_dir / "screenshot-completo.png"))
-              print(f"screenshot-completo.png OK ({W}x{H}px)")
-
-              def px(locator):
-                  """Devuelve el bounding box en pixeles escalados de la imagen full-page."""
-                  box = locator.bounding_box()
-                  if box is None:
-                      return None
-                  # Playwright reporta coordenadas en CSS pixels (1400px de ancho).
-                  # La imagen full-page tiene el mismo ancho => escala = W/1400.
-                  scale = W / 1400
-                  return {k: v * scale for k, v in box.items()}
-
-              def crop_save(name, y_top, y_bottom, pad_top=14, pad_bottom=24):
-                  """Recorta la imagen full-page entre y_top y y_bottom (en px de imagen)."""
-                  y0 = max(0, int(y_top  - pad_top))
-                  y1 = min(H, int(y_bottom + pad_bottom))
-                  if y1 <= y0:
-                      print(f"AVISO: crop vacio para {name} (y0={y0} y1={y1}), saltando.")
-                      return
-                  cropped = img.crop((0, y0, W, y1))
-                  cropped.save(str(out_dir / name))
-                  print(f"{name} OK ({W}x{y1-y0}px)")
-
-              # 2) Cabecera + KPIs
-              hero  = page.locator(".hero").first
-              cards = page.locator(".cards").first
-              if hero.count() and cards.count():
-                  hbox = px(hero)
-                  cbox = px(cards)
-                  if hbox and cbox:
-                      crop_save("screenshot-resumen.png",
-                                hbox["y"],
-                                cbox["y"] + cbox["height"],
-                                pad_top=0, pad_bottom=40)
-
-              # 3) Seccion RF
-              rf_h2  = page.locator("h2").filter(has_text="Funcionales").first
-              rnf_h2 = page.locator("h2").filter(has_text="No Funcionales").first
-
-              if rf_h2.count() and rnf_h2.count():
-                  rf_box  = px(rf_h2)
-                  rnf_box = px(rnf_h2)
-                  if rf_box and rnf_box:
-                      crop_save("screenshot-rf.png",
-                                rf_box["y"],
-                                rnf_box["y"])
-
-                      # 4) Seccion RNF hasta el final de la pagina
-                      crop_save("screenshot-rnf.png",
-                                rnf_box["y"],
-                                H,
-                                pad_top=0, pad_bottom=0)
-              else:
-                  print(f"AVISO: h2 RF={rf_h2.count()} RNF={rnf_h2.count()}, saltando crops de secciones.")
-
-              browser.close()
-          print("Screenshots listos en", out_dir)
-          PYEOF
-
-      # Inyectar metadatos de la corrida en el HTML (run number, commit, fecha)
-      # para que la pagina de Pages muestre de que corrida son los resultados.
-      - name: Anotar HTML con metadatos de la corrida
-        env:
-          OUTDIR: ${{ github.workspace }}/evidencia-out
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          RUN_NUMBER: ${{ github.run_number }}
-          COMMIT_SHA: ${{ github.sha }}
-        run: |
-          python3 - <<'EOF'
-          import os, re
-
-          outdir   = os.environ["OUTDIR"]
-          run_url  = os.environ["RUN_URL"]
-          run_num  = os.environ["RUN_NUMBER"]
-          sha      = os.environ["COMMIT_SHA"][:7]
-
-          badge = (
-            f'<div style="text-align:center;padding:8px 0 4px;font-size:12px;color:#64748b;">'
-            f'Corrida <a href="{run_url}" style="color:#4f46e5;">#{run_num}</a> &nbsp;·&nbsp; '
-            f'commit <code>{sha}</code></div>'
-          )
-
-          html_path = os.path.join(outdir, "evidencia.html")
-          with open(html_path, encoding="utf-8") as f:
-              content = f.read()
-
-          # Insertar el badge justo antes del cierre del <footer>
-          content = content.replace("</footer>", badge + "\n</footer>")
-          with open(html_path, "w", encoding="utf-8") as f:
-              f.write(content)
-
-          print(f"HTML anotado con run #{run_num} ({sha})")
-          EOF
-
-      # Marcar la carpeta de salida como artefacto de Pages
-      - name: Preparar carpeta para GitHub Pages
-        id: set-output
-        run: echo "pages_path=${{ github.workspace }}/evidencia-out" >> "$GITHUB_OUTPUT"
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: evidencia-out
-
       # ── Publicar todo como artifact descargable ───────────────────────────
-      - name: Subir artifact de evidencia (HTML + TXT + MD + JSON + PNGs)
+      - name: Subir artifact de evidencia (HTML + TXT + MD + JSON + PNGs por prueba)
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -320,11 +181,14 @@ jobs:
             evidencia-out/EVIDENCIA.txt
             evidencia-out/RESUMEN.md
             evidencia-out/resultados.json
-            evidencia-out/screenshot-completo.png
-            evidencia-out/screenshot-resumen.png
-            evidencia-out/screenshot-rf.png
-            evidencia-out/screenshot-rnf.png
+            evidencia-out/capturas/
           if-no-files-found: warn
+
+      - name: Upload Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: evidencia-out
 
       - name: Subir logs de servicios (si algo falla)
         if: failure()

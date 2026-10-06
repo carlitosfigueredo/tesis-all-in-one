@@ -3,9 +3,10 @@
 # Generador de evidencia para CI (GitHub Actions)
 # Ejecuta las pruebas RF/RNF contra el sistema levantado en el runner y
 # produce:
-#   - EVIDENCIA.txt  : log detallado (request + response reales)
-#   - RESUMEN.md     : tabla PASS/FAIL (se vuelca al Job Summary)
-#   - resultados.json: veredictos por prueba (artifact)
+#   - EVIDENCIA.txt        : log detallado (request + response reales)
+#   - RESUMEN.md           : tabla PASS/FAIL (se vuelca al Job Summary)
+#   - resultados.json      : veredictos por prueba (artifact)
+#   - capturas/<ID>.png    : captura individual por prueba (request+response+veredicto)
 #
 # Configurable por variables de entorno (con defaults locales):
 #   BACKEND_URL   (default http://localhost:4000)
@@ -23,6 +24,221 @@ OUTDIR  = os.environ.get("OUTDIR", ".")
 COMPANY = os.environ.get("COMPANY_ID", "comp-demo-1")
 
 os.makedirs(OUTDIR, exist_ok=True)
+CAPTURAS_DIR = os.path.join(OUTDIR, "capturas")
+os.makedirs(CAPTURAS_DIR, exist_ok=True)
+
+# ── Generador de captura PNG por prueba ──────────────────────────────────────
+# Usa solo stdlib + Pillow (ya disponible en el runner tras instalar playwright).
+# Si Pillow no está disponible, la función es no-op (no rompe las pruebas).
+_PIL_OK = False
+try:
+    from PIL import Image, ImageDraw, ImageFont
+    _PIL_OK = True
+except ImportError:
+    pass
+
+# Colores del tema (coinciden con el HTML de evidencia)
+_C = {
+    "bg":       (241, 245, 249),   # slate-100
+    "card":     (255, 255, 255),
+    "header":   ( 79,  70, 229),   # indigo-600
+    "header_t": (255, 255, 255),
+    "pass_bg":  (220, 252, 231),   # green-100
+    "pass_fg":  ( 22, 163,  74),   # green-600
+    "fail_bg":  (254, 226, 226),   # red-100
+    "fail_fg":  (220,  38,  38),   # red-600
+    "label":    (100, 116, 139),   # slate-500
+    "text":     ( 30,  41,  59),   # slate-800
+    "border":   (226, 232, 240),   # slate-200
+    "req_bg":   ( 15,  23,  42),   # slate-900  (bloque request/response)
+    "req_fg":   (226, 232, 240),   # slate-200
+}
+
+_FONT_REGULAR = None
+_FONT_BOLD    = None
+_FONT_MONO    = None
+_FONT_SMALL   = None
+
+def _load_fonts():
+    global _FONT_REGULAR, _FONT_BOLD, _FONT_MONO, _FONT_SMALL
+    if _FONT_REGULAR:
+        return
+    candidates_regular = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/liberation/LiberationSans-Regular.ttf",
+        "/System/Library/Fonts/Helvetica.ttc",
+    ]
+    candidates_bold = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+        "/usr/share/fonts/liberation/LiberationSans-Bold.ttf",
+        "/System/Library/Fonts/Helvetica.ttc",
+    ]
+    candidates_mono = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf",
+        "/usr/share/fonts/liberation/LiberationMono-Regular.ttf",
+    ]
+    def _try(paths, size):
+        for p in paths:
+            if os.path.exists(p):
+                try:
+                    return ImageFont.truetype(p, size)
+                except Exception:
+                    pass
+        return ImageFont.load_default()
+
+    _FONT_REGULAR = _try(candidates_regular, 15)
+    _FONT_BOLD    = _try(candidates_bold,    15)
+    _FONT_MONO    = _try(candidates_mono,    13)
+    _FONT_SMALL   = _try(candidates_regular, 12)
+
+def _wrap(text, font, max_width, draw):
+    """Parte el texto en líneas que no superen max_width píxeles."""
+    words = str(text).split()
+    lines, current = [], ""
+    for word in words:
+        test = (current + " " + word).strip()
+        w_px = draw.textlength(test, font=font)
+        if w_px <= max_width:
+            current = test
+        else:
+            if current:
+                lines.append(current)
+            current = word
+    if current:
+        lines.append(current)
+    return lines or [""]
+
+def generar_captura_png(cid, desc, passed, entrada, esperado, obtenido, evidencia_raw):
+    """
+    Genera una imagen PNG con la evidencia de una prueba individual.
+    La imagen tiene:
+      - Cabecera con ID, descripción y badge PASS/FAIL
+      - Sección Entrada / Esperado / Obtenido
+      - Bloque con el request+response real (primeras líneas del log)
+    Se guarda en CAPTURAS_DIR/<cid>.png
+    """
+    if not _PIL_OK:
+        return
+    _load_fonts()
+
+    W = 1100   # ancho fijo
+    PAD = 28   # padding lateral
+    LINE_H = 22
+    SECTION_PAD = 14
+
+    # ── Pre-calcular alturas para el canvas ──────────────────────────────────
+    # Usamos un canvas temporal para medir texto
+    tmp = Image.new("RGB", (W, 100))
+    d   = ImageDraw.Draw(tmp)
+
+    def measure_block(label, value, max_w):
+        lines = _wrap(value, _FONT_REGULAR, max_w, d)
+        return (len(lines) + 1) * LINE_H + SECTION_PAD
+
+    content_w = W - PAD * 2
+
+    # Limitar la evidencia raw a las primeras 35 líneas para no hacer la imagen enorme
+    raw_lines = [l for l in (evidencia_raw or "").splitlines() if l.strip()][:35]
+    raw_text  = "\n".join(raw_lines)
+
+    h_header  = 72
+    h_entrada = measure_block("Entrada",  entrada,  content_w)
+    h_esperado= measure_block("Esperado", esperado, content_w)
+    h_obtenido= measure_block("Obtenido", obtenido, content_w)
+    h_divider = 16
+    # Bloque de código: línea por línea con fuente mono
+    code_lines = raw_text.splitlines() if raw_text else []
+    h_code    = max(60, len(code_lines) * 18 + 24) if code_lines else 0
+    h_code_label = 24 if code_lines else 0
+    h_footer  = 32
+
+    total_h = (h_header + SECTION_PAD
+               + h_entrada + h_esperado + h_obtenido
+               + h_divider + h_code_label + h_code
+               + h_footer)
+
+    # ── Dibujar ──────────────────────────────────────────────────────────────
+    img = Image.new("RGB", (W, total_h), _C["bg"])
+    draw = ImageDraw.Draw(img)
+
+    y = 0
+
+    # Cabecera
+    draw.rectangle([0, 0, W, h_header], fill=_C["header"])
+    badge_color = _C["pass_bg"] if passed else _C["fail_bg"]
+    badge_text  = "PASS" if passed else "FAIL"
+    badge_fg    = _C["pass_fg"] if passed else _C["fail_fg"]
+    # ID grande
+    draw.text((PAD, 12), cid, font=_FONT_BOLD, fill=_C["header_t"])
+    # Badge
+    badge_w = 56
+    bx = W - PAD - badge_w
+    draw.rounded_rectangle([bx, 14, bx + badge_w, 42], radius=8, fill=badge_color)
+    draw.text((bx + 10, 18), badge_text, font=_FONT_BOLD, fill=badge_fg)
+    # Descripcion
+    draw.text((PAD, 44), desc[:90], font=_FONT_SMALL, fill=(200, 210, 230))
+    y = h_header + SECTION_PAD
+
+    # Tarjeta blanca de contenido
+    card_y0 = y - 6
+    card_h  = h_entrada + h_esperado + h_obtenido + h_divider + h_code_label + h_code + SECTION_PAD
+    draw.rounded_rectangle([PAD - 8, card_y0, W - PAD + 8, card_y0 + card_h + 8],
+                           radius=12, fill=_C["card"],
+                           outline=_C["border"], width=1)
+
+    def draw_field(label, value, y_pos):
+        draw.text((PAD, y_pos), label.upper(), font=_FONT_SMALL, fill=_C["label"])
+        y_pos += LINE_H
+        lines = _wrap(str(value), _FONT_REGULAR, content_w, draw)
+        for line in lines:
+            draw.text((PAD, y_pos), line, font=_FONT_REGULAR, fill=_C["text"])
+            y_pos += LINE_H
+        return y_pos + SECTION_PAD
+
+    y = draw_field("Entrada",  entrada,  y)
+    y = draw_field("Esperado", esperado, y)
+    # Obtenido con color según resultado
+    obtenido_color = _C["pass_fg"] if passed else _C["fail_fg"]
+    draw.text((PAD, y), "OBTENIDO", font=_FONT_SMALL, fill=_C["label"])
+    y += LINE_H
+    ob_lines = _wrap(str(obtenido), _FONT_REGULAR, content_w, draw)
+    for line in ob_lines:
+        draw.text((PAD, y), line, font=_FONT_REGULAR, fill=obtenido_color)
+        y += LINE_H
+    y += SECTION_PAD
+
+    # Separador
+    draw.line([PAD, y, W - PAD, y], fill=_C["border"], width=1)
+    y += h_divider
+
+    # Bloque de request/response
+    if code_lines:
+        draw.text((PAD, y), "REQUEST / RESPONSE", font=_FONT_SMALL, fill=_C["label"])
+        y += h_code_label
+        # Fondo oscuro
+        draw.rounded_rectangle([PAD - 8, y, W - PAD + 8, y + h_code],
+                               radius=8, fill=_C["req_bg"])
+        cy = y + 10
+        for line in code_lines:
+            # Recortar líneas muy largas
+            if len(line) > 130:
+                line = line[:127] + "..."
+            draw.text((PAD, cy), line, font=_FONT_MONO, fill=_C["req_fg"])
+            cy += 18
+            if cy > y + h_code - 10:
+                break
+
+    # Footer con timestamp
+    ts = time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime())
+    draw.text((PAD, total_h - 22), f"Sistema BI — Evidencia generada {ts}", 
+              font=_FONT_SMALL, fill=_C["label"])
+
+    out_path = os.path.join(CAPTURAS_DIR, f"{cid}.png")
+    img.save(out_path, "PNG")
+
 log_lines, results = [], []
 _current = {"id": None, "desc": None, "lines": []}
 def w(s=""):
@@ -79,6 +295,9 @@ def record(cid, desc, passed, detail="", entrada="", esperado="", obtenido=""):
                     "entrada": entrada, "esperado": esperado, "obtenido": obtenido,
                     "evidencia": "\n".join(_current["lines"]).strip() if _current["id"]==cid else ""})
     w(f"VEREDICTO: {cid} -> {'PASS' if passed else 'FAIL'}  ({detail})")
+    # Generar captura PNG individual para esta prueba
+    evidencia_raw = "\n".join(_current["lines"]).strip() if _current["id"] == cid else ""
+    generar_captura_png(cid, desc, bool(passed), entrada, esperado, obtenido, evidencia_raw)
 
 def section(cid, desc):
     _current["id"], _current["desc"], _current["lines"] = cid, desc, []
