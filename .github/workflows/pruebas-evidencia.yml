@@ -174,9 +174,9 @@ jobs:
       #   - screenshot-resumen.png   : cabecera con KPIs (total/pass/fail/%)
       #   - screenshot-rf.png        : seccion de pruebas funcionales
       #   - screenshot-rnf.png       : seccion de pruebas no funcionales
-      - name: Instalar Playwright Python + Chromium
+      - name: Instalar Playwright Python + Chromium y Pillow
         run: |
-          pip install playwright==1.49.0
+          pip install playwright==1.49.0 Pillow==11.0.0
           python -m playwright install --with-deps chromium
 
       - name: Tomar screenshots del reporte de evidencia
@@ -186,79 +186,82 @@ jobs:
           python3 - <<'PYEOF'
           import os, pathlib
           from playwright.sync_api import sync_playwright
+          from PIL import Image
+          import io
 
           out_dir  = pathlib.Path(os.environ["OUTDIR"])
           html_url = "file://" + str(out_dir / "evidencia.html")
 
-          def safe_clip(page, y_start, height, width=1400):
-              """Recorta el clip para que nunca se salga de la pagina renderizada."""
-              page_h = page.evaluate("() => document.body.scrollHeight")
-              y = max(0, y_start)
-              h = min(height, page_h - y)
-              return {"x": 0, "y": y, "width": width, "height": max(1, h)}
-
           with sync_playwright() as p:
               browser = p.chromium.launch()
-              # Viewport alto para que la pagina completa quede renderizada
-              page = browser.new_page(viewport={"width": 1400, "height": 1080})
+              page = browser.new_page(viewport={"width": 1400, "height": 900})
               page.goto(html_url, wait_until="networkidle")
+              page.wait_for_timeout(800)
 
-              # Esperar a que los estilos terminen de aplicarse
-              page.wait_for_timeout(500)
+              # Capturar la pagina entera como bytes una sola vez
+              full_bytes = page.screenshot(full_page=True)
+              img = Image.open(io.BytesIO(full_bytes))
+              W, H = img.size
 
-              # 1) Pagina completa (fullPage=True ignora el clip, nunca falla)
-              page.screenshot(
-                  path=str(out_dir / "screenshot-completo.png"),
-                  full_page=True,
-              )
-              print("screenshot-completo.png OK")
+              # Guardar la imagen completa directamente
+              img.save(str(out_dir / "screenshot-completo.png"))
+              print(f"screenshot-completo.png OK ({W}x{H}px)")
 
-              # 2) Cabecera + KPIs (hero + cards)
+              def px(locator):
+                  """Devuelve el bounding box en pixeles escalados de la imagen full-page."""
+                  box = locator.bounding_box()
+                  if box is None:
+                      return None
+                  # Playwright reporta coordenadas en CSS pixels (1400px de ancho).
+                  # La imagen full-page tiene el mismo ancho => escala = W/1400.
+                  scale = W / 1400
+                  return {k: v * scale for k, v in box.items()}
+
+              def crop_save(name, y_top, y_bottom, pad_top=14, pad_bottom=24):
+                  """Recorta la imagen full-page entre y_top y y_bottom (en px de imagen)."""
+                  y0 = max(0, int(y_top  - pad_top))
+                  y1 = min(H, int(y_bottom + pad_bottom))
+                  if y1 <= y0:
+                      print(f"AVISO: crop vacio para {name} (y0={y0} y1={y1}), saltando.")
+                      return
+                  cropped = img.crop((0, y0, W, y1))
+                  cropped.save(str(out_dir / name))
+                  print(f"{name} OK ({W}x{y1-y0}px)")
+
+              # 2) Cabecera + KPIs
               hero  = page.locator(".hero").first
               cards = page.locator(".cards").first
               if hero.count() and cards.count():
-                  hbox = hero.bounding_box()
-                  cbox = cards.bounding_box()
-                  clip = safe_clip(page,
-                      y_start=hbox["y"],
-                      height=cbox["y"] + cbox["height"] + 48 - hbox["y"],
-                  )
-                  page.screenshot(path=str(out_dir / "screenshot-resumen.png"), clip=clip)
-                  print("screenshot-resumen.png OK")
+                  hbox = px(hero)
+                  cbox = px(cards)
+                  if hbox and cbox:
+                      crop_save("screenshot-resumen.png",
+                                hbox["y"],
+                                cbox["y"] + cbox["height"],
+                                pad_top=0, pad_bottom=40)
 
-              # 3) Seccion RF + 4) Seccion RNF
-              # Buscar los h2 por texto exacto contenido en el elemento
-              rf_h2  = page.locator("h2", has_text="Pruebas Funcionales").first
-              rnf_h2 = page.locator("h2", has_text="Pruebas No Funcionales").first
+              # 3) Seccion RF
+              rf_h2  = page.locator("h2").filter(has_text="Funcionales").first
+              rnf_h2 = page.locator("h2").filter(has_text="No Funcionales").first
 
-              rf_ok  = rf_h2.count() > 0
-              rnf_ok = rnf_h2.count() > 0
+              if rf_h2.count() and rnf_h2.count():
+                  rf_box  = px(rf_h2)
+                  rnf_box = px(rnf_h2)
+                  if rf_box and rnf_box:
+                      crop_save("screenshot-rf.png",
+                                rf_box["y"],
+                                rnf_box["y"])
 
-              if rf_ok and rnf_ok:
-                  rf_box  = rf_h2.bounding_box()
-                  rnf_box = rnf_h2.bounding_box()
-
-                  # RF: desde el h2 "Funcionales" hasta justo antes del h2 "No Funcionales"
-                  clip_rf = safe_clip(page,
-                      y_start=rf_box["y"] - 12,
-                      height=rnf_box["y"] - rf_box["y"] + 12,
-                  )
-                  page.screenshot(path=str(out_dir / "screenshot-rf.png"), clip=clip_rf)
-                  print("screenshot-rf.png OK")
-
-                  # RNF: desde el h2 "No Funcionales" hasta el final de la pagina
-                  page_h = page.evaluate("() => document.body.scrollHeight")
-                  clip_rnf = safe_clip(page,
-                      y_start=rnf_box["y"] - 12,
-                      height=page_h - (rnf_box["y"] - 12),
-                  )
-                  page.screenshot(path=str(out_dir / "screenshot-rnf.png"), clip=clip_rnf)
-                  print("screenshot-rnf.png OK")
+                      # 4) Seccion RNF hasta el final de la pagina
+                      crop_save("screenshot-rnf.png",
+                                rnf_box["y"],
+                                H,
+                                pad_top=0, pad_bottom=0)
               else:
-                  print(f"AVISO: h2 RF encontrado={rf_ok}, h2 RNF encontrado={rnf_ok}. Saltando clips parciales.")
+                  print(f"AVISO: h2 RF={rf_h2.count()} RNF={rnf_h2.count()}, saltando crops de secciones.")
 
               browser.close()
-          print("Todos los screenshots generados en", out_dir)
+          print("Screenshots listos en", out_dir)
           PYEOF
 
       # Inyectar metadatos de la corrida en el HTML (run number, commit, fecha)
